@@ -10,7 +10,6 @@ import {
   Typography,
   Alert,
   Box,
-  AlertTitle
 } from '@mui/material';
 import styled from '@emotion/styled';
 
@@ -126,10 +125,7 @@ function Login() {
       <ErrorMessageSpace>
         {error && (
            <StyledAlert severity="error">
-              Please verify your email before logging in.
-              <ResendLink onClick={handleResendVerification}>
-                   Resend Code
-              </ResendLink>
+              {error}
           </StyledAlert>
         )}
       </ErrorMessageSpace>

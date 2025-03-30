@@ -5,9 +5,8 @@ import {
   Button,
   Container,
   Typography,
-  Box,
   Alert,
-} from '@mui/material';
+} from '@mui/material'; // Removed Box from import
 import styled from '@emotion/styled';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';

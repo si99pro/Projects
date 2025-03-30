@@ -9,7 +9,7 @@ import {
   Box,
 } from '@mui/material';
 import styled from '@emotion/styled';
-import { auth, db } from '../firebase';
+import { db } from '../firebase'; // Removed auth from import
 import { collection, getDocs } from 'firebase/firestore';
 import moment from 'moment';  // Import moment.js for date formatting
 import Loader from './Loader'; // Import the loader component
