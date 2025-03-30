@@ -16,7 +16,6 @@ import {
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 import GraphicEqIcon from '@mui/icons-material/GraphicEq';
-import AccountCircle from '@mui/icons-material/AccountCircle';  // Added AccountCircle
 import styled from '@emotion/styled';
 import { doc, getDoc } from 'firebase/firestore';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
@@ -41,38 +40,6 @@ const StyledTypography = styled(Typography)`
   cursor: pointer;
   font-weight: 600; // Semi-bold
   color: #2e7d32; /* Green accent color */
-`;
-
-//Styles for the navigation button
-const NavButton = styled(Button)`
-  color: #555; // Medium gray
-  font-weight: 500; // Medium font weight
-  &:hover {
-    background-color: rgba(0, 0, 0, 0.04); // Lighter background on hover
-  }
-`;
-
-// Styles for the profile dropdown button
-const ProfileButton = styled(IconButton)`
-  padding: 0;
-  width: 28px; //  Smaller profile icon
-  height: 28px; //   Smaller height
-  margin-left: 2px;
-`;
-
-// Styles for the customized profile menu
-const StyledMenu = styled(Menu)`
-  margin-top: 8px;
-`;
-
-// Custom Batch Button
-const BatchButton = styled(Button)`
-`;
-
-// Styles for the other icons (Mail, Notifications)
-const IconButtonStyle = styled(IconButton)`
-  width: 36px;
-  height: 36px;
 `;
 
 function Navbar() {

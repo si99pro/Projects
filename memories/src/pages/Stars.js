@@ -8,7 +8,6 @@ import {
   Paper,
   Avatar,
   Box,
-  Divider,
   IconButton,
 } from '@mui/material';
 import styled from '@emotion/styled';

@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import {
   Container,
   Typography,
-  Grid,
   Paper,
-  Avatar,
   Modal,
   Box,
   FormControl,
@@ -32,10 +30,6 @@ const DashboardContainer = styled(Container)`
   margin-top: 20px;
 `;
 
-const QuickActions = styled(Grid)`
-  margin-top: 20px;
-`;
-
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -49,10 +43,9 @@ const modalStyle = {
 };
 
 function Dashboard() {
-  const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [profileBg, setProfileBg] = useState('');
+  const [ setProfileBg] = useState('');
   const [openStatusModal, setOpenStatusModal] = useState(false);
   const [currentStatus, setCurrentStatus] = useState('');
 
@@ -86,16 +79,7 @@ function Dashboard() {
     });
 
     return () => unsubscribe();
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout Error:', error);
-    }
-  };
+  },);
 
   const handleStatusChange = (event) => {
     setCurrentStatus(event.target.value);

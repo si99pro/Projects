@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/Profile.js
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
@@ -24,7 +25,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteIcon from '@mui/icons-material/Delete';
-import CloseIcon from '@mui/icons-material/Close';
+
 import AddIcon from '@mui/icons-material/Add';
 import styled from '@emotion/styled';
 import Navbar from '../components/Navbar';
@@ -106,7 +107,7 @@ function Profile() {
     const [studentId, setStudentId] = useState('');
     const [batch, setBatch] = useState('');
     const [session, setSession] = useState('');
-    const [profileBg, setProfileBg] = useState('');
+    const [profilebg, setProfilebg] = useState('');
 
     // States for tab information
     const [contactInfo, setContactInfo] = useState({ phoneNumber: '', facebook: '', linkedin: '', website: '' });
@@ -140,7 +141,6 @@ function Profile() {
     const [editingPlaceField, setEditingPlaceField] = useState(null);
 
 
-    const navigate = useNavigate();
     const [originalData, setOriginalData] = useState({});
     const [activeTab, setActiveTab] = useState(0);
     const [loading, setLoading] = useState(true);
@@ -191,7 +191,7 @@ function Profile() {
                         setStudentId(userData.basicInfo.studentId || '');
                         setBatch(userData.basicInfo.batch || '');
                         setSession(userData.basicInfo.session || '');
-                        setProfileBg(userData.basicInfo.profilebg || '');
+                        setProfilebg(userData.basicInfo.profilebg || '');
 
                         // load the data into the states
                         setContactInfo(userData.contactInfo || { phoneNumber: '', facebook: '', linkedin: '', website: '' });
