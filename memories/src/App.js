@@ -1,34 +1,35 @@
-// src/App.js
+// App.js
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles'; // Import ThemeProvider
-import theme from './theme'; // Import your custom theme
-import Signup from './components/Auth/Signup';
-import Login from './components/Auth/Login';
-import VerifyEmail from './components/Auth/VerifyEmail';
-import Dashboard from './components/Dashboard';
-import Profile from './components/Profile';
-import HomePage from './pages/HomePage';
-import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Signup from './auth/Signup';
+import Login from './auth/Login';
+import Dashboard from './pages/Dashboard';
+import PrivateRoute from './auth/PrivateRoute';
+import MomentForm from './components/MomentForm'; // Corrected import
+import Batch from './pages/Batch';
+import Profile from './pages/Profile'; // Import Profile
+import Stars from './pages/Stars'; // Import Stars
 
 function App() {
-    return (
-        <Router>
-            <AuthProvider>  {/* *** IMPORTANT: Wrap everything in AuthProvider *** */}
-                <ThemeProvider theme={theme}> {/* Wrap Routes in ThemeProvider */}
-                    <Routes>
-                        <Route path="/" element={<HomePage />} />
-                        <Route path="/signup" element={<Signup />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/verify-email" element={<VerifyEmail />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/profile" element={<Profile />} />
-                        {/* Add other routes as needed */}
-                    </Routes>
-                </ThemeProvider>
-            </AuthProvider>
-        </Router>
-    );
+  return (
+    <Router>
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+
+        <Route element={<PrivateRoute />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/moment-form" element={<MomentForm />} /> {/* Corrected route */}
+          <Route path="/batch" element={<Batch />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/stars" element={<Stars />} />
+        </Route>
+
+        {/* Add a default route (optional) */}
+        <Route path="/" element={<Navigate to="/login" />} />
+      </Routes>
+    </Router>
+  );
 }
 
 export default App;
