@@ -41,10 +41,12 @@ const StyledTitle = styled(Typography)`
 // Styled Component for the Table
 const StyledTableContainer = styled(TableContainer)`
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  overflow-x: auto; /* Make table responsive */
 `;
 
 const StyledTable = styled(Table)`
   /* No extra styling needed */
+  min-width: 650px; /* Ensure table doesn't collapse too much */
 `;
 
 // Styled Component for Avatar with smaller size and consistent styling
@@ -85,6 +87,8 @@ function Batch() {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const year = queryParams.get('year');
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [displayedUsersCount, setDisplayedUsersCount] = useState(0);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -99,6 +103,11 @@ function Batch() {
           ...doc.data()
         }));
         setUsers(usersData);
+        setDisplayedUsersCount(usersData.length); // Update displayed count
+
+        // Fetch total user count (without batch filter for now - adjust as needed)
+        const allUsersSnapshot = await getDocs(collection(db, "users"));
+        setTotalUsers(allUsersSnapshot.size); //  Total user count in the database
       } catch (error) {
         console.error("Error fetching users:", error);
       } finally {
@@ -108,6 +117,11 @@ function Batch() {
 
     fetchUsers();
   }, [year]); // Re-fetch users when 'year' changes
+
+  useEffect(() => {
+    // Update displayed count whenever the users state changes
+    setDisplayedUsersCount(users.length);
+  }, [users]);
 
   if (loading) {
     return <Loader />;
@@ -121,13 +135,19 @@ function Batch() {
           Batch: {year}
         </StyledTitle>
 
+         {/* Subheader */}
+         <Typography variant="subtitle1" align="center" paragraph>
+          Displaying data of {displayedUsersCount} students out of a total of {totalUsers} students.
+        </Typography>
+
         <StyledTableContainer component={Paper}>
-          <StyledTable sx={{ minWidth: 650 }} aria-label="simple table">
+          <StyledTable aria-label="simple table">
             <TableHead>
               <TableRow>
                 <TableHeaderCell>Photo</TableHeaderCell>
                 <TableHeaderCell>ID</TableHeaderCell>
-                <TableHeaderCell width="20%">Name</TableHeaderCell> {/* Added width */}
+                <TableHeaderCell width="20%">Name</TableHeaderCell>
+                <TableHeaderCell>Hometown</TableHeaderCell> {/* Hometown Header */}
                 <TableHeaderCell align="left">Contact</TableHeaderCell>
                 <TableHeaderCell align="left">Status</TableHeaderCell>
               </TableRow>
@@ -146,7 +166,8 @@ function Batch() {
                     </Box>
                   </TableCell>
                   <TableCell>{user.basicInfo?.studentId}</TableCell>
-                  <TableCell width="20%">{user.basicInfo?.fullName}</TableCell> {/* Added width */}
+                  <TableCell width="20%">{user.basicInfo?.fullName}</TableCell>
+                   <TableCell>{user.placeInfo?.hometown || "N/A"}</TableCell> {/* Hometown Cell */}
                   <TableCell align="left">
                     <ContactIconBox>
                       {user.basicInfo?.email && (
