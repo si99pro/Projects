@@ -1,89 +1,106 @@
-/* eslint-disable no-unused-vars */
 // src/pages/Profile.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import {
-    Container,
-    Typography,
-    TextField,
-    Button,
-    Avatar,
-    Grid,
-    Box,
-    Tabs,
-    Tab,
-    Alert,
-    Snackbar,
-    Slide,
-    IconButton,
-    InputAdornment,
-    Checkbox,
-    FormControlLabel,
+    Container, Typography, TextField, Button, Avatar, Grid, Box,
+    Tabs, Tab, Alert, Snackbar, Slide, IconButton, InputAdornment,
+    Checkbox, FormControlLabel, CircularProgress, Tooltip, Skeleton
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
 import CancelIcon from '@mui/icons-material/Cancel';
 import DeleteIcon from '@mui/icons-material/Delete';
-
 import AddIcon from '@mui/icons-material/Add';
-import styled from '@emotion/styled';
-import Navbar from '../components/Navbar';
-import { useNavigate } from 'react-router-dom';
-import Loader from '../components/Loader';
 import BusinessIcon from '@mui/icons-material/Business';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ContactPhoneIcon from '@mui/icons-material/ContactPhone';
 import LinkIcon from '@mui/icons-material/Link';
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // Success icon
-import ErrorIcon from '@mui/icons-material/Error'; // Error icon
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import ErrorIcon from '@mui/icons-material/Error';
 import SchoolIcon from '@mui/icons-material/School';
 import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
+import styled from '@emotion/styled';
+// Removed useNavigate as it wasn't used
+// import { useNavigate } from 'react-router-dom';
+import Loader from '../components/Loader'; // Assuming Loader component exists
+
+// --- Styled Components (Minor adjustments for clarity) ---
 
 const StyledContainer = styled(Container)`
-  margin-top: 20px;
+  margin-top: 40px; // Increased top margin
+  margin-bottom: 40px;
+`;
+
+const ProfileHeader = styled(Box)`
+    text-align: center;
+    margin-bottom: 24px;
 `;
 
 const StyledAvatar = styled(Avatar)`
   width: 120px;
   height: 120px;
-  margin: 0 auto; /* Center the avatar */
-  margin-bottom: 16px;
-  font-size: 60px; /* Adjust font size to fit the avatar */
+  margin: 0 auto 16px;
+  font-size: 60px;
+  background-color: ${props => props.profilebg || '#673ab7'}; // Use profilebg color
 `;
 
 const StyledTabs = styled(Tabs)`
+  margin-bottom: 24px; // Add space below tabs
+  border-bottom: 1px solid #e0e0e0;
   .MuiTabs-indicator {
-    background-color: #673ab7; /* Custom indicator color */
+    background-color: #673ab7;
   }
 `;
 
 const StyledTab = styled(Tab)`
-  color: #757575;
+  color: #555; // Slightly darker default color
+  text-transform: none; // Use normal case
+  font-weight: 500;
   &.Mui-selected {
-    color: #673ab7; /* Selected tab color */
-    font-weight: bold;
+    color: #673ab7;
+    font-weight: 700;
   }
 `;
 
 const ProfileCard = styled(Box)`
   background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 24px;
+  border-radius: 12px; // Slightly more rounded
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); // Softer shadow
+  padding: 32px; // Increased padding
   margin-bottom: 24px;
 `;
 
 const SectionTitle = styled(Typography)`
-  font-size: 1.2rem;
+  font-size: 1.3rem; // Slightly larger
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   color: #333;
+  border-bottom: 1px solid #eee; // Add subtle separator
+  padding-bottom: 8px;
 `;
 
 const StyledTextField = styled(TextField)`
-  margin-bottom: 16px;
+    margin-bottom: 16px;
+    .MuiInputBase-root.Mui-disabled { // Style disabled fields
+        color: rgba(0, 0, 0, 0.7); // Make text slightly darker than default disabled
+        background-color: #f9f9f9; // Slight background tint
+    }
+    .MuiInput-underline:before { // Hide underline for standard variant when not focused
+        border-bottom: none;
+    }
+    .MuiInput-underline:hover:not(.Mui-disabled):before { // Show underline on hover for standard
+        border-bottom: 1px solid rgba(0, 0, 0, 0.42);
+    }
+    .MuiInputBase-input:read-only {
+      cursor: default; // Change cursor for read-only standard fields
+    }
+`;
+
+const ButtonContainer = styled(Box)`
+  display: flex;
+  gap: 8px; // Add space between buttons
 `;
 
 const SaveButton = styled(Button)`
@@ -91,6 +108,9 @@ const SaveButton = styled(Button)`
   color: #fff;
   &:hover {
     background-color: #512da8;
+  }
+  &:disabled { // Style disabled save button
+    background-color: rgba(0, 0, 0, 0.12);
   }
 `;
 
@@ -101,80 +121,214 @@ const CancelButton = styled(Button)`
   }
 `;
 
+const ItemBox = styled(Box)`
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  background-color: #fafafa; // Slight background for items
+  position: relative; // For positioning buttons if needed
+`;
+
+const ItemContent = styled(Box)`
+  margin-left: 16px;
+  flex-grow: 1;
+`;
+
+const ItemActions = styled(Box)`
+  margin-left: auto; // Pushes actions to the right
+  display: flex;
+  gap: 4px;
+`;
+
+const FormBox = styled(Box)`
+  margin-top: 16px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 24px;
+  background-color: #fff; // Clear background for form
+`;
+
+// --- Helper: Debounce Function ---
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+
+// --- Sub-Components ---
+
+// Generic Editable Field Component
+const EditableField = React.memo(({
+    label, value, fieldName, onSave, onCancel, onChange,
+    IconComponent, multiline = false, rows = 1,
+    readOnly = false, // For fields that are never editable
+    prefix = null,
+    disabled = false, // General disabled state
+}) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [currentValue, setCurrentValue] = useState(value);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        // Update internal state if the external value changes (e.g., after initial load or external update)
+        setCurrentValue(value);
+    }, [value]);
+
+    const handleEditClick = () => {
+        if (readOnly) return;
+        setIsEditing(true);
+    };
+
+    const handleSaveClick = async () => {
+        if (currentValue === value) { // Don't save if value hasn't changed
+            setIsEditing(false);
+            return;
+        }
+        setIsSaving(true);
+        try {
+            await onSave(fieldName, currentValue);
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Save failed:", error);
+            // Error display is handled by the main component's snackbar
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleCancelClick = () => {
+        setCurrentValue(value); // Revert to original value from props
+        setIsEditing(false);
+        if (onCancel) onCancel(fieldName);
+    };
+
+    const handleChange = (e) => {
+        setCurrentValue(e.target.value);
+        if (onChange) onChange(e.target.value); // Allow parent to react if needed
+    };
+
+    const debouncedSave = useCallback(debounce(handleSaveClick, 1000), [currentValue, fieldName, onSave]);
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && !multiline && isEditing) {
+            handleSaveClick();
+        } else if (e.key === 'Escape' && isEditing) {
+            handleCancelClick();
+        }
+    };
+
+     // Automatically save on blur for simplicity, except for multiline
+     const handleBlur = () => {
+        if (isEditing && !multiline && currentValue !== value) {
+             handleSaveClick();
+        } else if (isEditing && !multiline && currentValue === value) {
+            // If blurred without changes, just cancel editing state
+            handleCancelClick();
+        }
+        // For multiline, require explicit save/cancel click
+    };
+
+    return (
+        <StyledTextField
+            label={label}
+            value={currentValue}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onBlur={handleBlur} // Save on blur for non-multiline
+            fullWidth
+            multiline={multiline}
+            rows={rows}
+            variant={isEditing || readOnly ? "outlined" : "standard"}
+            disabled={disabled || isSaving || readOnly} // Disable field during save or if permanently read-only
+            InputProps={{
+                readOnly: !isEditing || readOnly,
+                startAdornment: (
+                    <>
+                        {IconComponent && (
+                            <InputAdornment position="start">
+                                <IconComponent sx={{ mr: prefix ? 0 : 1, color: 'action.active' }} />
+                            </InputAdornment>
+                        )}
+                         {prefix && !isEditing && <Typography variant="body1" sx={{ mr: 0.5, color: 'text.secondary' }}>{prefix}</Typography>}
+                    </>
+                ),
+                endAdornment: (
+                    <InputAdornment position="end">
+                        {readOnly ? null : isEditing ? (
+                            <ButtonContainer>
+                                <Tooltip title="Save">
+                                    <IconButton
+                                        onClick={handleSaveClick}
+                                        aria-label="save"
+                                        size="small"
+                                        disabled={isSaving || currentValue === value}
+                                        color="primary"
+                                    >
+                                        {isSaving ? <CircularProgress size={20} /> : <SaveIcon />}
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Cancel">
+                                    <IconButton onClick={handleCancelClick} aria-label="cancel" size="small" disabled={isSaving}>
+                                        <CancelIcon />
+                                    </IconButton>
+                                </Tooltip>
+                            </ButtonContainer>
+                        ) : (
+                            <Tooltip title="Edit">
+                                <IconButton onClick={handleEditClick} aria-label="edit" size="small" disabled={disabled}>
+                                    <EditIcon />
+                                </IconButton>
+                            </Tooltip>
+                        )}
+                    </InputAdornment>
+                ),
+            }}
+             // Add sx prop for specific styling like removing underline for read-only standard
+             sx={{
+                ...( (!isEditing && !readOnly) && { // Style standard variant when not editing
+                    '& .MuiInput-underline:before': { borderBottom: '1px dashed rgba(0, 0, 0, 0.2)' }, // Dashed line for view mode
+                    '&:hover .MuiInput-underline:before': { borderBottom: '1px solid rgba(0, 0, 0, 0.5) !important' }, // Solid line on hover
+                }),
+                ...(readOnly && { // Styles for permanently read-only fields
+                  '& .MuiInput-underline:before': { borderBottom: 'none' },
+                  '& .MuiInput-underline:after': { borderBottom: 'none' },
+                  '& .MuiInput-underline:hover:not(.Mui-disabled):before': { borderBottom: 'none' },
+                  '& .MuiInputBase-input': { cursor: 'default' }
+                })
+            }}
+        />
+    );
+});
+
+// --- Main Profile Component ---
+
 function Profile() {
-    const [fullName, setFullName] = useState(''); // Displayed name
-    const [email, setEmail] = useState('');
-    const [studentId, setStudentId] = useState('');
-    const [batch, setBatch] = useState('');
-    const [session, setSession] = useState('');
-    const [profilebg, setProfilebg] = useState('');
-
-    // States for tab information
+    // Grouped State
+    const [basicInfo, setBasicInfo] = useState({ fullName: '', email: '', studentId: '', batch: '', session: '', profilebg: '' });
     const [contactInfo, setContactInfo] = useState({ phoneNumber: '', facebook: '', linkedin: '', website: '' });
-    const [eduInfo, setEduInfo] = useState({ education: '' });
-    const [workInfoState, setWorkInfoState] = useState({ workExperience: [] }); // Changed workInfo to workInfoState
+    const [eduInfo, setEduInfo] = useState({ educationDetails: [] }); // Renamed for clarity
+    const [workInfo, setWorkInfo] = useState({ workExperience: [] });
+    const [placeInfo, setPlaceInfo] = useState({ currentCity: '', hometown: '' });
+    const [detailInfo, setDetailInfo] = useState({ birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
 
-
-    const [placeInfo, setPlaceInfo] = useState({ placesLived: '' });
-    const [detailInfo, setDetailInfo] = useState({
-        birthdate: '',
-        bloodGroup: '',
-        fieldOfExpertise: '',
-        bio: '',
-        aboutYou: ''
-    });
-
-    // Edit states for tabs
-    // const [isEditingContact, setIsEditingContact] = useState(false); // Removed: Now individual field edit state
-    // const [isEditingEdu, setIsEditingEdu] = useState(false);
-    // const [isEditingWork, setIsEditingWork] = useState(false);
-    // Edit States for Current City and Hometown
-    // const [isEditingCurrentCity, setIsEditingCurrentCity] = useState(false); // Removed: Now individual field edit state
-    // const [isEditingHometown, setIsEditingHometown] = useState(false); // Removed: Now individual field edit state
-
-
-    // const [isEditingPlace, setIsEditingPlace] = useState(false); // Removed: Now individual field edit state
-    // const [isEditingDetail, setIsEditingDetail] = useState(false); // Removed: Now individual field edit state
-
-    const [editingContactField, setEditingContactField] = useState(null);
-    const [editingDetailField, setEditingDetailField] = useState(null);
-    const [editingPlaceField, setEditingPlaceField] = useState(null);
-
-
-    const [originalData, setOriginalData] = useState({});
+    // Component State
     const [activeTab, setActiveTab] = useState(0);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [successMessage, setSuccessMessage] = useState('');
-    const [snackbarOpen, setSnackbarOpen] = useState(false);
-    const [alertType, setAlertType] = useState('success');
-    const [basicInfoAlertOpen, setBasicInfoAlertOpen] = useState(false); // Snackbar for basic info edit attempt
+    const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
+    const [basicInfoAlertOpen, setBasicInfoAlertOpen] = useState(false);
 
-    const [tempFullName, setTempFullName] = useState(''); // Temporary name for editing
-
-    // New states for work experience form
-    const [company, setCompany] = useState('');
-    const [position, setPosition] = useState('');
-    const [city, setCity] = useState('');
-    const [currentlyWorking, setCurrentlyWorking] = useState(false);
-    const [startYear, setStartYear] = useState('');
-    const [endYear, setEndYear] = useState('');
-
-    const [editingExperienceIndex, setEditingExperienceIndex] = useState(null); // State for inline edit
-
-    // New states for education
-    const [institution, setInstitution] = useState('');
-    const [degree, setDegree] = useState('');
-    const [fieldOfStudy, setFieldOfStudy] = useState('');
-    const [graduationYear, setGraduationYear] = useState('');
-    const [editingEducationIndex, setEditingEducationIndex] = useState(null);
-    const [eduInfoState, setEduInfoState] = useState({ educationDetails: [] });
-
-    // States for Current City and Hometown
-    const [currentCity, setCurrentCity] = useState('');
-    const [hometown, setHometown] = useState('');
-
-
+    // Fetch Data
     useEffect(() => {
         const fetchProfileData = async () => {
             setLoading(true);
@@ -185,237 +339,129 @@ function Profile() {
                     const docSnap = await getDoc(userDocRef);
 
                     if (docSnap.exists()) {
-                        const userData = docSnap.data();
-                        setFullName(userData.basicInfo.fullName || '');
-                        setEmail(userData.basicInfo.email || '');
-                        setStudentId(userData.basicInfo.studentId || '');
-                        setBatch(userData.basicInfo.batch || '');
-                        setSession(userData.basicInfo.session || '');
-                        setProfilebg(userData.basicInfo.profilebg || '');
-
-                        // load the data into the states
-                        setContactInfo(userData.contactInfo || { phoneNumber: '', facebook: '', linkedin: '', website: '' });
-                        setEduInfo(userData.eduInfo || { education: '' });
-                        setWorkInfoState(userData.workInfo || { workExperience: userData.workInfo?.workExperience || [] }); // Changed workInfo to workInfoState
-                        setPlaceInfo(userData.placeInfo || { placesLived: '' });
-                        setDetailInfo(userData.detailInfo || {
-                            birthdate: '',
-                            bloodGroup: '',
-                            fieldOfExpertise: '',
-                            bio: '',
-                            aboutYou: ''
-                        });
-                        setEduInfoState(userData.eduInfo || { educationDetails: userData.eduInfo?.educationDetails || [] });
-
-                        // Load Current City and Hometown
-                        setCurrentCity(userData.placeInfo?.currentCity || '');
-                        setHometown(userData.placeInfo?.hometown || '');
-
-
-                        setOriginalData({
-                            fullName: userData.basicInfo.fullName || '',
-                            email: userData.basicInfo.email || '',
-                            studentId: userData.basicInfo.studentId || '',
-                            batch: userData.basicInfo.batch || '',
-                            session: userData.basicInfo.session || '',
-                            profilebg: userData.basicInfo.profilebg || '',
-                            contactInfo: userData.contactInfo || { phoneNumber: '', facebook: '', linkedin: '', website: '' },
-                            eduInfo: userData.eduInfo || { education: '' },
-                            workInfo: userData.workInfo || { workExperience: userData.workInfo?.workExperience || [] },
-                            placeInfo: userData.placeInfo || { placesLived: '' },
-                            detailInfo: userData.detailInfo || {
-                                birthdate: '',
-                                bloodGroup: '',
-                                fieldOfExpertise: '',
-                                bio: '',
-                                aboutYou: ''
-                            },
-                            eduInfoState: userData.eduInfo || { educationDetails: userData.eduInfo?.educationDetails || [] },
-                            currentCity: userData.placeInfo?.currentCity || '',
-                            hometown: userData.placeInfo?.hometown || '',
-                        });
-                        setTempFullName(userData.basicInfo.fullName || ''); // initialize temporary full name
+                        const data = docSnap.data();
+                        // Set state using || {} or || [] to prevent undefined errors if structures don't exist
+                        setBasicInfo(data.basicInfo || { fullName: '', email: '', studentId: '', batch: '', session: '', profilebg: '#673ab7' });
+                        setContactInfo(data.contactInfo || { phoneNumber: '', facebook: '', linkedin: '', website: '' });
+                        setEduInfo(data.eduInfo || { educationDetails: [] });
+                        setWorkInfo(data.workInfo || { workExperience: [] });
+                        setPlaceInfo(data.placeInfo || { currentCity: '', hometown: '' });
+                        setDetailInfo(data.detailInfo || { birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
                     } else {
-                        console.log('No such document!');
+                        console.log('No profile document found for user:', user.uid);
+                        // Optionally set default values or show a message
+                        setSnackbar({ open: true, message: 'Profile data not found. Please fill in your details.', severity: 'info' });
                     }
+                } else {
+                     // Handle case where user is not logged in (should ideally be handled by routing)
+                     console.log('User not logged in');
                 }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
-                setError('Failed to load profile data.');
-                setAlertType('error');
-                setSnackbarOpen(true);
+                setSnackbar({ open: true, message: `Failed to load profile data: ${error.message}`, severity: 'error' });
             } finally {
                 setLoading(false);
             }
         };
 
         fetchProfileData();
-    }, []);
+    }, []); // Empty dependency array ensures this runs only once on mount
 
-    const handleSave = async (field, value) => {
-        setError('');
+
+    // --- Generic Save Handler ---
+    const handleSaveField = useCallback(async (fieldName, value) => {
+        // Clear previous snackbar messages
+        setSnackbar(prev => ({ ...prev, open: false }));
+
+        const user = auth.currentUser;
+        if (!user) {
+            setSnackbar({ open: true, message: 'User not authenticated.', severity: 'error' });
+            throw new Error("User not authenticated."); // Throw error to stop EditableField saving state
+        }
+
+        const userDocRef = doc(db, 'users', user.uid);
+        let updateData = {};
+        let newStateUpdater = () => {}; // Function to update local state on success
+
+        // Determine the path and the state update function based on the field name
+        if (fieldName in contactInfo) {
+            updateData[`contactInfo.${fieldName}`] = value;
+            newStateUpdater = () => setContactInfo(prev => ({ ...prev, [fieldName]: value }));
+        } else if (fieldName in placeInfo) {
+            updateData[`placeInfo.${fieldName}`] = value;
+             newStateUpdater = () => setPlaceInfo(prev => ({ ...prev, [fieldName]: value }));
+        } else if (fieldName in detailInfo) {
+            updateData[`detailInfo.${fieldName}`] = value;
+             newStateUpdater = () => setDetailInfo(prev => ({ ...prev, [fieldName]: value }));
+        } else {
+            console.error("Unknown field name:", fieldName);
+            setSnackbar({ open: true, message: `Unknown field: ${fieldName}`, severity: 'error' });
+            throw new Error(`Unknown field: ${fieldName}`);
+        }
+
         try {
-            const user = auth.currentUser;
-            if (user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                let updateData = {};
-
-                switch (field) {
-                    case 'fullName':
-                        updateData = { 'basicInfo.fullName': tempFullName }; // Save temp name
-                        setFullName(tempFullName);  // update display name after saving
-                        break;
-                    case 'phoneNumber':
-                        updateData = { 'contactInfo.phoneNumber': value };
-                        setContactInfo({ ...contactInfo, phoneNumber: value });
-                        setEditingContactField(null);
-                        break;
-                    case 'facebook':
-                        updateData = { 'contactInfo.facebook': value };
-                        setContactInfo({ ...contactInfo, facebook: value });
-                        setEditingContactField(null);
-                        break;
-                    case 'linkedin':
-                        updateData = { 'contactInfo.linkedin': value };
-                        setContactInfo({ ...contactInfo, linkedin: value });
-                        setEditingContactField(null);
-                        break;
-                    case 'website':
-                        updateData = { 'contactInfo.website': value };
-                        setContactInfo({ ...contactInfo, website: value });
-                        setEditingContactField(null);
-                        break;
-                    case 'birthdate':
-                        updateData = { 'detailInfo.birthdate': value };
-                        setDetailInfo({ ...detailInfo, birthdate: value });
-                        setEditingDetailField(null);
-                        break;
-                    case 'bloodGroup':
-                        updateData = { 'detailInfo.bloodGroup': value };
-                        setDetailInfo({ ...detailInfo, bloodGroup: value });
-                        setEditingDetailField(null);
-                        break;
-                    case 'fieldOfExpertise':
-                        updateData = { 'detailInfo.fieldOfExpertise': value };
-                        setDetailInfo({ ...detailInfo, fieldOfExpertise: value });
-                        setEditingDetailField(null);
-                        break;
-                    case 'bio':
-                        updateData = { 'detailInfo.bio': value };
-                        setDetailInfo({ ...detailInfo, bio: value });
-                        setEditingDetailField(null);
-                        break;
-                    case 'aboutYou':
-                        updateData = { 'detailInfo.aboutYou': value };
-                        setDetailInfo({ ...detailInfo, aboutYou: value });
-                        setEditingDetailField(null);
-                        break;
-                    case 'currentCity':
-                        updateData = { 'placeInfo.currentCity': value };
-                        setCurrentCity(value);
-                        setEditingPlaceField(null);
-                        break;
-                    case 'hometown':
-                        updateData = { 'placeInfo.hometown': value };
-                        setHometown(value);
-                        setEditingPlaceField(null);
-                        break;
-                    case 'eduInfo':
-                        updateData = { 'eduInfo.educationDetails': eduInfoState.educationDetails };
-                        //setIsEditingEdu(false);
-                        break;
-                    case 'workInfo':
-                        updateData = { 'workInfo.workExperience': workInfoState.workExperience }; // Changed workInfo to workInfoState
-                        //setIsEditingWork(false);
-                        break;
-
-                    default:
-                        return; // Exit if invalid field
-                }
-
-                await updateDoc(userDocRef, updateData);
-
-                console.log('Profile updated successfully!');
-                setSuccessMessage('Profile updated successfully!');
-                setAlertType('success');
-                setSnackbarOpen(true);
-            }
+            await updateDoc(userDocRef, updateData);
+            newStateUpdater(); // Update local state only after successful Firestore update
+            setSnackbar({ open: true, message: 'Profile updated successfully!', severity: 'success' });
+            console.log('Profile updated:', fieldName);
         } catch (err) {
-            console.error('Error updating profile:', err);
-            setError('Error updating profile:', err);
-            setAlertType('error');
-            setSnackbarOpen(true);
+            console.error('Error updating profile field:', fieldName, err);
+            setSnackbar({ open: true, message: `Error updating profile: ${err.message}`, severity: 'error' });
+            throw err; // Re-throw error so EditableField knows save failed
         }
-    };
+    }, [contactInfo, placeInfo, detailInfo]); // Dependencies: Ensure the function has access to the latest state
 
-    const handleCancel = (field) => {
-        switch (field) {
-            case 'fullName':
-                setTempFullName(originalData.fullName);  // Reset to original name
-                break;
-            case 'phoneNumber':
-                setContactInfo({ ...contactInfo, phoneNumber: originalData.contactInfo.phoneNumber });
-                setEditingContactField(null);
-                break;
-            case 'facebook':
-                setContactInfo({ ...contactInfo, facebook: originalData.contactInfo.facebook });
-                setEditingContactField(null);
-                break;
-            case 'linkedin':
-                setContactInfo({ ...contactInfo, linkedin: originalData.contactInfo.linkedin });
-                setEditingContactField(null);
-                break;
-            case 'website':
-                setContactInfo({ ...contactInfo, website: originalData.contactInfo.website });
-                setEditingContactField(null);
-                break;
-            case 'birthdate':
-                setDetailInfo({ ...detailInfo, birthdate: originalData.detailInfo.birthdate });
-                setEditingDetailField(null);
-                break;
-            case 'bloodGroup':
-                setDetailInfo({ ...detailInfo, bloodGroup: originalData.detailInfo.bloodGroup });
-                setEditingDetailField(null);
-                break;
-            case 'fieldOfExpertise':
-                setDetailInfo({ ...detailInfo, fieldOfExpertise: originalData.detailInfo.fieldOfExpertise });
-                setEditingDetailField(null);
-                break;
-            case 'bio':
-                setDetailInfo({ ...detailInfo, bio: originalData.detailInfo.bio });
-                setEditingDetailField(null);
-                break;
-            case 'aboutYou':
-                setDetailInfo({ ...detailInfo, aboutYou: originalData.detailInfo.aboutYou });
-                setEditingDetailField(null);
-                break;
-            case 'currentCity':
-                setCurrentCity(originalData.currentCity);
-                setEditingPlaceField(null);
-                break;
-            case 'hometown':
-                setHometown(originalData.hometown);
-                setEditingPlaceField(null);
-                break;
-            case 'eduInfo':
-                setEduInfoState(originalData.eduInfo);
-                //setIsEditingEdu(false);
-                break;
-            case 'workInfo':
-                setWorkInfoState(originalData.workInfo); // Changed workInfo to workInfoState
-                //setIsEditingWork(false);
-                break;
-            default:
-                break;
+
+    // --- Save Handlers for Array Data (Work/Edu) ---
+    const handleSaveWorkExperience = useCallback(async (updatedWorkExperiences) => {
+        setSnackbar(prev => ({ ...prev, open: false }));
+        const user = auth.currentUser;
+        if (!user) {
+            setSnackbar({ open: true, message: 'User not authenticated.', severity: 'error' });
+            return false; // Indicate failure
         }
-    };
+        const userDocRef = doc(db, 'users', user.uid);
+        try {
+            await updateDoc(userDocRef, { 'workInfo.workExperience': updatedWorkExperiences });
+            setWorkInfo({ workExperience: updatedWorkExperiences }); // Update local state
+            setSnackbar({ open: true, message: 'Work experience updated.', severity: 'success' });
+            return true; // Indicate success
+        } catch (err) {
+            console.error('Error saving work experience:', err);
+            setSnackbar({ open: true, message: `Error saving work experience: ${err.message}`, severity: 'error' });
+            return false; // Indicate failure
+        }
+    }, []); // No state dependencies needed here
 
+    const handleSaveEducation = useCallback(async (updatedEducationDetails) => {
+         setSnackbar(prev => ({ ...prev, open: false }));
+        const user = auth.currentUser;
+        if (!user) {
+            setSnackbar({ open: true, message: 'User not authenticated.', severity: 'error' });
+            return false;
+        }
+        const userDocRef = doc(db, 'users', user.uid);
+        try {
+            await updateDoc(userDocRef, { 'eduInfo.educationDetails': updatedEducationDetails });
+            setEduInfo({ educationDetails: updatedEducationDetails }); // Update local state
+            setSnackbar({ open: true, message: 'Education updated.', severity: 'success' });
+             return true;
+        } catch (err) {
+            console.error('Error saving education:', err);
+            setSnackbar({ open: true, message: `Error saving education: ${err.message}`, severity: 'error' });
+            return false;
+        }
+    }, []); // No state dependencies
+
+
+    // --- Tab Change Handler ---
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
     };
 
+    // --- Snackbar Handlers ---
     const handleCloseSnackbar = () => {
-        setSnackbarOpen(false);
+        setSnackbar(prev => ({ ...prev, open: false }));
     };
 
     const handleEditBasicInfo = () => {
@@ -426,976 +472,140 @@ function Profile() {
         setBasicInfoAlertOpen(false);
     };
 
-    const renderTextField = (label, value, onChange, isEditing, setIsEditing, fieldName, tabName, adornmentIcon = null, multiline = false, rows = 1, basicInfo = false) => {
-        const handleChange = (e) => {
-
-            onChange(e.target.value);
-
-        };
-
-
-        return (
-            <StyledTextField
-                label={label}
-                value={value}
-                onChange={handleChange}
-                fullWidth
-                multiline={multiline}
-                rows={rows}
-                variant={isEditing ? "outlined" : "standard"} // Show border only when editing
-                InputProps={{
-                    readOnly: !isEditing,
-                    startAdornment: adornmentIcon ? <InputAdornment position="start">{adornmentIcon}</InputAdornment> : null,
-                    style: { border: isEditing ? null : 'none' },
-                    endAdornment: (
-                        <>
-                            {basicInfo ? (
-                                <IconButton onClick={handleEditBasicInfo} aria-label="edit">
-                                    <EditIcon />
-                                </IconButton>
-                            ) : (
-                                <>
-                                    {isEditing ? (
-                                        <>
-                                            <IconButton onClick={() => handleSave(fieldName, value)} aria-label="save">
-                                                <SaveIcon />
-                                            </IconButton>
-                                            <IconButton onClick={() => handleCancel(fieldName)} aria-label="cancel">
-                                                <CancelIcon />
-                                            </IconButton>
-                                        </>
-                                    ) : (
-                                        <IconButton onClick={() => setIsEditing(fieldName)} aria-label="edit">
-                                            <EditIcon />
-                                        </IconButton>
-                                    )}
-                                </>
-                            )}
-
-                        </>
-                    ),
-                }}
-            />
-        );
-    };
-
-
-    const renderContactField = (label, value, fieldName, adornmentIcon = null, prefix = null) => {
-        const isEditing = editingContactField === fieldName;
-        return (
-            <StyledTextField
-                label={label}
-                value={value}
-                onChange={(e) => setContactInfo({ ...contactInfo, [fieldName]: e.target.value })}
-                fullWidth
-                variant={isEditing ? "outlined" : "standard"}
-                InputProps={{
-                    readOnly: !isEditing,
-                    startAdornment: (
-                        <>
-                            {adornmentIcon ? <InputAdornment position="start">{adornmentIcon}</InputAdornment> : null}
-                            {prefix && <Typography variant="body1">{prefix}</Typography>}
-                        </>
-                    ),
-                    endAdornment: (
-                        <>
-                            {isEditing ? (
-                                <>
-                                    <IconButton onClick={() => handleSave(fieldName, value)} aria-label="save">
-                                        <SaveIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleCancel(fieldName)} aria-label="cancel">
-                                        <CancelIcon />
-                                    </IconButton>
-                                </>
-                            ) : (
-                                <IconButton onClick={() => setEditingContactField(fieldName)} aria-label="edit">
-                                    <EditIcon />
-                                </IconButton>
-                            )}
-                        </>
-                    ),
-                }}
-            />
-        );
-    };
-
-    const renderDetailField = (label, value, fieldName, adornmentIcon = null, multiline = false, rows = 1) => {
-        const isEditing = editingDetailField === fieldName;
-        return (
-            <StyledTextField
-                label={label}
-                value={value}
-                onChange={(e) => setDetailInfo({ ...detailInfo, [fieldName]: e.target.value })}
-                fullWidth
-                multiline={multiline}
-                rows={rows}
-                variant={isEditing ? "outlined" : "standard"}
-                InputProps={{
-                    readOnly: !isEditing,
-                    startAdornment: adornmentIcon ? <InputAdornment position="start">{adornmentIcon}</InputAdornment> : null,
-                    endAdornment: (
-                        <>
-                            {isEditing ? (
-                                <>
-                                    <IconButton onClick={() => handleSave(fieldName, value)} aria-label="save">
-                                        <SaveIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleCancel(fieldName)} aria-label="cancel">
-                                        <CancelIcon />
-                                    </IconButton>
-                                </>
-                            ) : (
-                                <IconButton onClick={() => setEditingDetailField(fieldName)} aria-label="edit">
-                                    <EditIcon />
-                                </IconButton>
-                            )}
-                        </>
-                    ),
-                }}
-            />
-        );
-    };
-
-    const renderPlaceField = (label, value, fieldName, adornmentIcon = null) => {
-        const isEditing = editingPlaceField === fieldName;
-
-        return (
-            <StyledTextField
-                label={label}
-                value={value}
-                onChange={(e) => {
-                    if (fieldName === 'currentCity') {
-                        setCurrentCity(e.target.value);
-                    } else if (fieldName === 'hometown') {
-                        setHometown(e.target.value);
-                    }
-                }}
-                fullWidth
-                variant={isEditing ? "outlined" : "standard"}
-                InputProps={{
-                    readOnly: !isEditing,
-                    startAdornment: adornmentIcon ? <InputAdornment position="start">{adornmentIcon}</InputAdornment> : null,
-                    endAdornment: (
-                        <>
-                            {isEditing ? (
-                                <>
-                                    <IconButton onClick={() => handleSave(fieldName, fieldName === 'currentCity' ? currentCity : hometown)} aria-label="save">
-                                        <SaveIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => handleCancel(fieldName)} aria-label="cancel">
-                                        <CancelIcon />
-                                    </IconButton>
-                                </>
-                            ) : (
-                                <IconButton onClick={() => setEditingPlaceField(fieldName)} aria-label="edit">
-                                    <EditIcon />
-                                </IconButton>
-                            )}
-                        </>
-                    ),
-                }}
-            />
-        );
-    };
-
-    const handleAddWorkExperience = () => {
-        setCompany('');
-        setPosition('');
-        setCity('');
-        setStartYear('');
-        setEndYear('');
-        setCurrentlyWorking(false);
-        setEditingExperienceIndex('NEW'); // Use a special key for the "new" form
-    };
-
-    const handleSaveWorkExperience = async (indexToUpdate = null) => {
-        if (!company || !position || !city || !startYear) {
-            setError("Company, Position, City/Town and Starting Year are required.");
-            setAlertType("error");
-            setSnackbarOpen(true);
-            return;
-        }
-
-        if (!currentlyWorking && !endYear) {
-            setError("Ending Year is required if you are not currently working.");
-            setAlertType("error");
-            setSnackbarOpen(true);
-            return;
-        }
-
-        const workDuration = currentlyWorking ? `${startYear} - Present` : `${startYear} - ${endYear}`;
-
-        const newWorkExperience = {
-            company,
-            position,
-            city,
-            duration: workDuration,
-        };
-
-        const updatedWorkExperiences = [...(workInfoState.workExperience || [])];
-
-        if (indexToUpdate === 'NEW') {
-            updatedWorkExperiences.push(newWorkExperience);
-        } else if (indexToUpdate !== null) {
-            updatedWorkExperiences[indexToUpdate] = newWorkExperience;
-        }
-
-        setWorkInfoState({ ...workInfoState, workExperience: updatedWorkExperiences });
-
-
-        try {
-            const user = auth.currentUser;
-            if (user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, {
-                    'workInfo.workExperience': updatedWorkExperiences // Save the entire updated array
-                });
-
-                console.log('Work experience saved successfully!');
-                setSuccessMessage('Work experience saved successfully!');
-                setAlertType('success');
-                setSnackbarOpen(true);
-            }
-        } catch (err) {
-            console.error('Error saving work experience:', err);
-            setError('Error saving work experience:', err);
-            setAlertType('error');
-            setSnackbarOpen(true);
-        }
-
-        // Reset form
-        setCompany('');
-        setPosition('');
-        setCity('');
-        setCurrentlyWorking(false);
-        setStartYear('');
-        setEndYear('');
-        setEditingExperienceIndex(null); // Clear editing index
-    };
-
-
-    const handleDeleteWorkExperience = async (indexToDelete) => {
-        const updatedWorkExperiences = [...(workInfoState.workExperience || [])];
-        updatedWorkExperiences.splice(indexToDelete, 1);
-
-        setWorkInfoState({ ...workInfoState, workExperience: updatedWorkExperiences });
-
-
-        try {
-            const user = auth.currentUser;
-            if (user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, {
-                    'workInfo.workExperience': updatedWorkExperiences // Save the entire updated array
-                });
-
-                console.log('Work experience deleted successfully!');
-                setSuccessMessage('Work experience deleted successfully!');
-                setAlertType('success');
-                setSnackbarOpen(true);
-            }
-        } catch (err) {
-            console.error('Error deleting work experience:', err);
-            setError('Error deleting work experience:', err);
-            setAlertType('error');
-            setSnackbarOpen(true);
-        }
-
-        // Reset form and hide it
-        setCompany('');
-        setPosition('');
-        setCity('');
-        setCurrentlyWorking(false);
-        setStartYear('');
-        setEndYear('');
-        setEditingExperienceIndex(null);  // Reset editing index after deleting
-    };
-
-    const handleEditWorkExperience = (index) => {
-        const experience = workInfoState.workExperience[index];
-
-        const [start, end] = experience.duration.split(' - ');
-        setCompany(experience.company);
-        setPosition(experience.position);
-        setCity(experience.city);
-        setStartYear(start);
-        setEndYear(end === 'Present' ? '' : end);
-        setCurrentlyWorking(end === 'Present');
-        setEditingExperienceIndex(index);
-    };
-
-
-    const handleCancelEdit = () => {
-        setEditingExperienceIndex(null);
-        setCompany('');
-        setPosition('');
-        setCity('');
-        setStartYear('');
-        setEndYear('');
-        setCurrentlyWorking(false);
-    };
-
-    const sortedWorkExperiences = [...workInfoState.workExperience].sort((a, b) => {
-        if (a.currentlyWorking && !b.currentlyWorking) {
-            return -1; // 'a' comes first
-        }
-        if (!a.currentlyWorking && b.currentlyWorking) {
-            return 1; // 'b' comes first
-        }
-
-        const yearA = a.duration.split(' - ')[1];
-        const yearB = b.duration.split(' - ')[1];
-
-        if (yearA === 'Present' && yearB !== 'Present') {
-            return -1; // Put 'Present' on top
-        } else if (yearA !== 'Present' && yearB === 'Present') {
-            return 1; //Put 'Present' on top
-        }
-        //If both are present just put it into last or first. doesnot matter.
-        else if (yearA === 'Present' && yearB === 'Present') {
-            return -1;
-        }
-
-
-        return parseInt(yearB) - parseInt(yearA); // Sort by descending end year
-    });
-
-    // Education Logic
-
-    const handleAddEducation = () => {
-        setInstitution('');
-        setDegree('');
-        setFieldOfStudy('');
-        setGraduationYear('');
-        setEditingEducationIndex('NEW');
-    };
-
-    const handleSaveEducation = async (indexToUpdate = null) => {
-        if (!institution || !degree || !fieldOfStudy || !graduationYear) {
-            setError("Institution, Degree, Field of Study, and Graduation Year are required.");
-            setAlertType("error");
-            setSnackbarOpen(true);
-            return;
-        }
-
-        const newEducation = {
-            institution,
-            degree,
-            fieldOfStudy,
-            graduationYear,
-        };
-
-        const updatedEducationDetails = [...(eduInfoState.educationDetails || [])];
-
-        if (indexToUpdate === 'NEW') {
-            updatedEducationDetails.push(newEducation);
-        } else if (indexToUpdate !== null) {
-            updatedEducationDetails[indexToUpdate] = newEducation;
-        }
-
-        setEduInfoState({ ...eduInfoState, educationDetails: updatedEducationDetails });
-
-        try {
-            const user = auth.currentUser;
-            if (user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, {
-                    'eduInfo.educationDetails': updatedEducationDetails
-                });
-
-                console.log('Education saved successfully!');
-                setSuccessMessage('Education saved successfully!');
-                setAlertType('success');
-                setSnackbarOpen(true);
-            }
-        } catch (err) {
-            console.error('Error saving education:', err);
-            setError('Error saving education:', err);
-            setAlertType('error');
-            setSnackbarOpen(true);
-        }
-
-        // Reset form
-        setInstitution('');
-        setDegree('');
-        setFieldOfStudy('');
-        setGraduationYear('');
-        setEditingEducationIndex(null);
-    };
-
-    const handleDeleteEducation = async (indexToDelete) => {
-        const updatedEducationDetails = [...(eduInfoState.educationDetails || [])];
-        updatedEducationDetails.splice(indexToDelete, 1);
-
-        setEduInfoState({ ...eduInfoState, educationDetails: updatedEducationDetails });
-
-        try {
-            const user = auth.currentUser;
-            if (user) {
-                const userDocRef = doc(db, 'users', user.uid);
-                await updateDoc(userDocRef, {
-                    'eduInfo.educationDetails': updatedEducationDetails
-                });
-
-                console.log('Education deleted successfully!');
-                setSuccessMessage('Education deleted successfully!');
-                setAlertType('success');
-                setSnackbarOpen(true);
-            }
-        } catch (err) {
-            console.error('Error deleting education:', err);
-            setError('Error deleting education:', err);
-            setAlertType('error');
-            setSnackbarOpen(true);
-        }
-
-        // Reset form and hide it
-        setInstitution('');
-        setDegree('');
-        setFieldOfStudy('');
-        setGraduationYear('');
-        setEditingEducationIndex(null);
-    };
-
-    const handleEditEducation = (index) => {
-        const education = eduInfoState.educationDetails[index];
-        setInstitution(education.institution);
-        setDegree(education.degree);
-        setFieldOfStudy(education.fieldOfStudy);
-        setGraduationYear(education.graduationYear);
-        setEditingEducationIndex(index);
-    };
-
-    const handleCancelEditEducation = () => {
-        setEditingEducationIndex(null);
-        setInstitution('');
-        setDegree('');
-        setFieldOfStudy('');
-        setGraduationYear('');
-    };
-
-    const renderEducation = () => {
-        return (
-            <div>
-                {eduInfoState.educationDetails.map((education, index) => (
-                    <React.Fragment key={index}>
-                        {editingEducationIndex !== index ? (
-                            // Display Education
-                            <Box mb={2} p={2} border="1px solid #ccc" borderRadius="4px" display="flex" alignItems="center">
-                                <SchoolIcon sx={{ mr: 1, ml: 0, fontSize: '28px' }} /> {/* School icon */}
-                                <Box ml={1}>
-                                    <Typography variant="subtitle1">{education.institution}</Typography>
-                                    <Typography variant="body2">{education.degree} in {education.fieldOfStudy}</Typography>
-                                    <Typography variant="body2">Graduation Year: {education.graduationYear}</Typography>
-                                </Box>
-                                <Box ml="auto">
-                                    <IconButton aria-label="edit" onClick={() => handleEditEducation(index)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                </Box>
-                            </Box>
-                        ) : (
-                            // Display Edit Form
-                            <Box mt={2} p={2} border="1px solid #ccc" borderRadius="4px" marginBottom={3}>
-                                <StyledTextField
-                                    label="Institution"
-                                    value={institution}
-                                    onChange={(e) => setInstitution(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-                                <StyledTextField
-                                    label="Degree"
-                                    value={degree}
-                                    onChange={(e) => setDegree(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-                                <StyledTextField
-                                    label="Field of Study"
-                                    value={fieldOfStudy}
-                                    onChange={(e) => setFieldOfStudy(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-                                <StyledTextField
-                                    label="Graduation Year"
-                                    value={graduationYear}
-                                    onChange={(e) => setGraduationYear(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-
-                                <Box mt={2} display="flex" justifyContent="space-between">
-                                    <div>
-                                        <SaveButton variant="contained" onClick={() => handleSaveEducation(index)} disabled={!institution || !degree || !fieldOfStudy || !graduationYear}>
-                                            Save
-                                        </SaveButton>
-                                        <CancelButton onClick={handleCancelEditEducation}>Cancel</CancelButton>
-                                    </div>
-                                    <IconButton
-                                        aria-label="delete"
-                                        onClick={() => handleDeleteEducation(index)}
-                                        style={{ marginLeft: 'auto' }}
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </Box>
-                            </Box>
-                        )}
-                    </React.Fragment>
-                ))}
-                {editingEducationIndex === null && (
-                    <Button
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        onClick={handleAddEducation}
-                    >
-                        Add Education
-                    </Button>
-                )}
-                {editingEducationIndex === 'NEW' && (
-                    <Box mt={2} p={2} border="1px solid #ccc" borderRadius="4px" marginBottom={3}>
-                        <StyledTextField
-                            label="Institution"
-                            value={institution}
-                            onChange={(e) => setInstitution(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-                        <StyledTextField
-                            label="Degree"
-                            value={degree}
-                            onChange={(e) => setDegree(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-                        <StyledTextField
-                            label="Field of Study"
-                            value={fieldOfStudy}
-                            onChange={(e) => setFieldOfStudy(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-                        <StyledTextField
-                            label="Graduation Year"
-                            value={graduationYear}
-                            onChange={(e) => setGraduationYear(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-
-                        <Box mt={2} display="flex" justifyContent="space-between">
-                            <div>
-                                <SaveButton variant="contained" onClick={() => handleSaveEducation('NEW')} disabled={!institution || !degree || !fieldOfStudy || !graduationYear}>
-                                    Save
-                                </SaveButton>
-                                <CancelButton onClick={handleCancelEditEducation}>Cancel</CancelButton>
-                            </div>
-                        </Box>
-                    </Box>
-                )}
-            </div>
-        );
-    };
-
-    const renderWorkExperience = () => {
-        return (
-            <div>
-                {sortedWorkExperiences.map((experience, index) => (
-                    <React.Fragment key={index}>
-                        {editingExperienceIndex !== index ? (
-                            // Display Work Experience
-                            <Box mb={2} p={2} border="1px solid #ccc" borderRadius="4px" display="flex" alignItems="center"> {/* Adjusted the display */}
-                                <BusinessIcon sx={{ mr: 1, ml: 0, fontSize: '28px' }} /> {/* Job icon */}
-                                <Box ml={1}> {/* Add some left margin between the icon and the text */}
-                                    <Typography variant="subtitle1">{experience.company}</Typography>
-                                    <Typography variant="body2">{experience.position} - {experience.city}</Typography>
-                                    <Typography variant="body2">Duration: {experience.duration}</Typography>
-                                </Box>
-                                <Box ml="auto"> {/* Push the edit button to the right */}
-                                    <IconButton aria-label="edit" onClick={() => handleEditWorkExperience(index)}>
-                                        <EditIcon />
-                                    </IconButton>
-                                </Box>
-                            </Box>
-                        ) : (
-                            // Display Edit Form
-                            <Box mt={2} p={2} border="1px solid #ccc" borderRadius="4px" marginBottom={3}> {/* Added marginBottom */}
-                                <StyledTextField
-                                    label="Company"
-                                    value={company}
-                                    onChange={(e) => setCompany(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-                                <StyledTextField
-                                    label="Position"
-                                    value={position}
-                                    onChange={(e) => setPosition(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-                                <StyledTextField
-                                    label="City/Town"
-                                    value={city}
-                                    onChange={(e) => setCity(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                />
-
-                                <Typography variant="subtitle1">Time duration</Typography>
-                                <FormControlLabel
-                                    control={<Checkbox checked={currentlyWorking} onChange={(e) => setCurrentlyWorking(e.target.checked)} />}
-                                    label="Currently working"
-                                />
-
-                                <Grid container spacing={2} alignItems="center">
-                                    <Grid item xs={6}>
-                                        <StyledTextField
-                                            label="Starting Year"
-                                            value={startYear}
-                                            onChange={(e) => setStartYear(e.target.value)}
-                                            fullWidth
-                                            margin="normal"
-                                            required /* Make Starting Year mandatory */
-                                        />
-                                    </Grid>
-                                    {!currentlyWorking && (
-                                        <Grid item xs={6}>
-                                            <StyledTextField
-                                                label="Ending Year"
-                                                value={endYear}
-                                                onChange={(e) => setEndYear(e.target.value)}
-                                                fullWidth
-                                                margin="normal"
-                                                required /* Make Ending Year mandatory when not currently working */
-                                            />
-                                        </Grid>
-                                    )}
-                                </Grid>
-
-                                <Box mt={2} display="flex" justifyContent="space-between">
-                                    <div>
-                                        <SaveButton variant="contained" onClick={() => handleSaveWorkExperience(index)} disabled={!company || !position || !city || !startYear || (!currentlyWorking && !endYear)}>
-                                            Save
-                                        </SaveButton>
-                                        <CancelButton onClick={handleCancelEdit}>Cancel</CancelButton>
-                                    </div>
-                                    <IconButton
-                                        aria-label="delete"
-                                        onClick={() => handleDeleteWorkExperience(index)}
-                                        style={{ marginLeft: 'auto' }}  // Push to the right
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                </Box>
-                            </Box>
-                        )}
-                    </React.Fragment>
-                ))}
-                {editingExperienceIndex === null && (  /* Only show the button when *not* editing */
-                    <Button
-                        variant="outlined"
-                        startIcon={<AddIcon />}
-                        onClick={handleAddWorkExperience}
-                    >
-                        Add another workspace
-                    </Button>
-                )}
-                {editingExperienceIndex === 'NEW' && (
-                    <Box mt={2} p={2} border="1px solid #ccc" borderRadius="4px" marginBottom={3}> {/* Added marginBottom */}
-                        <StyledTextField
-                            label="Company"
-                            value={company}
-                            onChange={(e) => setCompany(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-                        <StyledTextField
-                            label="Position"
-                            value={position}
-                            onChange={(e) => setPosition(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-                        <StyledTextField
-                            label="City/Town"
-                            value={city}
-                            onChange={(e) => setCity(e.target.value)}
-                            fullWidth
-                            margin="normal"
-                        />
-
-                        <Typography variant="subtitle1">Time duration</Typography>
-                        <FormControlLabel
-                            control={<Checkbox checked={currentlyWorking} onChange={(e) => setCurrentlyWorking(e.target.checked)} />}
-                            label="Currently working"
-                        />
-
-                        <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={6}>
-                                <StyledTextField
-                                    label="Starting Year"
-                                    value={startYear}
-                                    onChange={(e) => setStartYear(e.target.value)}
-                                    fullWidth
-                                    margin="normal"
-                                    required /* Make Starting Year mandatory */
-                                />
-                            </Grid>
-                            {!currentlyWorking && (
-                                <Grid item xs={6}>
-                                    <StyledTextField
-                                        label="Ending Year"
-                                        value={endYear}
-                                        onChange={(e) => setEndYear(e.target.value)}
-                                        fullWidth
-                                        margin="normal"
-                                        required /* Make Ending Year mandatory when not currently working */
-                                    />
-                                </Grid>
-                            )}
-                        </Grid>
-
-                        <Box mt={2} display="flex" justifyContent="space-between">
-                            <div>
-                                <SaveButton variant="contained" onClick={() => handleSaveWorkExperience('NEW')} disabled={!company || !position || !city || !startYear || (!currentlyWorking && !endYear)}>
-                                    Save
-                                </SaveButton>
-                                <CancelButton onClick={handleCancelEdit}>Cancel</CancelButton>
-                            </div>
-
-                        </Box>
-                    </Box>
-                )}
-            </div>
-        );
-    };
-
-
-    // Render the Work and Education tab
-    const renderWorkAndEducationTab = () => (
+    // --- Memoized Tab Content ---
+    // Using useMemo to prevent re-rendering of tabs unless their specific data changes
+    // Note: Pass handleSaveField directly, EditableField handles its own state.
+
+    const basicInfoTabContent = useMemo(() => (
         <Box mt={3}>
-            <SectionTitle>Work Experience</SectionTitle>
-            {renderWorkExperience()}
-
-            <Box mt={3}><SectionTitle>MSc/ MBA/ PhD (If any)</SectionTitle>
-                {renderEducation()}
-            </Box>
+            <SectionTitle>Basic Information</SectionTitle>
+            {/* Use readOnly prop and disable edit button */}
+             <StyledTextField
+                label="Full Name"
+                value={basicInfo.fullName}
+                fullWidth
+                variant="standard" // Use standard for read-only display
+                InputProps={{ readOnly: true, disableUnderline: true }}
+                onClick={handleEditBasicInfo} // Show alert on click
+                sx={{ cursor: 'not-allowed' }} // Indicate non-editable
+            />
+            {/* Repeat for other basic info fields */}
+             <StyledTextField label="Email" value={basicInfo.email} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Student ID" value={basicInfo.studentId} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Batch" value={basicInfo.batch} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Session" value={basicInfo.session} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <Alert severity="info" sx={{ mt: 2 }}>
+                Basic information cannot be edited directly. Please contact an administrator if changes are needed.
+            </Alert>
         </Box>
-    );
+    ), [basicInfo]);
 
-    const renderPlacesLivedTab = () => (
+    const workEduTabContent = useMemo(() => (
+        <WorkEduTab
+            workInfo={workInfo}
+            eduInfo={eduInfo}
+            onSaveWork={handleSaveWorkExperience}
+            onSaveEdu={handleSaveEducation}
+        />
+    ), [workInfo, eduInfo, handleSaveWorkExperience, handleSaveEducation]);
+
+    const placesLivedTabContent = useMemo(() => (
         <Box mt={3}>
             <SectionTitle>Places Lived</SectionTitle>
-            {renderPlaceField(
-                'Current City',
-                currentCity,
-                'currentCity',
-                <HomeIcon sx={{ mr: 1, color: 'action.active' }} />
-            )}
-            {renderPlaceField(
-                'Hometown',
-                hometown,
-                'hometown',
-                <HomeIcon sx={{ mr: 1, color: 'action.active' }} />
-            )}
+            <EditableField
+                label="Current City"
+                value={placeInfo.currentCity}
+                fieldName="currentCity"
+                onSave={handleSaveField}
+                IconComponent={HomeIcon}
+            />
+            <EditableField
+                label="Hometown"
+                value={placeInfo.hometown}
+                fieldName="hometown"
+                onSave={handleSaveField}
+                IconComponent={HomeIcon}
+            />
         </Box>
-    );
+    ), [placeInfo, handleSaveField]);
 
-    const renderContactTab = () => (
-        <Box mt={3}>
+    const contactTabContent = useMemo(() => (
+         <Box mt={3}>
             <SectionTitle>Contact Information</SectionTitle>
-            {renderContactField(
-                'Phone Number',
-                contactInfo.phoneNumber,
-                'phoneNumber',
-                <ContactPhoneIcon sx={{ mr: 1, color: 'action.active' }} />
-            )}
-            {renderContactField(
-                'Facebook',
-                contactInfo.facebook,
-                'facebook',
-                <LinkIcon sx={{ mr: 1, color: 'action.active' }}/>,
-                'https://facebook.com/' // Added prefix
-            )}
-            {renderContactField(
-                'LinkedIn',
-                contactInfo.linkedin,
-                'linkedin',
-                <LinkIcon sx={{ mr: 1, color: 'action.active' }}/>,
-                'https://linkedin.com/in/' // Added prefix
-            )}
-            {renderContactField(
-                'Website',
-                contactInfo.website,
-                'website',
-                <LinkIcon sx={{ mr: 1, color: 'action.active' }}/>,
-                'https://' // Added prefix
-            )}
+            <EditableField label="Phone Number" value={contactInfo.phoneNumber} fieldName="phoneNumber" onSave={handleSaveField} IconComponent={ContactPhoneIcon} />
+            <EditableField label="Facebook Profile" value={contactInfo.facebook} fieldName="facebook" onSave={handleSaveField} IconComponent={LinkIcon} prefix="facebook.com/" />
+            <EditableField label="LinkedIn Profile" value={contactInfo.linkedin} fieldName="linkedin" onSave={handleSaveField} IconComponent={LinkIcon} prefix="linkedin.com/in/" />
+            <EditableField label="Website" value={contactInfo.website} fieldName="website" onSave={handleSaveField} IconComponent={LinkIcon} prefix="https://" />
         </Box>
-    );
+    ), [contactInfo, handleSaveField]);
 
-    const renderDetailsTab = () => (
+     const detailsTabContent = useMemo(() => (
         <Box mt={3}>
-            <SectionTitle>Details</SectionTitle>
-            {renderDetailField(
-                'Birthdate',
-                detailInfo.birthdate,
-                'birthdate',
-                <InfoIcon sx={{ mr: 1, color: 'action.active' }}/>
-            )}
-            {renderDetailField(
-                'Blood group',
-                detailInfo.bloodGroup,
-                'bloodGroup',
-                <InfoIcon sx={{ mr: 1, color: 'action.active' }}/>
-            )}
-            {renderDetailField(
-                'Field of Expertise',
-                detailInfo.fieldOfExpertise,
-                'fieldOfExpertise',
-                <InfoIcon sx={{ mr: 1, color: 'action.active' }}/>
-            )}
-            {renderDetailField(
-                'Bio',
-                detailInfo.bio,
-                'bio',
-                <DescriptionIcon sx={{ mr: 1, color: 'action.active' }} />,
-                true, // multiline
-                4 // Rows
-            )}
-            {renderDetailField(
-                'About you',
-                detailInfo.aboutYou,
-                'aboutYou',
-                <DescriptionIcon sx={{ mr: 1, color: 'action.active' }} />,
-                true, // multiline
-                4 // Rows
-            )}
+            <SectionTitle>Details About You</SectionTitle>
+            <EditableField label="Birthdate" value={detailInfo.birthdate} fieldName="birthdate" onSave={handleSaveField} IconComponent={InfoIcon} />
+            <EditableField label="Blood Group" value={detailInfo.bloodGroup} fieldName="bloodGroup" onSave={handleSaveField} IconComponent={InfoIcon} />
+            <EditableField label="Field of Expertise" value={detailInfo.fieldOfExpertise} fieldName="fieldOfExpertise" onSave={handleSaveField} IconComponent={InfoIcon} />
+            <EditableField label="Bio" value={detailInfo.bio} fieldName="bio" onSave={handleSaveField} IconComponent={DescriptionIcon} multiline rows={4} />
+            <EditableField label="About You" value={detailInfo.aboutYou} fieldName="aboutYou" onSave={handleSaveField} IconComponent={DescriptionIcon} multiline rows={4} />
         </Box>
-    );
+    ), [detailInfo, handleSaveField]);
 
 
     if (loading) {
-        return <Loader />;
+        // Improved Loading State
+         return (
+             <StyledContainer maxWidth="md">
+                 <ProfileHeader>
+                     <Skeleton variant="circular" width={120} height={120} sx={{ margin: '0 auto 16px' }} />
+                     <Skeleton variant="text" width="40%" height={40} sx={{ margin: '0 auto 16px' }} />
+                 </ProfileHeader>
+                 <ProfileCard>
+                      <Skeleton variant="rectangular" height={48} sx={{ mb: 3 }}/>
+                      <Skeleton variant="text" height={30} sx={{ mb: 2 }}/>
+                      <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }}/>
+                      <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }}/>
+                      <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }}/>
+                 </ProfileCard>
+             </StyledContainer>
+         );
     }
 
     return (
         <>
-            <Navbar />
             <StyledContainer maxWidth="md">
-                <Typography variant="h4" align="center" gutterBottom>
-                    Your Profile
-                </Typography>
+                 <ProfileHeader>
+                     <StyledAvatar profilebg={basicInfo.profilebg}>
+                         {basicInfo.fullName ? basicInfo.fullName.charAt(0).toUpperCase() : '?'}
+                     </StyledAvatar>
+                    <Typography variant="h4" component="h1" gutterBottom>
+                        {basicInfo.fullName || 'Your Profile'}
+                    </Typography>
+                     <Typography variant="body1" color="textSecondary">
+                         {basicInfo.email}
+                     </Typography>
+                 </ProfileHeader>
 
                 <ProfileCard>
                     <StyledTabs value={activeTab} onChange={handleTabChange} aria-label="profile tabs" centered>
                         <StyledTab label="Basic Info" />
-                        <StyledTab label="Work & Edu" />
+                        <StyledTab label="Work & Education" />
                         <StyledTab label="Places Lived" />
                         <StyledTab label="Contact" />
                         <StyledTab label="Details" />
                     </StyledTabs>
 
-                    {activeTab === 0 && (
-                        <Box mt={3}>
-                            <SectionTitle>Basic Information</SectionTitle>
-                            {renderTextField(
-                                'Full Name',
-                                fullName,
-                                () => {
-                                }, // Removed direct fullName update here
-                                false,
-                                () => {
-                                },
-                                'fullName',
-                                '',
-                                null,
-                                false,
-                                1,
-                                true
-                            )}
-                            {renderTextField(
-                                'Email',
-                                email,
-                                () => {
-                                }, // Removed direct Email update here
-                                false,
-                                () => {
-                                },
-                                'email',
-                                '',
-                                null,
-                                false,
-                                1,
-                                true
-                            )}
-                            {renderTextField(
-                                'Student ID',
-                                studentId,
-                                () => {
-                                }, // Removed direct Email update here
-                                false,
-                                () => {
-                                },
-                                'StudentId',
-                                '',
-                                null,
-                                false,
-                                1,
-                                true
-                            )}
-                            {renderTextField(
-                                'Batch',
-                                batch,
-                                () => {
-                                }, // Removed direct batch update here
-                                false,
-                                () => {
-                                },
-                                'Batch',
-                                '',
-                                null,
-                                false,
-                                1,
-                                true
-                            )}
-                            {renderTextField(
-                                'Session',
-                                session,
-                                () => {
-                                }, // Removed direct session update here
-                                false,
-                                () => {
-                                },
-                                'Session',
-                                '',
-                                null,
-                                false,
-                                1,
-                                true
-                            )}
-
-
-                        </Box>
-                    )}
-
-                    {activeTab === 1 && renderWorkAndEducationTab()}
-
-                    {/* Places Lived Tab */}
-                    {activeTab === 2 && renderPlacesLivedTab()}
-
-                    {activeTab === 3 && renderContactTab()}
-
-                    {activeTab === 4 && renderDetailsTab()}
-
+                    {/* Render active tab content */}
+                    {activeTab === 0 && basicInfoTabContent}
+                    {activeTab === 1 && workEduTabContent}
+                    {activeTab === 2 && placesLivedTabContent}
+                    {activeTab === 3 && contactTabContent}
+                    {activeTab === 4 && detailsTabContent}
 
                 </ProfileCard>
+
+                {/* --- Snackbars --- */}
                 <Snackbar
-                    open={snackbarOpen}
+                    open={snackbar.open}
                     autoHideDuration={6000}
                     onClose={handleCloseSnackbar}
                     TransitionComponent={Slide}
@@ -1403,20 +613,20 @@ function Profile() {
                 >
                     <Alert
                         onClose={handleCloseSnackbar}
-                        severity={alertType}
-                        sx={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
+                        severity={snackbar.severity}
+                        variant="filled" // Use filled variant for better visibility
+                        sx={{ width: '100%', display: 'flex', alignItems: 'center' }}
+                        iconMapping={{
+                            success: <CheckCircleIcon fontSize="inherit" />,
+                            error: <ErrorIcon fontSize="inherit" />,
+                            // Add mappings for info/warning if needed
                         }}
-                        icon={alertType === 'success' ? <CheckCircleIcon fontSize="inherit" /> :
-                            <ErrorIcon fontSize="inherit" />} // Conditional Icon
                     >
-                        {successMessage || error}
-
+                        {snackbar.message}
                     </Alert>
                 </Snackbar>
 
+                {/* Alert for trying to edit basic info (optional, as inline alert is added) */}
                 <Snackbar
                     open={basicInfoAlertOpen}
                     autoHideDuration={6000}
@@ -1427,14 +637,10 @@ function Profile() {
                     <Alert
                         onClose={handleCloseBasicInfoAlert}
                         severity="warning"
-                        sx={{
-                            width: '100%',
-                            display: 'flex',
-                            alignItems: 'center',
-                        }}
-
+                        variant="filled"
+                        sx={{ width: '100%' }}
                     >
-                        These fields cannot be edited directly. Please contact the administrator for assistance.
+                        These fields cannot be edited directly. Please contact the administrator.
                     </Alert>
                 </Snackbar>
 
@@ -1442,5 +648,416 @@ function Profile() {
         </>
     );
 }
+
+// --- Work & Education Tab Component ---
+
+const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => {
+    // State specific to this tab (editing indices, form values)
+    const [editingExperienceIndex, setEditingExperienceIndex] = useState(null); // null | 'NEW' | number
+    const [workForm, setWorkForm] = useState({ company: '', position: '', city: '', startYear: '', endYear: '', currentlyWorking: false });
+    const [isSavingWork, setIsSavingWork] = useState(false);
+
+    const [editingEducationIndex, setEditingEducationIndex] = useState(null); // null | 'NEW' | number
+    const [eduForm, setEduForm] = useState({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' });
+    const [isSavingEdu, setIsSavingEdu] = useState(false);
+
+
+    // --- Work Experience Handlers ---
+    const handleAddWorkExperience = () => {
+        setWorkForm({ company: '', position: '', city: '', startYear: '', endYear: '', currentlyWorking: false });
+        setEditingExperienceIndex('NEW');
+    };
+
+    const handleEditWorkExperience = (index) => {
+        const exp = workInfo.workExperience[index];
+        const [start = '', end = ''] = exp.duration?.split(' - ') || [];
+        const currentlyWorking = end === 'Present';
+        setWorkForm({
+            company: exp.company || '',
+            position: exp.position || '',
+            city: exp.city || '',
+            startYear: start,
+            endYear: currentlyWorking ? '' : end,
+            currentlyWorking: currentlyWorking,
+        });
+        setEditingExperienceIndex(index);
+    };
+
+    const handleCancelWorkEdit = () => {
+        setEditingExperienceIndex(null);
+        setWorkForm({ company: '', position: '', city: '', startYear: '', endYear: '', currentlyWorking: false }); // Reset form
+    };
+
+    const handleDeleteWorkExperience = async (indexToDelete) => {
+        setIsSavingWork(true);
+        const updatedWorkExperiences = workInfo.workExperience.filter((_, index) => index !== indexToDelete);
+        const success = await onSaveWork(updatedWorkExperiences);
+         if (success) {
+             setEditingExperienceIndex(null); // Close form if deletion was successful
+         }
+        setIsSavingWork(false);
+    };
+
+     const handleSaveCurrentWorkExperience = async () => {
+        // Basic Validation
+        if (!workForm.company || !workForm.position || !workForm.city || !workForm.startYear || (!workForm.currentlyWorking && !workForm.endYear)) {
+             // Consider showing a form-specific error message instead of snackbar
+             console.error("Work form validation failed");
+             alert("Please fill in all required work experience fields."); // Simple alert for now
+             return;
+         }
+
+        setIsSavingWork(true);
+        const workDuration = workForm.currentlyWorking ? `${workForm.startYear} - Present` : `${workForm.startYear} - ${workForm.endYear}`;
+        const newExperience = {
+            company: workForm.company,
+            position: workForm.position,
+            city: workForm.city,
+            duration: workDuration,
+        };
+
+        let updatedWorkExperiences;
+        if (editingExperienceIndex === 'NEW') {
+            updatedWorkExperiences = [...workInfo.workExperience, newExperience];
+        } else if (typeof editingExperienceIndex === 'number') {
+            updatedWorkExperiences = [...workInfo.workExperience];
+            updatedWorkExperiences[editingExperienceIndex] = newExperience;
+        } else {
+             setIsSavingWork(false);
+             return; // Should not happen
+        }
+
+         // Sort experiences after update (most recent first)
+         updatedWorkExperiences.sort((a, b) => {
+            const [, endAStr] = a.duration.split(' - ');
+            const [, endBStr] = b.duration.split(' - ');
+            const endAYear = endAStr === 'Present' ? Infinity : parseInt(endAStr || '0', 10);
+            const endBYear = endBStr === 'Present' ? Infinity : parseInt(endBStr || '0', 10);
+            return endBYear - endAYear; // Descending order by end year
+        });
+
+
+        const success = await onSaveWork(updatedWorkExperiences);
+         if (success) {
+             handleCancelWorkEdit(); // Close form on success
+         }
+        setIsSavingWork(false);
+    };
+
+     // --- Education Handlers ---
+     const handleAddEducation = () => {
+        setEduForm({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' });
+        setEditingEducationIndex('NEW');
+    };
+
+     const handleEditEducation = (index) => {
+        const edu = eduInfo.educationDetails[index];
+        setEduForm({
+            institution: edu.institution || '',
+            degree: edu.degree || '',
+            fieldOfStudy: edu.fieldOfStudy || '',
+            graduationYear: edu.graduationYear || '',
+        });
+        setEditingEducationIndex(index);
+    };
+
+     const handleCancelEduEdit = () => {
+        setEditingEducationIndex(null);
+        setEduForm({ institution: '', degree: '', fieldOfStudy: '', graduationYear: '' }); // Reset form
+    };
+
+     const handleDeleteEducation = async (indexToDelete) => {
+         setIsSavingEdu(true);
+        const updatedEducationDetails = eduInfo.educationDetails.filter((_, index) => index !== indexToDelete);
+        const success = await onSaveEdu(updatedEducationDetails);
+         if (success) {
+             setEditingEducationIndex(null);
+         }
+         setIsSavingEdu(false);
+    };
+
+     const handleSaveCurrentEducation = async () => {
+         // Basic Validation
+         if (!eduForm.institution || !eduForm.degree || !eduForm.fieldOfStudy || !eduForm.graduationYear) {
+             console.error("Education form validation failed");
+              alert("Please fill in all required education fields."); // Simple alert
+             return;
+         }
+
+        setIsSavingEdu(true);
+        const newEducation = { ...eduForm };
+
+        let updatedEducationDetails;
+        if (editingEducationIndex === 'NEW') {
+            updatedEducationDetails = [...eduInfo.educationDetails, newEducation];
+        } else if (typeof editingEducationIndex === 'number') {
+            updatedEducationDetails = [...eduInfo.educationDetails];
+            updatedEducationDetails[editingEducationIndex] = newEducation;
+        } else {
+             setIsSavingEdu(false);
+            return; // Should not happen
+        }
+
+         // Sort education by graduation year (most recent first)
+         updatedEducationDetails.sort((a, b) => parseInt(b.graduationYear || '0', 10) - parseInt(a.graduationYear || '0', 10));
+
+
+        const success = await onSaveEdu(updatedEducationDetails);
+         if (success) {
+             handleCancelEduEdit(); // Close form on success
+         }
+        setIsSavingEdu(false);
+    };
+
+
+    // Memoize sorted lists
+     const sortedWorkExperiences = useMemo(() =>
+        [...(workInfo.workExperience || [])].sort((a, b) => {
+             const [, endAStr] = a.duration?.split(' - ') || [];
+             const [, endBStr] = b.duration?.split(' - ') || [];
+             const endAYear = endAStr === 'Present' ? Infinity : parseInt(endAStr || '0', 10);
+             const endBYear = endBStr === 'Present' ? Infinity : parseInt(endBStr || '0', 10);
+            return endBYear - endAYear; // Descending
+        }), [workInfo.workExperience]);
+
+     const sortedEducationDetails = useMemo(() =>
+         [...(eduInfo.educationDetails || [])].sort((a, b) =>
+            parseInt(b.graduationYear || '0', 10) - parseInt(a.graduationYear || '0', 10) // Descending
+         ), [eduInfo.educationDetails]);
+
+
+    // --- Render Logic ---
+    return (
+        <Box mt={3}>
+            {/* --- Work Experience Section --- */}
+            <SectionTitle>Work Experience</SectionTitle>
+            {sortedWorkExperiences.map((experience, index) => (
+                 <ItemBox key={`work-${index}`}>
+                     <BusinessIcon sx={{ mr: 1, color: 'action.active' }} />
+                     <ItemContent>
+                         <Typography variant="subtitle1" fontWeight="bold">{experience.company}</Typography>
+                         <Typography variant="body2" color="textSecondary">{experience.position} - {experience.city}</Typography>
+                         <Typography variant="body2" color="textSecondary">Duration: {experience.duration}</Typography>
+                     </ItemContent>
+                     {editingExperienceIndex !== index && ( // Show edit only if not currently editing this item
+                         <ItemActions>
+                             <Tooltip title="Edit">
+                                 <IconButton size="small" onClick={() => handleEditWorkExperience(index)} disabled={editingExperienceIndex !== null || isSavingWork}>
+                                     <EditIcon fontSize="small" />
+                                 </IconButton>
+                             </Tooltip>
+                         </ItemActions>
+                     )}
+                 </ItemBox>
+            ))}
+
+            {/* Add/Edit Work Form */}
+             {(editingExperienceIndex !== null) && (
+                 <WorkExperienceForm
+                    formData={workForm}
+                    setFormData={setWorkForm}
+                    onSave={handleSaveCurrentWorkExperience}
+                    onCancel={handleCancelWorkEdit}
+                    onDelete={editingExperienceIndex !== 'NEW' ? () => handleDeleteWorkExperience(editingExperienceIndex) : undefined}
+                    isSaving={isSavingWork}
+                    isNew={editingExperienceIndex === 'NEW'}
+                 />
+             )}
+
+             {/* Add Button - Show only if no form is open */}
+             {editingExperienceIndex === null && (
+                 <Button
+                     variant="outlined"
+                     startIcon={<AddIcon />}
+                     onClick={handleAddWorkExperience}
+                     disabled={isSavingWork} // Disable while any save is in progress
+                     sx={{ mt: 1 }}
+                 >
+                     Add Work Experience
+                 </Button>
+             )}
+
+
+            {/* --- Education Section --- */}
+            <Box mt={5}> {/* Add more space before Education */}
+                <SectionTitle>Education (MSc/MBA/PhD etc.)</SectionTitle>
+                 {sortedEducationDetails.map((education, index) => (
+                    <ItemBox key={`edu-${index}`}>
+                         <SchoolIcon sx={{ mr: 1, color: 'action.active' }} />
+                         <ItemContent>
+                             <Typography variant="subtitle1" fontWeight="bold">{education.institution}</Typography>
+                             <Typography variant="body2" color="textSecondary">{education.degree} in {education.fieldOfStudy}</Typography>
+                             <Typography variant="body2" color="textSecondary">Graduated: {education.graduationYear}</Typography>
+                         </ItemContent>
+                         {editingEducationIndex !== index && (
+                            <ItemActions>
+                                 <Tooltip title="Edit">
+                                    <IconButton size="small" onClick={() => handleEditEducation(index)} disabled={editingEducationIndex !== null || isSavingEdu}>
+                                        <EditIcon fontSize="small"/>
+                                    </IconButton>
+                                </Tooltip>
+                            </ItemActions>
+                         )}
+                     </ItemBox>
+                 ))}
+
+                 {/* Add/Edit Education Form */}
+                 {(editingEducationIndex !== null) && (
+                     <EducationForm
+                        formData={eduForm}
+                        setFormData={setEduForm}
+                        onSave={handleSaveCurrentEducation}
+                        onCancel={handleCancelEduEdit}
+                        onDelete={editingEducationIndex !== 'NEW' ? () => handleDeleteEducation(editingEducationIndex) : undefined}
+                        isSaving={isSavingEdu}
+                        isNew={editingEducationIndex === 'NEW'}
+                     />
+                 )}
+
+                 {/* Add Button */}
+                 {editingEducationIndex === null && (
+                     <Button
+                         variant="outlined"
+                         startIcon={<AddIcon />}
+                         onClick={handleAddEducation}
+                         disabled={isSavingEdu}
+                         sx={{ mt: 1 }}
+                     >
+                         Add Education
+                     </Button>
+                 )}
+            </Box>
+        </Box>
+    );
+});
+
+
+// --- Work Experience Form Component ---
+const WorkExperienceForm = ({ formData, setFormData, onSave, onCancel, onDelete, isSaving, isNew }) => {
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+     const canSave = formData.company && formData.position && formData.city && formData.startYear && (formData.currentlyWorking || formData.endYear);
+
+    return (
+        <FormBox>
+             <Typography variant="h6" gutterBottom>{isNew ? 'Add New Work Experience' : 'Edit Work Experience'}</Typography>
+            <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Company *" name="company" value={formData.company} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Position *" name="position" value={formData.position} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} />
+                </Grid>
+                <Grid item xs={12}>
+                     <TextField label="City/Town *" name="city" value={formData.city} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} />
+                 </Grid>
+
+                <Grid item xs={12}>
+                     <Typography variant="subtitle2" gutterBottom sx={{ mt: 1 }}>Time Period *</Typography>
+                     <FormControlLabel
+                         control={<Checkbox name="currentlyWorking" checked={formData.currentlyWorking} onChange={handleChange} disabled={isSaving} />}
+                         label="I currently work here"
+                     />
+                 </Grid>
+                 <Grid item xs={6}>
+                    <TextField
+                         label="Start Year *"
+                         name="startYear"
+                         value={formData.startYear}
+                         onChange={handleChange}
+                         fullWidth
+                         margin="dense" // Use dense margin in grids
+                         disabled={isSaving}
+                         type="number" // Consider using type="number" for years
+                     />
+                </Grid>
+                 {!formData.currentlyWorking && (
+                     <Grid item xs={6}>
+                        <TextField
+                             label="End Year *"
+                             name="endYear"
+                             value={formData.endYear}
+                             onChange={handleChange}
+                             fullWidth
+                             margin="dense"
+                             disabled={isSaving}
+                              type="number"
+                         />
+                    </Grid>
+                 )}
+            </Grid>
+            <Box mt={3} display="flex" justifyContent="space-between" alignItems="center">
+                <ButtonContainer>
+                    <SaveButton variant="contained" onClick={onSave} disabled={isSaving || !canSave}>
+                        {isSaving ? <CircularProgress size={24} color="inherit" /> : 'Save'}
+                    </SaveButton>
+                    <CancelButton onClick={onCancel} disabled={isSaving}>Cancel</CancelButton>
+                </ButtonContainer>
+                {!isNew && onDelete && (
+                    <Tooltip title="Delete this experience">
+                         <IconButton aria-label="delete" onClick={onDelete} disabled={isSaving} color="error">
+                             <DeleteIcon />
+                         </IconButton>
+                     </Tooltip>
+                 )}
+            </Box>
+        </FormBox>
+    );
+};
+
+
+// --- Education Form Component ---
+const EducationForm = ({ formData, setFormData, onSave, onCancel, onDelete, isSaving, isNew }) => {
+
+     const handleChange = (e) => {
+         const { name, value } = e.target;
+         setFormData(prev => ({ ...prev, [name]: value }));
+     };
+
+      const canSave = formData.institution && formData.degree && formData.fieldOfStudy && formData.graduationYear;
+
+    return (
+        <FormBox>
+             <Typography variant="h6" gutterBottom>{isNew ? 'Add New Education' : 'Edit Education'}</Typography>
+             <Grid container spacing={2}>
+                <Grid item xs={12}>
+                    <TextField label="Institution *" name="institution" value={formData.institution} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} />
+                 </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Degree *" name="degree" value={formData.degree} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} />
+                 </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Field of Study *" name="fieldOfStudy" value={formData.fieldOfStudy} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} />
+                 </Grid>
+                <Grid item xs={12} sm={6}>
+                    <TextField label="Graduation Year *" name="graduationYear" value={formData.graduationYear} onChange={handleChange} fullWidth margin="normal" disabled={isSaving} type="number"/>
+                 </Grid>
+             </Grid>
+            <Box mt={3} display="flex" justifyContent="space-between" alignItems="center">
+                 <ButtonContainer>
+                     <SaveButton variant="contained" onClick={onSave} disabled={isSaving || !canSave}>
+                         {isSaving ? <CircularProgress size={24} color="inherit" /> : 'Save'}
+                     </SaveButton>
+                     <CancelButton onClick={onCancel} disabled={isSaving}>Cancel</CancelButton>
+                 </ButtonContainer>
+                 {!isNew && onDelete && (
+                     <Tooltip title="Delete this education entry">
+                         <IconButton aria-label="delete" onClick={onDelete} disabled={isSaving} color="error">
+                             <DeleteIcon />
+                         </IconButton>
+                     </Tooltip>
+                 )}
+            </Box>
+        </FormBox>
+    );
+};
+
 
 export default Profile;
