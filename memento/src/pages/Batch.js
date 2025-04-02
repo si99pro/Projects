@@ -1,21 +1,21 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useLocation, Link } from 'react-router-dom'; // Added Link
-import { db } from '../firebase'; // Assuming firebase is initialized
+import { useLocation, useNavigate } from 'react-router-dom'; // useNavigate added, Link removed
+import { db } from '../firebase';
 import {
     collection,
     query,
-    where, // Keep if filtering by batch year is still needed
-    orderBy, // Keep for potential default ordering if needed before client sort
-    getDocs,
+    where,
+    // orderBy, // Only needed if default server-order is critical before client sort
     getCountFromServer,
+    getDocs,
 } from "firebase/firestore";
 
 // Material UI Components
 import {
     Container, Typography, Table, TableBody, TableCell, TableContainer,
     TableHead, TableRow, Paper, Avatar, Box, IconButton,
-    CircularProgress, Alert, Tooltip
+    CircularProgress, Alert, Tooltip, useTheme, useMediaQuery // Import breakpoint hooks if needed elsewhere, but sx prop is simpler here
 } from '@mui/material';
 
 // Icons
@@ -24,9 +24,9 @@ import PhoneIcon from '@mui/icons-material/Phone';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
-import LaunchIcon from '@mui/icons-material/Launch'; // Added for external link
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'; // Added for sorting
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward'; // Added for sorting
+// import LaunchIcon from '@mui/icons-material/Launch'; // Removed
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 
 // Emotion Styled Components
@@ -37,7 +37,7 @@ import styled from '@emotion/styled';
 const StyledContainer = styled(Container)`
     margin-top: 20px;
     padding: 20px;
-    min-height: calc(100vh - 120px);
+    min-height: calc(100vh - 120px); // Adjust based on your header/footer height
     display: flex;
     flex-direction: column;
 `;
@@ -50,81 +50,107 @@ const StyledTitle = styled(Typography)`
     text-align: center;
     margin-bottom: 25px;
     color: #333;
+    font-weight: 500; // Slightly bolder title
 `;
 
 const StyledTableContainer = styled(TableContainer)`
     border: 1px solid #e0e0e0;
-    border-radius: 4px;
+    border-radius: 8px; // Slightly more rounded
     overflow-x: auto;
     margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05); // Subtle shadow
 `;
 
 const StyledTable = styled(Table)`
-    min-width: 650px;
+    min-width: 650px; // Keep min-width for larger screens
 `;
 
 const StyledAvatar = styled(Avatar)`
-    width: 32px;
-    height: 32px;
-    font-size: 0.8rem;
+    width: 36px; // Slightly larger avatar
+    height: 36px;
+    font-size: 0.9rem;
+    margin-right: 8px; // Add space between avatar and ID
 `;
 
 const TableHeaderCell = styled(TableCell)`
     font-weight: 600;
     background-color: #f8f9fa;
     color: #343a40;
-    cursor: ${props => props.issortable === 'true' ? 'pointer' : 'default'}; // Added cursor for sortable
+    cursor: ${props => props.issortable === 'true' ? 'pointer' : 'default'};
     position: relative;
-    padding: 10px 16px;
+    padding: 12px 16px; // Slightly increased padding
     white-space: nowrap;
-    border-bottom: 1px solid #dee2e6;
+    border-bottom: 2px solid #dee2e6; // Stronger bottom border
     user-select: none;
 
      &:hover {
-        background-color: ${props => props.issortable === 'true' ? '#e9ecef' : '#f8f9fa'}; // Hover effect for sortable
+        background-color: ${props => props.issortable === 'true' ? '#e9ecef' : '#f8f9fa'};
+    }
+
+    /* Added Flexbox for icon positioning */
+    .MuiBox-root {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%; /* Ensure Box takes full width */
     }
 `;
 
-// Added SortIconContainer back
 const SortIconContainer = styled.span`
-    display: inline-flex;
-    vertical-align: middle;
-    margin-left: 4px;
-    opacity: 0.6;
+    display: inline-flex; /* Changed to inline-flex */
+    vertical-align: middle; /* Keep vertical alignment */
+    /* margin-left: 5px; // Removed margin, using flexbox space-between now */
+    opacity: 0.4; /* Slightly more faded for inactive */
     transition: opacity 0.2s ease-in-out;
+    line-height: 0; /* Prevent container from affecting line height */
 
     &.active {
       opacity: 1;
+      color: #007bff; // Highlight active sort icon
     }
 `;
 
 
 const DataTableCell = styled(TableCell)`
-    padding: 8px 16px;
+    padding: 10px 16px; // Adjusted padding
     vertical-align: middle;
     border-bottom: 1px solid #e9ecef;
-    font-size: 0.875rem;
+    font-size: 0.9rem; // Slightly larger data font
+    line-height: 1.4; // Improved line height for readability
 `;
+
+// Styled TableRow for clickability and hover effect
+const ClickableTableRow = styled(TableRow)`
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+    &:hover {
+        background-color: #f5f5f5; // Standard hover color
+    }
+    &:last-child td, &:last-child th {
+        border: 0; // Remove border for last row
+    }
+`;
+
 
 const ContactIconBox = styled(Box)`
     display: flex;
-    gap: 4px; // Reduced gap between icons
+    gap: 6px; // Slightly increased gap
     align-items: center;
     flex-wrap: nowrap;
 `;
 
 const ContactIcon = styled(IconButton)`
-    padding: 4px;
+    padding: 5px; // Adjusted padding
     color: #6c757d;
 
     &:hover {
         color: #0d6efd;
-        background-color: transparent;
+        background-color: rgba(13, 110, 253, 0.05); // Subtle background on hover
     }
 
     svg {
-        width: 18px;
-        height: 18px;
+        width: 20px; // Slightly larger icons
+        height: 20px;
     }
 `;
 
@@ -132,27 +158,26 @@ const LoadingOverlay = styled(Box)`
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 200px;
+    min-height: 300px; // Increased height for loading
     width: 100%;
 `;
 
 const CenteredMessage = styled(Typography)`
     text-align: center;
-    margin-top: 20px;
+    padding: 40px 20px; // More padding for empty/error message
     color: #6c757d;
 `;
 
 // ----------------------------------------------------------------------
 // Constants
 // ----------------------------------------------------------------------
-// Re-add Sortable Fields keys used in component logic
 const SORTABLE_FIELD_KEYS = {
     ID: 'ID',
     NAME: 'Name',
 };
 
 // ----------------------------------------------------------------------
-// Custom Hook (Fetching All Users - Unchanged from previous step)
+// Custom Hook (Fetching All Users - Unchanged)
 // ----------------------------------------------------------------------
 const useAllUsers = (year) => {
     const [users, setUsers] = useState([]);
@@ -161,6 +186,7 @@ const useAllUsers = (year) => {
     const [totalCount, setTotalCount] = useState(0);
 
     const fetchAllUsers = useCallback(async () => {
+        // Reset states
         setError(null);
         setLoading(true);
         setUsers([]);
@@ -168,32 +194,28 @@ const useAllUsers = (year) => {
 
         try {
             const usersRef = collection(db, "users");
-            let q = query(usersRef);
+            let dataQuery = query(usersRef);
+            let countQuery = query(usersRef);
 
             if (year) {
-                q = query(q, where("basicInfo.batch", "==", year));
+                const yearConstraint = where("basicInfo.batch", "==", year);
+                dataQuery = query(dataQuery, yearConstraint);
+                countQuery = query(countQuery, yearConstraint);
             }
 
-            // Optional default server-side order (affects initial load before client sort)
-            // Ensure index exists if using this! e.g., composite (batch, studentId)
-            // q = query(q, orderBy("basicInfo.studentId", "asc"));
+            const countPromise = getCountFromServer(countQuery).then(snapshot => {
+                 setTotalCount(snapshot.data().count);
+            }).catch(countError => {
+                 console.warn("Could not get user count:", countError);
+                 setTotalCount(0);
+            });
 
-            // Get Count
-             let countQuery = query(usersRef);
-             if (year) {
-                 countQuery = query(countQuery, where("basicInfo.batch", "==", year));
-             }
-             try {
-                const snapshot = await getCountFromServer(countQuery);
-                setTotalCount(snapshot.data().count);
-             } catch (countError) {
-                console.warn("Could not get user count:", countError);
-             }
+            const dataPromise = getDocs(dataQuery).then(documentSnapshots => {
+                 const fetchedUsers = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                 setUsers(fetchedUsers);
+            });
 
-            // Get All Docs
-            const documentSnapshots = await getDocs(q);
-            const fetchedUsers = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setUsers(fetchedUsers);
+            await Promise.all([dataPromise, countPromise]);
 
         } catch (err) {
             console.error("Error fetching users:", err);
@@ -214,57 +236,50 @@ const useAllUsers = (year) => {
 
 
 // ----------------------------------------------------------------------
-// Helper Components (Memoized)
+// Helper Components (Memoized & Updated)
 // ----------------------------------------------------------------------
 
-// Updated Contact Icons Component
+// Updated Contact Icons Component (Profile Icon Removed)
 const ContactIcons = React.memo(({ user }) => {
-    const { id, basicInfo = {}, contactInfo = {} } = user; // Destructure id
+    const { basicInfo = {}, contactInfo = {} } = user;
+
+    const formatUrl = (url, prefix = 'https://') => {
+        if (!url) return '';
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+        return `${prefix}${url}`;
+    };
+
+    const linkedInUrl = useMemo(() => formatUrl(contactInfo.linkedin, 'https://www.linkedin.com/in/'), [contactInfo.linkedin]);
+    const facebookUrl = useMemo(() => formatUrl(contactInfo.facebook, 'https://www.facebook.com/'), [contactInfo.facebook]);
 
     return (
-        <ContactIconBox>
-             {/* Profile Link Icon */}
-             {id && ( // Only show if user.id is available
-                 <Tooltip title="View Profile" arrow TransitionProps={{ timeout: 0 }}>
-                    {/* Use React Router Link component */}
-                    <ContactIcon
-                        aria-label="view profile"
-                        component={Link} // Use Link component
-                        to={`/users/${id}`} // Dynamic link
-                        // target="_blank" // Optional: Open in new tab
-                        // rel="noopener noreferrer" // If using target="_blank"
-                    >
-                         <LaunchIcon fontSize="inherit" />
-                    </ContactIcon>
-                 </Tooltip>
-             )}
-
-            {/* Email Icon */}
+        <ContactIconBox onClick={(e) => e.stopPropagation()}>
             {basicInfo.email && (
-                <Tooltip title={basicInfo.email} arrow TransitionProps={{ timeout: 0 }}>
+                <Tooltip title={`Mail ${basicInfo.email}`} arrow TransitionProps={{ timeout: 0 }}>
                     <ContactIcon aria-label="email" href={`mailto:${basicInfo.email}`} target="_blank">
                         <EmailIcon fontSize="inherit" />
                     </ContactIcon>
                 </Tooltip>
             )}
-             {/* Other Icons */}
             {contactInfo.phoneNumber && (
-                 <Tooltip title={contactInfo.phoneNumber} arrow TransitionProps={{ timeout: 0 }}>
+                 <Tooltip title={`Call ${contactInfo.phoneNumber}`} arrow TransitionProps={{ timeout: 0 }}>
                     <ContactIcon aria-label="phone" href={`tel:${contactInfo.phoneNumber}`} target="_blank">
                         <PhoneIcon fontSize="inherit" />
                     </ContactIcon>
                  </Tooltip>
             )}
-            {contactInfo.linkedin && (
-                 <Tooltip title="LinkedIn Profile" arrow TransitionProps={{ timeout: 0 }}>
-                    <ContactIcon aria-label="linkedin" href={contactInfo.linkedin.startsWith('http') ? contactInfo.linkedin : `https://www.linkedin.com/in/${contactInfo.linkedin}`} target="_blank" rel="noopener noreferrer">
+            {linkedInUrl && (
+                 <Tooltip title="View LinkedIn Profile" arrow TransitionProps={{ timeout: 0 }}>
+                    <ContactIcon aria-label="linkedin" href={linkedInUrl} target="_blank" rel="noopener noreferrer">
                         <LinkedInIcon fontSize="inherit" />
                     </ContactIcon>
                  </Tooltip>
             )}
-            {contactInfo.facebook && (
-                 <Tooltip title="Facebook Profile" arrow TransitionProps={{ timeout: 0 }}>
-                    <ContactIcon aria-label="facebook" href={contactInfo.facebook.startsWith('http') ? contactInfo.facebook : `https://www.facebook.com/${contactInfo.facebook}`} target="_blank" rel="noopener noreferrer">
+             {facebookUrl && (
+                 <Tooltip title="View Facebook Profile" arrow TransitionProps={{ timeout: 0 }}>
+                    <ContactIcon aria-label="facebook" href={facebookUrl} target="_blank" rel="noopener noreferrer">
                         <FacebookIcon fontSize="inherit" />
                     </ContactIcon>
                  </Tooltip>
@@ -273,43 +288,61 @@ const ContactIcons = React.memo(({ user }) => {
     );
 });
 
-// UserTableRow Component (Unchanged)
+// **UPDATED** UserTableRow Component (Status hidden on small screens)
 const UserTableRow = React.memo(({ user }) => {
+    const navigate = useNavigate();
     const fullName = user.basicInfo?.fullName;
     const placeholderChar = fullName?.split(' ')[0]?.charAt(0)?.toUpperCase() || '?';
     const profileBg = user.basicInfo?.profilebg || '#bdbdbd';
 
+    const handleRowClick = useCallback(() => {
+        if (user.id) {
+            navigate(`/users/${user.id}`);
+        } else {
+            console.warn("User ID missing, cannot navigate.", user);
+        }
+    }, [navigate, user.id]);
+
     return (
-        <TableRow hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+        <ClickableTableRow onClick={handleRowClick}>
+            {/* Avatar */}
             <DataTableCell sx={{ width: '5%' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <StyledAvatar sx={{ bgcolor: profileBg }}>
-                        {placeholderChar}
-                    </StyledAvatar>
-                </Box>
+                 <StyledAvatar sx={{ bgcolor: profileBg }}>
+                     {placeholderChar}
+                 </StyledAvatar>
             </DataTableCell>
+            {/* Student ID */}
             <DataTableCell sx={{ width: '15%' }}>
                 {user.basicInfo?.studentId || "N/A"}
             </DataTableCell>
-            <DataTableCell sx={{ width: '25%', fontWeight: 500 }}>
+            {/* Full Name */}
+            <DataTableCell sx={{ width: '25%', fontWeight: 500, color: '#212529' }}>
                 {fullName || "N/A"}
             </DataTableCell>
+            {/* Hometown */}
             <DataTableCell sx={{ width: '20%' }}>
                 {user.placeInfo?.hometown || "N/A"}
             </DataTableCell>
+            {/* Contact Icons */}
             <DataTableCell align="left" sx={{ width: '20%' }}>
-                {/* Pass the full user object which includes the id */}
                 <ContactIcons user={user} />
             </DataTableCell>
-            <DataTableCell align="left" sx={{ width: '15%' }}>
+            {/* Status (Hidden on small screens 'xs', shown 'sm' and up) */}
+            <DataTableCell
+                align="left"
+                sx={{
+                    width: '15%', // Keep width consistent for larger screens
+                    display: { xs: 'none', sm: 'table-cell' } // Apply responsive display
+                }}
+            >
                 {user.basicInfo?.currentStatus || "Unknown"}
             </DataTableCell>
-        </TableRow>
+        </ClickableTableRow>
     );
 });
 
 // ----------------------------------------------------------------------
-// Main Component (UserDirectory) - Added Client-Side Sorting
+// Main Component (UserDirectory - Title, Sorting Icons, Responsive Column updated)
 // ----------------------------------------------------------------------
 
 function UserDirectory() {
@@ -317,132 +350,104 @@ function UserDirectory() {
     const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
     const year = queryParams.get('year');
 
-    // State for client-side sorting
-    const [sortConfig, setSortConfig] = useState({
-        key: null, // 'ID' or 'Name' from SORTABLE_FIELD_KEYS, or null for default
-        direction: 'ascending'
-    });
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
+    const { users: fetchedUsers, loading, error, totalCount } = useAllUsers(year);
 
-    // Fetch all users using the hook
-    const {
-        users: fetchedUsers, // Rename to avoid conflict with sortedUsers
-        loading,
-        error,
-        totalCount
-    } = useAllUsers(year);
-
-    // Memoized sorting logic
+    // Memoized sorting logic (remains the same)
     const sortedUsers = useMemo(() => {
-        if (!sortConfig.key) {
-            // Return fetched users in their default order (potentially ordered by ID from Firestore)
-            return fetchedUsers;
-        }
-
-        // Create a sortable copy
+        if (!sortConfig.key) return fetchedUsers;
         const sortableItems = [...fetchedUsers];
-
         sortableItems.sort((a, b) => {
             let aValue, bValue;
-
-            // Access the correct values based on the sort key
             if (sortConfig.key === SORTABLE_FIELD_KEYS.ID) {
-                aValue = a.basicInfo?.studentId ?? ''; // Handle potential undefined
+                aValue = a.basicInfo?.studentId ?? '';
                 bValue = b.basicInfo?.studentId ?? '';
             } else if (sortConfig.key === SORTABLE_FIELD_KEYS.NAME) {
-                aValue = a.basicInfo?.fullName?.toLowerCase() ?? ''; // Case-insensitive name sort
+                aValue = a.basicInfo?.fullName?.toLowerCase() ?? '';
                 bValue = b.basicInfo?.fullName?.toLowerCase() ?? '';
-            } else {
-                return 0; // Should not happen if key is validated
-            }
-
-            // Comparison logic
-            if (aValue < bValue) {
-                return sortConfig.direction === 'ascending' ? -1 : 1;
-            }
-            if (aValue > bValue) {
-                return sortConfig.direction === 'ascending' ? 1 : -1;
-            }
-            return 0; // Values are equal
+            } else return 0;
+            if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            return 0;
         });
-
         return sortableItems;
-    }, [fetchedUsers, sortConfig]); // Re-sort when fetched data or config changes
+    }, [fetchedUsers, sortConfig]);
 
+    // Sort request handler (remains the same)
+    const requestSort = useCallback((key) => {
+        setSortConfig(currentConfig => ({
+            key,
+            direction: currentConfig.key === key && currentConfig.direction === 'ascending' ? 'descending' : 'ascending'
+        }));
+    }, []);
 
-    // Sort request handler
-    const requestSort = (key) => {
-        let direction = 'ascending';
-        // If clicking the same key, toggle direction
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        // If switching to a new key, default to ascending
-        setSortConfig({ key, direction });
-    };
+    // Get sort icon helper (UPDATED to show active/inactive icons)
+    const getSortIcon = useCallback((key) => {
+        const isActive = sortConfig.key === key;
+        const IconComponent = isActive
+            ? (sortConfig.direction === 'ascending' ? ArrowUpwardIcon : ArrowDownwardIcon)
+            : ArrowDownwardIcon; // Default inactive icon
 
-    // Get sort icon helper
-    const getSortIcon = (key) => {
-        if (sortConfig.key === key) {
-            const Icon = sortConfig.direction === 'ascending' ? ArrowUpwardIcon : ArrowDownwardIcon;
-            return (
-                <SortIconContainer className="active"> {/* Added active class */}
-                    <Icon sx={{ fontSize: '1rem' }} />
-                </SortIconContainer>
-            );
-        }
-        // Optionally show a default dimmed icon for sortable columns when not active
-        // return (
-        //     <SortIconContainer>
-        //         <ArrowUpwardIcon sx={{ fontSize: '1rem' }} />
-        //     </SortIconContainer>
-        // );
-        return null; // Return null if not the active sort key
-    };
+        return (
+            <SortIconContainer className={isActive ? "active" : ""}>
+                <IconComponent sx={{ fontSize: '1rem' }} />
+            </SortIconContainer>
+        );
+    }, [sortConfig]);
 
 
     // --- Render Logic ---
     const renderTableContent = () => {
-        if (loading) return <LoadingOverlay><CircularProgress /></LoadingOverlay>;
+        if (loading) return <LoadingOverlay><CircularProgress size={50} /></LoadingOverlay>;
         if (error) return (
-            <Alert severity="error" icon={<WarningAmberIcon />} sx={{ m: 2 }}>
-                Error loading users: {error.message}. Please try again.
-                {error.code === 'failed-precondition' && ' (Hint: Check Firestore indexes if using server-side default order)'}
+            <Alert severity="error" icon={<WarningAmberIcon fontSize="inherit" />} sx={{ m: 2, alignItems: 'center' }}>
+                Failed to load student directory{year ? ` for batch ${year}` : ''}. Please try refreshing the page.
             </Alert>
         );
-         if (!loading && sortedUsers.length === 0) return <CenteredMessage>No users found{year ? ` for batch ${year}` : ''}.</CenteredMessage>;
+         if (!loading && sortedUsers.length === 0) return (
+            <CenteredMessage>
+                 No students found{year ? ` matching batch ${year}` : ''}. {/* Updated empty message */}
+             </CenteredMessage>
+         );
 
         return (
-            <StyledTableContainer component={Paper}>
-                <StyledTable aria-label="User directory table">
+            <StyledTableContainer component={Paper} elevation={0}>
+                {/* Updated aria-label */}
+                <StyledTable aria-label="Student directory table">
                     <TableHead>
                         <TableRow>
-                            {/* Non-Sortable Header */}
-                            <TableHeaderCell issortable="false">Photo</TableHeaderCell>
-                            {/* Sortable ID Header */}
-                            <TableHeaderCell
-                                issortable="true"
-                                onClick={() => requestSort(SORTABLE_FIELD_KEYS.ID)}
-                                aria-sort={sortConfig.key === SORTABLE_FIELD_KEYS.ID ? sortConfig.direction : 'none'}
-                            >
-                                ID {getSortIcon(SORTABLE_FIELD_KEYS.ID)}
+                            {/* Header Cells */}
+                            <TableHeaderCell issortable="false" sx={{ width: '5%' }}>{/* Avatar */}</TableHeaderCell>
+                            <TableHeaderCell issortable="true" onClick={() => requestSort(SORTABLE_FIELD_KEYS.ID)} sx={{ width: '15%' }}>
+                                <Box>
+                                    <span>ID</span>
+                                    {getSortIcon(SORTABLE_FIELD_KEYS.ID)}
+                                </Box>
                             </TableHeaderCell>
-                             {/* Sortable Name Header */}
-                            <TableHeaderCell
-                                issortable="true"
-                                onClick={() => requestSort(SORTABLE_FIELD_KEYS.NAME)}
-                                aria-sort={sortConfig.key === SORTABLE_FIELD_KEYS.NAME ? sortConfig.direction : 'none'}
-                            >
-                                Name {getSortIcon(SORTABLE_FIELD_KEYS.NAME)}
+                            <TableHeaderCell issortable="true" onClick={() => requestSort(SORTABLE_FIELD_KEYS.NAME)} sx={{ width: '25%' }}>
+                                <Box>
+                                    <span>Name</span>
+                                    {getSortIcon(SORTABLE_FIELD_KEYS.NAME)}
+                                </Box>
                             </TableHeaderCell>
-                             {/* Non-Sortable Headers */}
-                            <TableHeaderCell issortable="false">Hometown</TableHeaderCell>
-                            <TableHeaderCell align="left" issortable="false">Contact</TableHeaderCell>
-                            <TableHeaderCell align="left" issortable="false">Status</TableHeaderCell>
+                            <TableHeaderCell issortable="false" sx={{ width: '20%' }}>Hometown</TableHeaderCell>
+                            <TableHeaderCell align="left" issortable="false" sx={{ width: '20%' }}>Contact</TableHeaderCell>
+                            {/* **UPDATED** Status Header (Hidden on 'xs', shown 'sm' and up) */}
+                            <TableHeaderCell
+                                align="left"
+                                issortable="false"
+                                sx={{
+                                    width: '15%', // Keep width consistent for larger screens
+                                    display: { xs: 'none', sm: 'table-cell' } // Apply responsive display
+                                }}
+                            >
+                                Status
+                            </TableHeaderCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {/* Map over the client-side sorted users */}
                         {sortedUsers.map((user) => (
+                            // Pass user data to the updated UserTableRow component
                             <UserTableRow key={user.id} user={user} />
                         ))}
                     </TableBody>
@@ -452,18 +457,18 @@ function UserDirectory() {
     }
 
     return (
-        <StyledContainer maxWidth="lg">
+        <StyledContainer maxWidth="xl">
             <ContentWrapper>
+                {/* UPDATED Title */}
                 <StyledTitle variant="h5" component="h1">
-                    User Directory
+                    Student Directory {/* Changed Title */}
                      {totalCount > 0 && !loading && ` (${totalCount})`}
-                     {year && ` - Batch ${year}`}
+                     {year && ` - Batch of ${year}`}
                 </StyledTitle>
 
                 {renderTableContent()}
 
             </ContentWrapper>
-            {/* <Footer /> */}
         </StyledContainer>
     );
 }

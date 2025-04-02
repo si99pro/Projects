@@ -1,90 +1,112 @@
 // src/auth/PrivateRoute.js
-import React, { useEffect, useState, createContext, useContext, useMemo } from 'react'; // Added useMemo
+import React, { useEffect, useState, createContext, useContext, useMemo } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { auth, db } from '../firebase';
-import Loader from '../components/Loader'; // Assuming Loader can take props like 'fullPage'
+import Loader from '../components/Loader'; // Assuming Loader component exists
 import { doc, getDoc } from 'firebase/firestore';
 
-// --- AuthContext remains the same ---
+// --- AuthContext definition ---
 export const AuthContext = createContext(null);
 
-// --- Optimized AuthProvider ---
+// --- Optimized and Enhanced AuthProvider ---
 export function AuthProvider({ children }) {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true); // Initial auth check is loading
+    const [user, setUser] = useState(null); // Firebase auth user object
+    const [userProfile, setUserProfile] = useState(null); // Full Firestore profile data
+    const [loading, setLoading] = useState(true); // Internal loading state name
+
+    // Derived state (roles, profileBg, userName) - kept for potential backward compatibility
+    // or if other components use them directly. Could be removed if only userProfile is needed.
+    const [roles, setRoles] = useState([]);
     const [profileBg, setProfileBg] = useState('');
     const [userName, setUserName] = useState('');
-    const [roles, setRoles] = useState([]);
 
     useEffect(() => {
         const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+            setLoading(true); // Ensure loading is true at the start of the check
+            let fetchedProfile = null; // Temporary variable for profile data
+            let currentRoles = []; // Temporary variable for roles
+
             try {
                 if (firebaseUser) {
-                    // User is logged in (or state changed while logged in)
-                    let userProfile = { profileBg: '', userName: '', roles: [] }; // Default profile state
-
+                    // User is signed in, attempt to fetch profile
                     try {
                         const userDocRef = doc(db, 'users', firebaseUser.uid);
                         const docSnap = await getDoc(userDocRef);
-
                         if (docSnap.exists()) {
-                            const userData = docSnap.data();
-                            userProfile = {
-                                profileBg: userData.basicInfo?.profilebg || '',
-                                userName: userData.basicInfo?.fullName || '',
-                                roles: userData.roles || [],
-                            };
+                            fetchedProfile = docSnap.data(); // Get the entire data object
+                             setUserProfile(fetchedProfile); // Store the full profile object
+                             console.log("[AuthProvider] User profile fetched:", fetchedProfile); // Debug log
+
+                             // --- Update derived state based on the fetched profile ---
+                             currentRoles = Array.isArray(fetchedProfile.roles) ? fetchedProfile.roles : [];
+                             setRoles(currentRoles);
+                             setProfileBg(fetchedProfile.basicInfo?.profilebg || '');
+                             setUserName(fetchedProfile.basicInfo?.fullName || '');
+
                         } else {
-                            // User exists in Auth, but not in Firestore 'users' collection (or profile incomplete)
-                            console.warn(`[AuthProvider] Firestore document may be missing or incomplete for user: ${firebaseUser.uid}`);
-                            // Keep default empty profile state
+                            console.warn(`[AuthProvider] Firestore document missing for user: ${firebaseUser.uid}. Setting profile to null.`);
+                             setUserProfile(null); // Explicitly set profile to null
+                             // Reset derived state if profile doesn't exist
+                             setRoles([]);
+                             setProfileBg('');
+                             setUserName('');
+                             currentRoles = [];
                         }
                     } catch (firestoreError) {
-                        // Error fetching Firestore data, keep default profile state
                         console.error('[AuthProvider] Error fetching Firestore user data:', firestoreError);
+                         setUserProfile(null); // Set profile to null on fetch error
+                         // Reset derived state on error
+                         setRoles([]);
+                         setProfileBg('');
+                         setUserName('');
+                         currentRoles = [];
                     }
-
-                    // Update state based on Auth user and fetched/default profile
-                    setUser(firebaseUser);
-                    setProfileBg(userProfile.profileBg);
-                    setUserName(userProfile.userName);
-                    setRoles(userProfile.roles);
+                     setUser(firebaseUser); // Set the Firebase auth user object
 
                 } else {
-                    // User is logged out
+                    // User logged out
                     setUser(null);
-                    setProfileBg('');
-                    setUserName('');
-                    setRoles([]);
+                    setUserProfile(null); // Clear the full profile
+                    setRoles([]); // Clear roles
+                    setProfileBg(''); // Clear derived state
+                    setUserName(''); // Clear derived state
+                    currentRoles = [];
                 }
             } catch (error) {
-                 // Catch any unexpected errors in the handler itself
                  console.error("[AuthProvider] Unexpected error in onAuthStateChanged handler:", error);
-                 // Reset state as if logged out for safety
+                 // Reset everything on unexpected error
                  setUser(null);
+                 setUserProfile(null);
+                 setRoles([]);
                  setProfileBg('');
                  setUserName('');
-                 setRoles([]);
+                 currentRoles = [];
             } finally {
-                // Regardless of the outcome, the initial auth check is complete
-                setLoading(false);
+                setLoading(false); // Final step: set loading to false
             }
         });
-
-        // Cleanup subscription on unmount
         return () => unsubscribe();
-    }, []); // Empty dependency array ensures this runs only once on mount
+    }, []); // Empty dependency array ensures this runs once on mount
 
-    // --- Optimization: Memoize the context value ---
-    // This prevents consumers from re-rendering unless the actual value object changes identity,
-    // which only happens if user, loading, or profile data actually changes.
-    const value = useMemo(() => ({
-        user,
-        loading,
-        profileBg,
-        userName,
-        roles
-    }), [user, loading, profileBg, userName, roles]); // Dependencies for memoization
+    // Memoize the context value
+    const value = useMemo(() => {
+        // Calculate isAdmin based on the current roles state derived from userProfile
+        const isAdmin = Array.isArray(userProfile?.roles) && userProfile.roles.includes('admin');
+        // console.log("[AuthProvider] Memoized value update. User:", user ? user.uid : 'null', "IsAdmin:", isAdmin, "Profile:", userProfile); // Enhanced Debug log
+
+        return {
+            user,           // Firebase auth user object
+            authLoading: loading, // Renamed for compatibility with NotificationForm
+            userProfile,    // The full Firestore user data object
+            isAdmin,        // Boolean derived from userProfile.roles
+
+            // Optionally keep these if other components rely on them directly
+            roles: userProfile?.roles || [],
+            profileBg: userProfile?.basicInfo?.profilebg || '',
+            userName: userProfile?.basicInfo?.fullName || '',
+        };
+        // Dependencies now include userProfile instead of the individual fields
+    }, [user, loading, userProfile]);
 
     return (
         <AuthContext.Provider value={value}>
@@ -93,30 +115,28 @@ export function AuthProvider({ children }) {
     );
 }
 
-// --- Custom hook remains the same ---
+// --- Custom hook (useAuth - remains the same) ---
 export const useAuth = () => {
     return useContext(AuthContext);
 };
 
-// --- Optimized PrivateRoute Component ---
+// --- PrivateRoute Component (remains the same, uses 'authLoading' from context) ---
 function PrivateRoute() {
-    const { user, loading } = useAuth(); // Use the hook
+    // Use 'authLoading' as provided by the context value
+    const { user, authLoading } = useAuth();
     const location = useLocation();
 
-    if (loading) {
-        // Render a loader, potentially full page for the initial auth check
-        // Make sure your Loader component accepts props like 'fullPage' if needed
-        return <Loader fullPage />;
+    if (authLoading) {
+        return <Loader fullPage />; // Assuming Loader component exists
     }
 
     if (!user) {
-        // User is not logged in after checking, redirect to login
-        // Preserve the location they were trying to reach
+        // Redirect them to the /login page, but save the current location they were
+        // trying to go to. This allows us to send them back after they log in.
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // User is authenticated, render the child route element
-    return <Outlet />;
+    return <Outlet />; // Render the child route components
 }
 
 export default PrivateRoute; // Export PrivateRoute as default

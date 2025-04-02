@@ -5,7 +5,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import {
     Container, Typography, TextField, Button, Avatar, Grid, Box,
     Tabs, Tab, Alert, Snackbar, Slide, IconButton, InputAdornment,
-    Checkbox, FormControlLabel, CircularProgress, Tooltip, Skeleton
+    Checkbox, FormControlLabel, CircularProgress, Tooltip, Skeleton // <-- Keep Skeleton import
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import SaveIcon from '@mui/icons-material/Save';
@@ -22,9 +22,8 @@ import SchoolIcon from '@mui/icons-material/School';
 import HomeIcon from '@mui/icons-material/Home';
 import InfoIcon from '@mui/icons-material/Info';
 import styled from '@emotion/styled';
-// Removed useNavigate as it wasn't used
-// import { useNavigate } from 'react-router-dom';
-import Loader from '../components/Loader'; // Assuming Loader component exists
+// Removed Loader component import as it's no longer used
+// import Loader from '../components/Loader';
 
 // --- Styled Components (Minor adjustments for clarity) ---
 
@@ -218,6 +217,7 @@ const EditableField = React.memo(({
         if (onChange) onChange(e.target.value); // Allow parent to react if needed
     };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const debouncedSave = useCallback(debounce(handleSaveClick, 1000), [currentValue, fieldName, onSave]);
 
     const handleKeyDown = (e) => {
@@ -242,7 +242,7 @@ const EditableField = React.memo(({
     return (
         <StyledTextField
             label={label}
-            value={currentValue}
+            value={currentValue ?? ''} // Ensure value is not undefined/null for TextField
             onChange={handleChange}
             onKeyDown={handleKeyDown}
             onBlur={handleBlur} // Save on blur for non-multiline
@@ -314,24 +314,32 @@ const EditableField = React.memo(({
 // --- Main Profile Component ---
 
 function Profile() {
-    // Grouped State
-    const [basicInfo, setBasicInfo] = useState({ fullName: '', email: '', studentId: '', batch: '', session: '', profilebg: '' });
-    const [contactInfo, setContactInfo] = useState({ phoneNumber: '', facebook: '', linkedin: '', website: '' });
-    const [eduInfo, setEduInfo] = useState({ educationDetails: [] }); // Renamed for clarity
-    const [workInfo, setWorkInfo] = useState({ workExperience: [] });
-    const [placeInfo, setPlaceInfo] = useState({ currentCity: '', hometown: '' });
-    const [detailInfo, setDetailInfo] = useState({ birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
+    // Grouped State - Initialized with null/empty values suitable for Skeleton checks
+    const [basicInfo, setBasicInfo] = useState({ fullName: null, email: null, studentId: null, batch: null, session: null, profilebg: null });
+    const [contactInfo, setContactInfo] = useState({ phoneNumber: null, facebook: null, linkedin: null, website: null });
+    const [eduInfo, setEduInfo] = useState({ educationDetails: null }); // Use null for array initially
+    const [workInfo, setWorkInfo] = useState({ workExperience: null }); // Use null for array initially
+    const [placeInfo, setPlaceInfo] = useState({ currentCity: null, hometown: null });
+    const [detailInfo, setDetailInfo] = useState({ birthdate: null, bloodGroup: null, fieldOfExpertise: null, bio: null, aboutYou: null });
 
     // Component State
     const [activeTab, setActiveTab] = useState(0);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(true); // Start loading
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' });
     const [basicInfoAlertOpen, setBasicInfoAlertOpen] = useState(false);
 
     // Fetch Data
     useEffect(() => {
         const fetchProfileData = async () => {
-            setLoading(true);
+            setLoading(true); // Ensure loading is true at the start
+             // Reset states to initial null/empty for skeleton display if re-fetching
+            setBasicInfo({ fullName: null, email: null, studentId: null, batch: null, session: null, profilebg: null });
+            setContactInfo({ phoneNumber: null, facebook: null, linkedin: null, website: null });
+            setEduInfo({ educationDetails: null });
+            setWorkInfo({ workExperience: null });
+            setPlaceInfo({ currentCity: null, hometown: null });
+            setDetailInfo({ birthdate: null, bloodGroup: null, fieldOfExpertise: null, bio: null, aboutYou: null });
+
             try {
                 const user = auth.currentUser;
                 if (user) {
@@ -340,7 +348,7 @@ function Profile() {
 
                     if (docSnap.exists()) {
                         const data = docSnap.data();
-                        // Set state using || {} or || [] to prevent undefined errors if structures don't exist
+                        // Set state using || {} or || [] to provide defaults after loading
                         setBasicInfo(data.basicInfo || { fullName: '', email: '', studentId: '', batch: '', session: '', profilebg: '#673ab7' });
                         setContactInfo(data.contactInfo || { phoneNumber: '', facebook: '', linkedin: '', website: '' });
                         setEduInfo(data.eduInfo || { educationDetails: [] });
@@ -349,18 +357,41 @@ function Profile() {
                         setDetailInfo(data.detailInfo || { birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
                     } else {
                         console.log('No profile document found for user:', user.uid);
-                        // Optionally set default values or show a message
+                        // Set empty defaults if profile doesn't exist, allowing user to fill
+                        setBasicInfo({ fullName: user.displayName || '', email: user.email || '', studentId: '', batch: '', session: '', profilebg: '#673ab7' });
+                        setContactInfo({ phoneNumber: '', facebook: '', linkedin: '', website: '' });
+                        setEduInfo({ educationDetails: [] });
+                        setWorkInfo({ workExperience: [] });
+                        setPlaceInfo({ currentCity: '', hometown: '' });
+                        setDetailInfo({ birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
                         setSnackbar({ open: true, message: 'Profile data not found. Please fill in your details.', severity: 'info' });
                     }
                 } else {
-                     // Handle case where user is not logged in (should ideally be handled by routing)
                      console.log('User not logged in');
+                     // Handle case where user is not logged in (should ideally be handled by routing)
+                     // Set defaults or potentially navigate away
+                     setSnackbar({ open: true, message: 'Please log in to view your profile.', severity: 'warning' });
+                     // Potentially set empty defaults here too if staying on the page
+                     setBasicInfo({ fullName: '', email: '', studentId: '', batch: '', session: '', profilebg: '#673ab7' });
+                     setContactInfo({ phoneNumber: '', facebook: '', linkedin: '', website: '' });
+                     setEduInfo({ educationDetails: [] });
+                     setWorkInfo({ workExperience: [] });
+                     setPlaceInfo({ currentCity: '', hometown: '' });
+                     setDetailInfo({ birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
                 }
             } catch (error) {
                 console.error('Error fetching profile data:', error);
                 setSnackbar({ open: true, message: `Failed to load profile data: ${error.message}`, severity: 'error' });
+                 // Set empty defaults on error to avoid crashing UI components expecting objects/arrays
+                 setBasicInfo({ fullName: '', email: '', studentId: '', batch: '', session: '', profilebg: '#673ab7' });
+                 setContactInfo({ phoneNumber: '', facebook: '', linkedin: '', website: '' });
+                 setEduInfo({ educationDetails: [] });
+                 setWorkInfo({ workExperience: [] });
+                 setPlaceInfo({ currentCity: '', hometown: '' });
+                 setDetailInfo({ birthdate: '', bloodGroup: '', fieldOfExpertise: '', bio: '', aboutYou: '' });
             } finally {
-                setLoading(false);
+                // Add a small delay to prevent flashing if data loads very quickly
+                setTimeout(() => setLoading(false), 300);
             }
         };
 
@@ -384,18 +415,19 @@ function Profile() {
         let newStateUpdater = () => {}; // Function to update local state on success
 
         // Determine the path and the state update function based on the field name
-        if (fieldName in contactInfo) {
+        // Make sure contactInfo, placeInfo, detailInfo are not null before checking 'in'
+        if (contactInfo && fieldName in contactInfo) {
             updateData[`contactInfo.${fieldName}`] = value;
             newStateUpdater = () => setContactInfo(prev => ({ ...prev, [fieldName]: value }));
-        } else if (fieldName in placeInfo) {
+        } else if (placeInfo && fieldName in placeInfo) {
             updateData[`placeInfo.${fieldName}`] = value;
              newStateUpdater = () => setPlaceInfo(prev => ({ ...prev, [fieldName]: value }));
-        } else if (fieldName in detailInfo) {
+        } else if (detailInfo && fieldName in detailInfo) {
             updateData[`detailInfo.${fieldName}`] = value;
              newStateUpdater = () => setDetailInfo(prev => ({ ...prev, [fieldName]: value }));
         } else {
-            console.error("Unknown field name:", fieldName);
-            setSnackbar({ open: true, message: `Unknown field: ${fieldName}`, severity: 'error' });
+            console.error("Unknown field name or state object is null:", fieldName);
+            setSnackbar({ open: true, message: `Cannot save unknown field: ${fieldName}`, severity: 'error' });
             throw new Error(`Unknown field: ${fieldName}`);
         }
 
@@ -409,6 +441,7 @@ function Profile() {
             setSnackbar({ open: true, message: `Error updating profile: ${err.message}`, severity: 'error' });
             throw err; // Re-throw error so EditableField knows save failed
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [contactInfo, placeInfo, detailInfo]); // Dependencies: Ensure the function has access to the latest state
 
 
@@ -482,7 +515,7 @@ function Profile() {
             {/* Use readOnly prop and disable edit button */}
              <StyledTextField
                 label="Full Name"
-                value={basicInfo.fullName}
+                value={basicInfo.fullName ?? ''} // Use default empty string if null
                 fullWidth
                 variant="standard" // Use standard for read-only display
                 InputProps={{ readOnly: true, disableUnderline: true }}
@@ -490,10 +523,10 @@ function Profile() {
                 sx={{ cursor: 'not-allowed' }} // Indicate non-editable
             />
             {/* Repeat for other basic info fields */}
-             <StyledTextField label="Email" value={basicInfo.email} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
-             <StyledTextField label="Student ID" value={basicInfo.studentId} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
-             <StyledTextField label="Batch" value={basicInfo.batch} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
-             <StyledTextField label="Session" value={basicInfo.session} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Email" value={basicInfo.email ?? ''} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Student ID" value={basicInfo.studentId ?? ''} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Batch" value={basicInfo.batch ?? ''} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
+             <StyledTextField label="Session" value={basicInfo.session ?? ''} fullWidth variant="standard" InputProps={{ readOnly: true, disableUnderline: true }} onClick={handleEditBasicInfo} sx={{ cursor: 'not-allowed' }} />
              <Alert severity="info" sx={{ mt: 2 }}>
                 Basic information cannot be edited directly. Please contact an administrator if changes are needed.
             </Alert>
@@ -506,82 +539,97 @@ function Profile() {
             eduInfo={eduInfo}
             onSaveWork={handleSaveWorkExperience}
             onSaveEdu={handleSaveEducation}
+            isLoading={loading} // Pass loading state to handle internal skeletons
         />
-    ), [workInfo, eduInfo, handleSaveWorkExperience, handleSaveEducation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    ), [workInfo, eduInfo, handleSaveWorkExperience, handleSaveEducation, loading]);
 
     const placesLivedTabContent = useMemo(() => (
         <Box mt={3}>
             <SectionTitle>Places Lived</SectionTitle>
             <EditableField
                 label="Current City"
-                value={placeInfo.currentCity}
+                value={placeInfo.currentCity ?? ''}
                 fieldName="currentCity"
                 onSave={handleSaveField}
                 IconComponent={HomeIcon}
             />
             <EditableField
                 label="Hometown"
-                value={placeInfo.hometown}
+                value={placeInfo.hometown ?? ''}
                 fieldName="hometown"
                 onSave={handleSaveField}
                 IconComponent={HomeIcon}
             />
         </Box>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     ), [placeInfo, handleSaveField]);
 
     const contactTabContent = useMemo(() => (
          <Box mt={3}>
             <SectionTitle>Contact Information</SectionTitle>
-            <EditableField label="Phone Number" value={contactInfo.phoneNumber} fieldName="phoneNumber" onSave={handleSaveField} IconComponent={ContactPhoneIcon} />
-            <EditableField label="Facebook Profile" value={contactInfo.facebook} fieldName="facebook" onSave={handleSaveField} IconComponent={LinkIcon} prefix="facebook.com/" />
-            <EditableField label="LinkedIn Profile" value={contactInfo.linkedin} fieldName="linkedin" onSave={handleSaveField} IconComponent={LinkIcon} prefix="linkedin.com/in/" />
-            <EditableField label="Website" value={contactInfo.website} fieldName="website" onSave={handleSaveField} IconComponent={LinkIcon} prefix="https://" />
+            <EditableField label="Phone Number" value={contactInfo.phoneNumber ?? ''} fieldName="phoneNumber" onSave={handleSaveField} IconComponent={ContactPhoneIcon} />
+            <EditableField label="Facebook Profile" value={contactInfo.facebook ?? ''} fieldName="facebook" onSave={handleSaveField} IconComponent={LinkIcon} prefix="facebook.com/" />
+            <EditableField label="LinkedIn Profile" value={contactInfo.linkedin ?? ''} fieldName="linkedin" onSave={handleSaveField} IconComponent={LinkIcon} prefix="linkedin.com/in/" />
+            <EditableField label="Website" value={contactInfo.website ?? ''} fieldName="website" onSave={handleSaveField} IconComponent={LinkIcon} prefix="https://" />
         </Box>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     ), [contactInfo, handleSaveField]);
 
      const detailsTabContent = useMemo(() => (
         <Box mt={3}>
             <SectionTitle>Details About You</SectionTitle>
-            <EditableField label="Birthdate" value={detailInfo.birthdate} fieldName="birthdate" onSave={handleSaveField} IconComponent={InfoIcon} />
-            <EditableField label="Blood Group" value={detailInfo.bloodGroup} fieldName="bloodGroup" onSave={handleSaveField} IconComponent={InfoIcon} />
-            <EditableField label="Field of Expertise" value={detailInfo.fieldOfExpertise} fieldName="fieldOfExpertise" onSave={handleSaveField} IconComponent={InfoIcon} />
-            <EditableField label="Bio" value={detailInfo.bio} fieldName="bio" onSave={handleSaveField} IconComponent={DescriptionIcon} multiline rows={4} />
-            <EditableField label="About You" value={detailInfo.aboutYou} fieldName="aboutYou" onSave={handleSaveField} IconComponent={DescriptionIcon} multiline rows={4} />
+            <EditableField label="Birthdate" value={detailInfo.birthdate ?? ''} fieldName="birthdate" onSave={handleSaveField} IconComponent={InfoIcon} />
+            <EditableField label="Blood Group" value={detailInfo.bloodGroup ?? ''} fieldName="bloodGroup" onSave={handleSaveField} IconComponent={InfoIcon} />
+            <EditableField label="Field of Expertise" value={detailInfo.fieldOfExpertise ?? ''} fieldName="fieldOfExpertise" onSave={handleSaveField} IconComponent={InfoIcon} />
+            <EditableField label="Bio" value={detailInfo.bio ?? ''} fieldName="bio" onSave={handleSaveField} IconComponent={DescriptionIcon} multiline rows={4} />
+            <EditableField label="About You" value={detailInfo.aboutYou ?? ''} fieldName="aboutYou" onSave={handleSaveField} IconComponent={DescriptionIcon} multiline rows={4} />
         </Box>
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     ), [detailInfo, handleSaveField]);
 
 
+    // ********** SKELETON LOADER **********
     if (loading) {
-        // Improved Loading State
-         return (
-             <StyledContainer maxWidth="md">
-                 <ProfileHeader>
-                     <Skeleton variant="circular" width={120} height={120} sx={{ margin: '0 auto 16px' }} />
-                     <Skeleton variant="text" width="40%" height={40} sx={{ margin: '0 auto 16px' }} />
-                 </ProfileHeader>
-                 <ProfileCard>
-                      <Skeleton variant="rectangular" height={48} sx={{ mb: 3 }}/>
-                      <Skeleton variant="text" height={30} sx={{ mb: 2 }}/>
-                      <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }}/>
-                      <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }}/>
-                      <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }}/>
-                 </ProfileCard>
-             </StyledContainer>
-         );
+        return (
+            <StyledContainer maxWidth="md">
+                <ProfileHeader>
+                    <Skeleton variant="circular" width={120} height={120} sx={{ margin: '0 auto 16px' }} />
+                    <Skeleton variant="text" width="40%" height={40} sx={{ margin: '0 auto 8px' }} />
+                    <Skeleton variant="text" width="50%" height={24} sx={{ margin: '0 auto 16px' }} />
+                </ProfileHeader>
+                <ProfileCard>
+                    {/* Skeleton for Tabs */}
+                    <Skeleton variant="rectangular" height={48} sx={{ mb: 3 }} />
+
+                    {/* Skeleton for Tab Content (e.g., Basic Info or current active tab) */}
+                    <Skeleton variant="text" width="30%" height={40} sx={{ mb: 3 }} /> {/* Section Title */}
+
+                    {/* Skeleton for Editable Fields (example for 3 fields) */}
+                    <Skeleton variant="rectangular" height={56} sx={{ mb: 2 }} />
+                    <Skeleton variant="rectangular" height={56} sx={{ mb: 2 }} />
+                    <Skeleton variant="rectangular" height={56} sx={{ mb: 2 }} />
+                     <Skeleton variant="rectangular" height={56} sx={{ mb: 2 }} />
+                     {/* Add more skeletons if the initial view has more elements */}
+                </ProfileCard>
+            </StyledContainer>
+        );
     }
+    // *************************************
 
     return (
         <>
             <StyledContainer maxWidth="md">
                  <ProfileHeader>
-                     <StyledAvatar profilebg={basicInfo.profilebg}>
-                         {basicInfo.fullName ? basicInfo.fullName.charAt(0).toUpperCase() : '?'}
+                    {/* Ensure basicInfo exists before accessing properties */}
+                     <StyledAvatar profilebg={basicInfo?.profilebg}>
+                         {basicInfo?.fullName ? basicInfo.fullName.charAt(0).toUpperCase() : '?'}
                      </StyledAvatar>
                     <Typography variant="h4" component="h1" gutterBottom>
-                        {basicInfo.fullName || 'Your Profile'}
+                        {basicInfo?.fullName || 'Your Profile'}
                     </Typography>
                      <Typography variant="body1" color="textSecondary">
-                         {basicInfo.email}
+                         {basicInfo?.email}
                      </Typography>
                  </ProfileHeader>
 
@@ -619,7 +667,8 @@ function Profile() {
                         iconMapping={{
                             success: <CheckCircleIcon fontSize="inherit" />,
                             error: <ErrorIcon fontSize="inherit" />,
-                            // Add mappings for info/warning if needed
+                            info: <InfoIcon fontSize="inherit" />,
+                            warning: <ErrorIcon fontSize='inherit' /> // Use ErrorIcon for warning too or specific WarningIcon
                         }}
                     >
                         {snackbar.message}
@@ -639,6 +688,7 @@ function Profile() {
                         severity="warning"
                         variant="filled"
                         sx={{ width: '100%' }}
+                        iconMapping={{ warning: <ErrorIcon fontSize='inherit' /> }}
                     >
                         These fields cannot be edited directly. Please contact the administrator.
                     </Alert>
@@ -651,7 +701,8 @@ function Profile() {
 
 // --- Work & Education Tab Component ---
 
-const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => {
+// Pass isLoading prop
+const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu, isLoading }) => {
     // State specific to this tab (editing indices, form values)
     const [editingExperienceIndex, setEditingExperienceIndex] = useState(null); // null | 'NEW' | number
     const [workForm, setWorkForm] = useState({ company: '', position: '', city: '', startYear: '', endYear: '', currentlyWorking: false });
@@ -669,6 +720,8 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
     };
 
     const handleEditWorkExperience = (index) => {
+        // Ensure workExperience exists and has the item
+        if (!workInfo?.workExperience?.[index]) return;
         const exp = workInfo.workExperience[index];
         const [start = '', end = ''] = exp.duration?.split(' - ') || [];
         const currentlyWorking = end === 'Present';
@@ -690,7 +743,8 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
 
     const handleDeleteWorkExperience = async (indexToDelete) => {
         setIsSavingWork(true);
-        const updatedWorkExperiences = workInfo.workExperience.filter((_, index) => index !== indexToDelete);
+        const currentExperiences = workInfo?.workExperience || [];
+        const updatedWorkExperiences = currentExperiences.filter((_, index) => index !== indexToDelete);
         const success = await onSaveWork(updatedWorkExperiences);
          if (success) {
              setEditingExperienceIndex(null); // Close form if deletion was successful
@@ -701,7 +755,6 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
      const handleSaveCurrentWorkExperience = async () => {
         // Basic Validation
         if (!workForm.company || !workForm.position || !workForm.city || !workForm.startYear || (!workForm.currentlyWorking && !workForm.endYear)) {
-             // Consider showing a form-specific error message instead of snackbar
              console.error("Work form validation failed");
              alert("Please fill in all required work experience fields."); // Simple alert for now
              return;
@@ -717,10 +770,11 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
         };
 
         let updatedWorkExperiences;
+        const currentExperiences = workInfo?.workExperience || [];
         if (editingExperienceIndex === 'NEW') {
-            updatedWorkExperiences = [...workInfo.workExperience, newExperience];
+            updatedWorkExperiences = [...currentExperiences, newExperience];
         } else if (typeof editingExperienceIndex === 'number') {
-            updatedWorkExperiences = [...workInfo.workExperience];
+            updatedWorkExperiences = [...currentExperiences];
             updatedWorkExperiences[editingExperienceIndex] = newExperience;
         } else {
              setIsSavingWork(false);
@@ -729,8 +783,8 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
 
          // Sort experiences after update (most recent first)
          updatedWorkExperiences.sort((a, b) => {
-            const [, endAStr] = a.duration.split(' - ');
-            const [, endBStr] = b.duration.split(' - ');
+            const [, endAStr] = a.duration?.split(' - ') || [];
+            const [, endBStr] = b.duration?.split(' - ') || [];
             const endAYear = endAStr === 'Present' ? Infinity : parseInt(endAStr || '0', 10);
             const endBYear = endBStr === 'Present' ? Infinity : parseInt(endBStr || '0', 10);
             return endBYear - endAYear; // Descending order by end year
@@ -751,6 +805,8 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
     };
 
      const handleEditEducation = (index) => {
+        // Ensure eduInfo exists and has the item
+        if (!eduInfo?.educationDetails?.[index]) return;
         const edu = eduInfo.educationDetails[index];
         setEduForm({
             institution: edu.institution || '',
@@ -768,7 +824,8 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
 
      const handleDeleteEducation = async (indexToDelete) => {
          setIsSavingEdu(true);
-        const updatedEducationDetails = eduInfo.educationDetails.filter((_, index) => index !== indexToDelete);
+         const currentEducation = eduInfo?.educationDetails || [];
+        const updatedEducationDetails = currentEducation.filter((_, index) => index !== indexToDelete);
         const success = await onSaveEdu(updatedEducationDetails);
          if (success) {
              setEditingEducationIndex(null);
@@ -788,10 +845,11 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
         const newEducation = { ...eduForm };
 
         let updatedEducationDetails;
+        const currentEducation = eduInfo?.educationDetails || [];
         if (editingEducationIndex === 'NEW') {
-            updatedEducationDetails = [...eduInfo.educationDetails, newEducation];
+            updatedEducationDetails = [...currentEducation, newEducation];
         } else if (typeof editingEducationIndex === 'number') {
-            updatedEducationDetails = [...eduInfo.educationDetails];
+            updatedEducationDetails = [...currentEducation];
             updatedEducationDetails[editingEducationIndex] = newEducation;
         } else {
              setIsSavingEdu(false);
@@ -810,20 +868,20 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
     };
 
 
-    // Memoize sorted lists
+    // Memoize sorted lists, handle null case
      const sortedWorkExperiences = useMemo(() =>
-        [...(workInfo.workExperience || [])].sort((a, b) => {
+        [...(workInfo?.workExperience || [])].sort((a, b) => {
              const [, endAStr] = a.duration?.split(' - ') || [];
              const [, endBStr] = b.duration?.split(' - ') || [];
              const endAYear = endAStr === 'Present' ? Infinity : parseInt(endAStr || '0', 10);
              const endBYear = endBStr === 'Present' ? Infinity : parseInt(endBStr || '0', 10);
             return endBYear - endAYear; // Descending
-        }), [workInfo.workExperience]);
+        }), [workInfo?.workExperience]); // Depend on the array itself
 
      const sortedEducationDetails = useMemo(() =>
-         [...(eduInfo.educationDetails || [])].sort((a, b) =>
+         [...(eduInfo?.educationDetails || [])].sort((a, b) =>
             parseInt(b.graduationYear || '0', 10) - parseInt(a.graduationYear || '0', 10) // Descending
-         ), [eduInfo.educationDetails]);
+         ), [eduInfo?.educationDetails]); // Depend on the array itself
 
 
     // --- Render Logic ---
@@ -831,100 +889,120 @@ const WorkEduTab = React.memo(({ workInfo, eduInfo, onSaveWork, onSaveEdu }) => 
         <Box mt={3}>
             {/* --- Work Experience Section --- */}
             <SectionTitle>Work Experience</SectionTitle>
-            {sortedWorkExperiences.map((experience, index) => (
-                 <ItemBox key={`work-${index}`}>
-                     <BusinessIcon sx={{ mr: 1, color: 'action.active' }} />
-                     <ItemContent>
-                         <Typography variant="subtitle1" fontWeight="bold">{experience.company}</Typography>
-                         <Typography variant="body2" color="textSecondary">{experience.position} - {experience.city}</Typography>
-                         <Typography variant="body2" color="textSecondary">Duration: {experience.duration}</Typography>
-                     </ItemContent>
-                     {editingExperienceIndex !== index && ( // Show edit only if not currently editing this item
-                         <ItemActions>
-                             <Tooltip title="Edit">
-                                 <IconButton size="small" onClick={() => handleEditWorkExperience(index)} disabled={editingExperienceIndex !== null || isSavingWork}>
-                                     <EditIcon fontSize="small" />
-                                 </IconButton>
-                             </Tooltip>
-                         </ItemActions>
-                     )}
-                 </ItemBox>
-            ))}
+            {isLoading ? (
+                 <>
+                    {/* Skeleton for Work Items */}
+                    <Skeleton variant="rectangular" height={80} sx={{ mb: 2, borderRadius: '8px' }} />
+                    <Skeleton variant="rectangular" height={80} sx={{ mb: 2, borderRadius: '8px' }} />
+                 </>
+             ) : (
+                <>
+                 {sortedWorkExperiences.map((experience, index) => (
+                      <ItemBox key={`work-${index}`}>
+                          <BusinessIcon sx={{ mr: 1, color: 'action.active' }} />
+                          <ItemContent>
+                              <Typography variant="subtitle1" fontWeight="bold">{experience.company}</Typography>
+                              <Typography variant="body2" color="textSecondary">{experience.position} - {experience.city}</Typography>
+                              <Typography variant="body2" color="textSecondary">Duration: {experience.duration}</Typography>
+                          </ItemContent>
+                          {editingExperienceIndex !== index && ( // Show edit only if not currently editing this item
+                              <ItemActions>
+                                  <Tooltip title="Edit">
+                                      <IconButton size="small" onClick={() => handleEditWorkExperience(index)} disabled={editingExperienceIndex !== null || isSavingWork}>
+                                          <EditIcon fontSize="small" />
+                                      </IconButton>
+                                  </Tooltip>
+                              </ItemActions>
+                          )}
+                      </ItemBox>
+                 ))}
 
-            {/* Add/Edit Work Form */}
-             {(editingExperienceIndex !== null) && (
-                 <WorkExperienceForm
-                    formData={workForm}
-                    setFormData={setWorkForm}
-                    onSave={handleSaveCurrentWorkExperience}
-                    onCancel={handleCancelWorkEdit}
-                    onDelete={editingExperienceIndex !== 'NEW' ? () => handleDeleteWorkExperience(editingExperienceIndex) : undefined}
-                    isSaving={isSavingWork}
-                    isNew={editingExperienceIndex === 'NEW'}
-                 />
-             )}
+                 {/* Add/Edit Work Form */}
+                  {(editingExperienceIndex !== null) && (
+                      <WorkExperienceForm
+                         formData={workForm}
+                         setFormData={setWorkForm}
+                         onSave={handleSaveCurrentWorkExperience}
+                         onCancel={handleCancelWorkEdit}
+                         onDelete={editingExperienceIndex !== 'NEW' ? () => handleDeleteWorkExperience(editingExperienceIndex) : undefined}
+                         isSaving={isSavingWork}
+                         isNew={editingExperienceIndex === 'NEW'}
+                      />
+                  )}
 
-             {/* Add Button - Show only if no form is open */}
-             {editingExperienceIndex === null && (
-                 <Button
-                     variant="outlined"
-                     startIcon={<AddIcon />}
-                     onClick={handleAddWorkExperience}
-                     disabled={isSavingWork} // Disable while any save is in progress
-                     sx={{ mt: 1 }}
-                 >
-                     Add Work Experience
-                 </Button>
-             )}
+                  {/* Add Button - Show only if no form is open */}
+                  {editingExperienceIndex === null && (
+                      <Button
+                          variant="outlined"
+                          startIcon={<AddIcon />}
+                          onClick={handleAddWorkExperience}
+                          disabled={isSavingWork} // Disable while any save is in progress
+                          sx={{ mt: 1 }}
+                      >
+                          Add Work Experience
+                      </Button>
+                  )}
+                </>
+            )}
 
 
             {/* --- Education Section --- */}
             <Box mt={5}> {/* Add more space before Education */}
                 <SectionTitle>Education (MSc/MBA/PhD etc.)</SectionTitle>
-                 {sortedEducationDetails.map((education, index) => (
-                    <ItemBox key={`edu-${index}`}>
-                         <SchoolIcon sx={{ mr: 1, color: 'action.active' }} />
-                         <ItemContent>
-                             <Typography variant="subtitle1" fontWeight="bold">{education.institution}</Typography>
-                             <Typography variant="body2" color="textSecondary">{education.degree} in {education.fieldOfStudy}</Typography>
-                             <Typography variant="body2" color="textSecondary">Graduated: {education.graduationYear}</Typography>
-                         </ItemContent>
-                         {editingEducationIndex !== index && (
-                            <ItemActions>
-                                 <Tooltip title="Edit">
-                                    <IconButton size="small" onClick={() => handleEditEducation(index)} disabled={editingEducationIndex !== null || isSavingEdu}>
-                                        <EditIcon fontSize="small"/>
-                                    </IconButton>
-                                </Tooltip>
-                            </ItemActions>
-                         )}
-                     </ItemBox>
-                 ))}
+                 {isLoading ? (
+                     <>
+                         {/* Skeleton for Education Items */}
+                         <Skeleton variant="rectangular" height={80} sx={{ mb: 2, borderRadius: '8px' }} />
+                         <Skeleton variant="rectangular" height={80} sx={{ mb: 2, borderRadius: '8px' }} />
+                     </>
+                 ) : (
+                    <>
+                     {sortedEducationDetails.map((education, index) => (
+                         <ItemBox key={`edu-${index}`}>
+                              <SchoolIcon sx={{ mr: 1, color: 'action.active' }} />
+                              <ItemContent>
+                                  <Typography variant="subtitle1" fontWeight="bold">{education.institution}</Typography>
+                                  <Typography variant="body2" color="textSecondary">{education.degree} in {education.fieldOfStudy}</Typography>
+                                  <Typography variant="body2" color="textSecondary">Graduated: {education.graduationYear}</Typography>
+                              </ItemContent>
+                              {editingEducationIndex !== index && (
+                                 <ItemActions>
+                                      <Tooltip title="Edit">
+                                         <IconButton size="small" onClick={() => handleEditEducation(index)} disabled={editingEducationIndex !== null || isSavingEdu}>
+                                             <EditIcon fontSize="small"/>
+                                         </IconButton>
+                                     </Tooltip>
+                                 </ItemActions>
+                              )}
+                          </ItemBox>
+                     ))}
 
-                 {/* Add/Edit Education Form */}
-                 {(editingEducationIndex !== null) && (
-                     <EducationForm
-                        formData={eduForm}
-                        setFormData={setEduForm}
-                        onSave={handleSaveCurrentEducation}
-                        onCancel={handleCancelEduEdit}
-                        onDelete={editingEducationIndex !== 'NEW' ? () => handleDeleteEducation(editingEducationIndex) : undefined}
-                        isSaving={isSavingEdu}
-                        isNew={editingEducationIndex === 'NEW'}
-                     />
-                 )}
+                     {/* Add/Edit Education Form */}
+                     {(editingEducationIndex !== null) && (
+                         <EducationForm
+                            formData={eduForm}
+                            setFormData={setEduForm}
+                            onSave={handleSaveCurrentEducation}
+                            onCancel={handleCancelEduEdit}
+                            onDelete={editingEducationIndex !== 'NEW' ? () => handleDeleteEducation(editingEducationIndex) : undefined}
+                            isSaving={isSavingEdu}
+                            isNew={editingEducationIndex === 'NEW'}
+                         />
+                     )}
 
-                 {/* Add Button */}
-                 {editingEducationIndex === null && (
-                     <Button
-                         variant="outlined"
-                         startIcon={<AddIcon />}
-                         onClick={handleAddEducation}
-                         disabled={isSavingEdu}
-                         sx={{ mt: 1 }}
-                     >
-                         Add Education
-                     </Button>
+                     {/* Add Button */}
+                     {editingEducationIndex === null && (
+                         <Button
+                             variant="outlined"
+                             startIcon={<AddIcon />}
+                             onClick={handleAddEducation}
+                             disabled={isSavingEdu}
+                             sx={{ mt: 1 }}
+                         >
+                             Add Education
+                         </Button>
+                     )}
+                    </>
                  )}
             </Box>
         </Box>
@@ -987,8 +1065,9 @@ const WorkExperienceForm = ({ formData, setFormData, onSave, onCancel, onDelete,
                              onChange={handleChange}
                              fullWidth
                              margin="dense"
-                             disabled={isSaving}
-                              type="number"
+                             disabled={isSaving || !formData.startYear} // Also disable if start year is empty
+                             type="number"
+                             inputProps={{ min: formData.startYear || undefined }} // Basic validation: End year >= Start year
                          />
                     </Grid>
                  )}
@@ -1002,6 +1081,7 @@ const WorkExperienceForm = ({ formData, setFormData, onSave, onCancel, onDelete,
                 </ButtonContainer>
                 {!isNew && onDelete && (
                     <Tooltip title="Delete this experience">
+                         {/* Ensure isSaving disables delete button */}
                          <IconButton aria-label="delete" onClick={onDelete} disabled={isSaving} color="error">
                              <DeleteIcon />
                          </IconButton>
@@ -1049,6 +1129,7 @@ const EducationForm = ({ formData, setFormData, onSave, onCancel, onDelete, isSa
                  </ButtonContainer>
                  {!isNew && onDelete && (
                      <Tooltip title="Delete this education entry">
+                         {/* Ensure isSaving disables delete button */}
                          <IconButton aria-label="delete" onClick={onDelete} disabled={isSaving} color="error">
                              <DeleteIcon />
                          </IconButton>

@@ -1,6 +1,8 @@
 /* eslint-disable no-unused-vars */ // Keep if some vars are intentionally unused for now
 import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
-import { auth, db } from '../firebase';
+import { auth, db } from '../firebase'; // Assuming firebase setup is correct
+import { doc, getDoc, updateDoc } from 'firebase/firestore'; // Firebase v9 imports
+import styled from '@emotion/styled';
 import {
     Container,
     Typography,
@@ -17,47 +19,24 @@ import {
     Card,
     CardContent,
     IconButton,
-    List,
-    ListItem,
-    ListItemAvatar,
-    ListItemText,
+    // List, // Removed as not used after chart/recent activity removal
+    // ListItem, // Removed
+    // ListItemAvatar, // Removed
+    // ListItemText, // Removed
     LinearProgress, // Keep for Suspense fallback
-    Skeleton,       // Import Skeleton
+    Skeleton,       // Import Skeleton for loading state
     Alert,          // For error messages
-    Link,           // Import Link for functional quick links (if using react-router)
+    Link as MuiLink,// Import MUI Link for potential external links, or use react-router Link
 } from '@mui/material';
-// REMOVED: ChartJS imports as charts are removed
-// import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
-import styled from '@emotion/styled'; // Moved UP
-import { doc, getDoc, updateDoc } from 'firebase/firestore'; // Moved UP
-import EditIcon from '@mui/icons-material/Edit'; // Moved UP
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'; // Moved UP
+import EditIcon from '@mui/icons-material/Edit';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'; // For error alert icon
 
 // --- Lazy Loaded Components ---
-// Keep lazy imports *after* all standard imports
-// REMOVED: Chart lazy imports
-// const Bar = lazy(() => import('react-chartjs-2').then(module => ({ default: module.Bar })));
-// const Doughnut = lazy(() => import('react-chartjs-2').then(module => ({ default: module.Doughnut })));
-// Lazy load custom heavy component
-const AllMomentList = lazy(() => import('../components/AllMomentList')); // Keep this lazy import here
+// Ensure the path is correct relative to this file (Dashboard.js)
+// Ensure AllMomentList.js has a 'export default AllMomentList;'
+const AllMomentList = lazy(() => import('../components/AllMomentList')); // Keep lazy load
 
-
-// --- Register ChartJS Modules ---
-// REMOVED: ChartJS registration as charts are removed
-/*
-ChartJS.register(
-    CategoryScale,
-    LinearScale,
-    BarElement,
-    Title,
-    Tooltip,
-    Legend,
-    ArcElement
-);
-*/
-
-// --- Styled Components ---
-// (Keep all styled components as they might be used by remaining elements or future additions)
+// --- Styled Components (Keep all styled components as they define the UI structure) ---
 const primaryColor = '#3f51b5';
 const secondaryColor = '#7986cb';
 const textColor = '#212121';
@@ -67,31 +46,35 @@ const StyledContainer = styled(Container)`
     padding: 20px;
     color: ${textColor};
     font-family: 'Roboto', sans-serif;
-    min-height: 90vh;
+    min-height: 90vh; // Ensure content fills viewport height
 `;
 
-const StyledPaper = styled(Paper)`
-    padding: 20px;
+// Consolidated Paper styling
+const StyledPaperBase = styled(Paper)`
     border-radius: 10px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     background-color: #fff;
     transition: box-shadow 0.3s ease-in-out;
+    margin-bottom: 20px; // Consistent margin
     &:hover {
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
     }
 `;
 
-const SectionTitle = styled(Typography)`
-    font-size: 1.5rem;
-    font-weight: 500;
-    margin-bottom: 15px;
-    color: ${primaryColor};
+const UserInfoContainer = styled(StyledPaperBase)`
+    padding: 20px;
 `;
 
+const QuickLinksContainer = styled(StyledPaperBase)`
+    padding: 15px 20px;
+    background-color: #fcfcff; // Slightly different bg
+`;
+
+// Keep WidgetCard styles
 const WidgetCard = styled(Card)`
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 15px;
+    margin-bottom: 15px; // Keep margin consistent or remove if parent Grid handles spacing
     height: 100%; // Ensure cards in the same row have equal height if needed
     display: flex;
     flex-direction: column;
@@ -113,103 +96,12 @@ const WidgetCardContent = styled(CardContent)`
     flex-grow: 1; // Allow content to expand
 `;
 
-// REMOVED: DataCard components as the Overview section using them is removed
-/*
-const DataCard = styled(Card)`
-    background: linear-gradient(45deg, ${primaryColor} 30%, ${secondaryColor} 90%);
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 3px 5px 2px rgba(63, 81, 181, .3);
+// Keep other specific styled components
+const SectionTitle = styled(Typography)`
+    font-size: 1.3rem; // Slightly smaller for better fit
+    font-weight: 500;
     margin-bottom: 15px;
-    text-align: center;
-     transition: transform 0.2s ease-in-out;
-     &:hover {
-       transform: scale(1.03);
-    }
-`;
-
-const DataCardContent = styled(CardContent)`
-    padding: 20px; // Slightly more padding
-`;
-
-const DataCardTitle = styled(Typography)`
-    font-size: 1.1rem; // Adjusted size
-    font-weight: 400;
-    margin-bottom: 8px; // Adjusted spacing
-    opacity: 0.9;
-`;
-
-const DataCardValue = styled(Typography)`
-    font-size: 2.2rem; // Adjusted size
-    font-weight: 600;
-`;
-*/
-
-// REMOVED: ActivityItem styling as the demo activity list is removed
-/*
-const ActivityItem = styled(ListItem)`
-    padding: 10px 15px; // Adjusted padding
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.2s ease;
-    &:last-child {
-        border-bottom: none;
-    }
-     &:hover {
-        background-color: #f9f9f9;
-    }
-`;
-*/
-
-// REMOVED: NotificationItem styling as the demo notification list is removed
-/*
-const NotificationItem = styled(ListItem)`
-    padding: 10px 15px; // Adjusted padding
-    border-bottom: 1px solid #eee;
-    transition: background-color 0.2s ease;
-    &:last-child {
-        border-bottom: none;
-    }
-    &:hover {
-        background-color: #f0f0f0; // Already had hover, ensure consistency
-    }
-`;
-*/
-
-// REMOVED: CourseProgressContainer styling as charts are removed
-/*
-const CourseProgressContainer = styled(Paper)`
-    padding: 20px; // Consistent padding
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-bottom: 15px;
-    height: 100%; // Match height with sibling grid items
-    display: flex;
-    flex-direction: column;
-`;
-*/
-
-const UserInfoContainer = styled(Paper)`
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background-color: #fff;
-    margin-bottom: 20px;
-    transition: box-shadow 0.3s ease-in-out;
-     &:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-`;
-
-const QuickLinksContainer = styled(Paper)`
-    padding: 15px 20px; // Adjusted padding
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    background-color: #fcfcff; // Slightly different bg
-    margin-bottom: 20px;
-     transition: box-shadow 0.3s ease-in-out;
-     &:hover {
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
+    color: ${primaryColor};
 `;
 
 const QuickLinksScroll = styled(Box)`
@@ -220,7 +112,7 @@ const QuickLinksScroll = styled(Box)`
     margin-right: -5px;
 
     &::-webkit-scrollbar {
-        height: 6px; // Make scrollbar visible but subtle
+        height: 6px;
     }
     &::-webkit-scrollbar-thumb {
         background: #ccc;
@@ -234,47 +126,47 @@ const QuickLinksScroll = styled(Box)`
 `;
 
 const QuickLinkButton = styled(Button)`
-    margin: 0 5px; // Use margin for spacing
+    margin: 0 5px;
+    text-transform: none; // More readable quick links
 `;
 
 const ProfileAvatar = styled(Avatar)`
-    width: 80px;
-    height: 80px;
+    width: 70px; // Slightly smaller avatar
+    height: 70px;
     margin-right: 20px;
     position: relative;
     background-color: ${props => props.profilebg || primaryColor};
     color: white;
-    font-size: 2.5rem;
-    cursor: pointer; // Indicate it's interactive
+    font-size: 2.2rem; // Adjust font size accordingly
+    cursor: pointer;
 `;
 
 const WelcomeContainer = styled(Box)`
   display: flex;
   align-items: center;
   text-align: left;
-  margin-bottom: 15px;
+  margin-bottom: 5px; // Reduced margin as UserInfoContainer has margin-bottom
 `;
 
 const EditIconContainer = styled(IconButton)`
     position: absolute;
-    bottom: 0;
-    right: 0;
-    background-color: rgba(255, 255, 255, 0.8);
-    padding: 3px; // Slightly larger padding
-    border: 1px solid rgba(0,0,0,0.1); // Subtle border
+    bottom: -2px; // Adjust position relative to avatar size
+    right: -2px;
+    background-color: rgba(255, 255, 255, 0.9); // Slightly more opaque
+    padding: 4px;
+    border: 1px solid rgba(0,0,0,0.1);
     border-radius: 50%;
     transition: background-color 0.2s ease, transform 0.2s ease;
     &:hover {
         background-color: rgba(255, 255, 255, 1);
         transform: scale(1.1);
     }
-    // Adjust icon size if needed via sx prop on the icon itself
 `;
 
 const UserInfoDetails = styled(Box)`
     display: flex;
     flex-direction: column;
-    gap: 4px; // Add small gap between lines
+    gap: 2px; // Reduced gap
 `;
 
 const modalStyle = {
@@ -282,91 +174,85 @@ const modalStyle = {
     top: '50%',
     left: '50%',
     transform: 'translate(-50%, -50%)',
-    width: { xs: '90%', sm: 400 }, // Responsive width
+    width: { xs: '90%', sm: 400 },
     bgcolor: 'background.paper',
-    border: '1px solid #ccc', // Softer border
-    borderRadius: '10px', // Consistent border radius
+    border: '1px solid #ccc',
+    borderRadius: '10px',
     boxShadow: 24,
     p: 4,
 };
-
-// --- Chart Data ---
-// REMOVED: All chart data generation and options
-/*
-const generateChartData = () => { ... };
-const generateAssignmentData = () => { ... };
-const useDashboardData = () => { ... };
-const chartOptions = { ... };
-const assignmentOptions = { ... };
-*/
-
-// --- Static Data ---
-// REMOVED: Static demo data arrays
-/*
-const trendingUsers = [ ... ];
-const notifications = [ ... ];
-*/
 
 // --- Component ---
 
 function Dashboard() {
     const [user, setUser] = useState(null);
-    // profileBg state can be removed if only used for the Avatar's prop
-    // const [profileBg, setProfileBg] = useState('');
-    const [loading, setLoading] = useState(true); // Added loading state
-    const [error, setError] = useState(null);     // Added error state
+    const [loading, setLoading] = useState(true); // State to track loading status
+    const [error, setError] = useState(null);     // State to track errors
     const [openStatusModal, setOpenStatusModal] = useState(false);
     const [currentStatus, setCurrentStatus] = useState('');
     const [editProfileModalOpen, setEditProfileModalOpen] = useState(false);
 
-    // REMOVED: useDashboardData hook call
-    // const { chartData, assignmentData } = useDashboardData();
-    const dashboardContentRef = useRef(null); // Keep ref if needed for other purposes
+    // Ref is kept in case it's needed for other interactions later
+    const dashboardContentRef = useRef(null);
 
     useEffect(() => {
         let isMounted = true;
-        setLoading(true); // Start loading
-        setError(null);   // Reset error on new fetch attempt
+        setLoading(true);
+        setError(null);
 
-        async function fetchData() {
-            if (!auth.currentUser) {
-                 if (isMounted) {
-                    setError("User not authenticated. Please log in."); // More specific message
-                    setLoading(false);
-                 }
-                return; // Exit if no user is logged in
+        // Use onAuthStateChanged for better listener management if needed,
+        // but for a single load, checking currentUser directly is fine.
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) {
+            if (isMounted) {
+                setError("User not authenticated. Please log in.");
+                setLoading(false);
             }
+            return; // Exit early if no user
+        }
+
+        async function fetchUserData() {
             try {
-                const userDocRef = doc(db, 'users', auth.currentUser.uid);
+                const userDocRef = doc(db, 'users', currentUser.uid);
                 const docSnap = await getDoc(userDocRef);
 
                 if (docSnap.exists()) {
                     const userData = docSnap.data();
                     if (isMounted) {
                         setUser(userData);
-                        // Directly use userData.basicInfo?.profilebg where needed
-                        setCurrentStatus(userData.basicInfo?.currentStatus || ''); // Pre-fill status modal
+                        // Ensure basicInfo exists before accessing properties
+                        setCurrentStatus(userData.basicInfo?.currentStatus || '');
                     }
                 } else {
-                    console.log('No user document found!');
-                    if (isMounted) setError("User profile data not found. Please complete your profile or contact support."); // More specific message
+                    console.warn('No user document found for UID:', currentUser.uid);
+                    if (isMounted) {
+                        // Set user to an empty object or specific state to indicate profile needed
+                        setUser({}); // Indicate user exists but profile data is missing
+                        setError("User profile data not found. Please complete your profile.");
+                    }
                 }
             } catch (err) {
                 console.error('Error fetching user data:', err);
-                 if (isMounted) setError("Failed to load user data due to a network or server issue. Please try again later."); // More specific message
+                if (isMounted) {
+                    setError("Failed to load dashboard data. Please check your connection and try again.");
+                }
             } finally {
-                if (isMounted) setLoading(false); // Stop loading regardless of outcome
+                if (isMounted) {
+                    setLoading(false); // Ensure loading is set to false in all cases
+                }
             }
         }
 
-        fetchData();
+        fetchUserData();
 
+        // Cleanup function
         return () => {
-            isMounted = false; // Cleanup function to prevent state updates on unmounted component
+            isMounted = false;
         };
-    }, []); // Empty dependency array ensures this runs once on mount
+    }, []); // Empty dependency array: run once on mount
 
-    // Handlers (Keep handlers as they are for user interaction)
+    // --- Handlers (Keep as they are functional) ---
     const handleStatusChange = (event) => setCurrentStatus(event.target.value);
     const handleCloseStatusModal = () => setOpenStatusModal(false);
     const handleOpenStatusModal = () => setOpenStatusModal(true);
@@ -374,250 +260,267 @@ function Dashboard() {
     const handleOpenEditProfileModal = () => setEditProfileModalOpen(true);
 
     const handleStatusSubmit = async () => {
-        if (!auth.currentUser) return; // Guard clause
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+            setError("Authentication error. Please log in again.");
+            return;
+        }
         try {
-            const userDocRef = doc(db, 'users', auth.currentUser.uid);
+            setOpenStatusModal(false); // Close modal immediately for better UX
+            const userDocRef = doc(db, 'users', currentUser.uid);
             await updateDoc(userDocRef, {
                 'basicInfo.currentStatus': currentStatus,
             });
             // Optimistic UI update
-            setUser((prevState) => ({
-                ...prevState,
-                basicInfo: {
-                    ...prevState.basicInfo,
-                    currentStatus: currentStatus,
-                },
-            }));
-            setOpenStatusModal(false);
-            // Optional: Add success feedback (Snackbar)
+            setUser((prevState) => {
+                 // Check if prevState and basicInfo exist before spreading
+                const currentBasicInfo = prevState?.basicInfo || {};
+                return {
+                    ...prevState,
+                    basicInfo: {
+                        ...currentBasicInfo,
+                        currentStatus: currentStatus,
+                    },
+                };
+            });
+            // Consider adding a success Snackbar message here
         } catch (error) {
             console.error('Error updating current status:', error);
-            // TODO: Show user feedback (e.g., snackbar) for the error
+            setError("Failed to update status. Please try again.");
+            // Re-open modal or show error message prominently
+            // setOpenStatusModal(true); // Optionally re-open modal on error
         }
     };
 
-    // Derive basicInfo safely
-    const basicInfo = user?.basicInfo;
+    // Safely derive basicInfo, provide default empty object if user or basicInfo is null/undefined
+    const basicInfo = user?.basicInfo || {};
+    const hasBasicInfo = user && Object.keys(basicInfo).length > 0; // Check if basicInfo has data
 
     // --- Render Logic ---
+
+    const renderSkeletons = () => (
+        <>
+            {/* Skeleton for User Info */}
+            <UserInfoContainer>
+                <WelcomeContainer>
+                    <Skeleton variant="circular" width={70} height={70} sx={{ marginRight: '20px' }} />
+                    <UserInfoDetails>
+                        <Skeleton variant="text" width={180} height={35} />
+                        <Skeleton variant="text" width={220} height={20} />
+                        <Skeleton variant="text" width={250} height={20} />
+                    </UserInfoDetails>
+                </WelcomeContainer>
+            </UserInfoContainer>
+
+            {/* Skeleton for Quick Links */}
+            <QuickLinksContainer>
+                <SectionTitle variant="h6">
+                    <Skeleton variant="text" width={120} height={30}/>
+                </SectionTitle>
+                <QuickLinksScroll>
+                    <Skeleton variant="rounded" width={140} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
+                    <Skeleton variant="rounded" width={120} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
+                    <Skeleton variant="rounded" width={90} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
+                    <Skeleton variant="rounded" width={160} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
+                </QuickLinksScroll>
+            </QuickLinksContainer>
+
+            {/* Skeleton for the main content grid */}
+            <Grid container spacing={3}>
+                <Grid item xs={12}>
+                    <WidgetCard>
+                        <WidgetCardHeader><Skeleton variant="text" width="40%" height={30} /></WidgetCardHeader>
+                        <WidgetCardContent>
+                            <Skeleton variant="rectangular" height={100} />
+                        </WidgetCardContent>
+                    </WidgetCard>
+                </Grid>
+                {/* Add more skeletons for other grid items if they existed */}
+            </Grid>
+        </>
+    );
+
+    const renderContent = () => (
+         <>
+            {/* User Info & Quick Links - Conditionally render based on data */}
+            {hasBasicInfo ? (
+                 <>
+                     <UserInfoContainer>
+                         <WelcomeContainer>
+                             <ProfileAvatar
+                                 profilebg={basicInfo.profilebg || primaryColor}
+                                 onClick={handleOpenEditProfileModal}
+                                 aria-label="Open edit profile modal"
+                             >
+                                 {basicInfo.fullName?.charAt(0).toUpperCase() || '?'}
+                                 <EditIconContainer
+                                     aria-label="Edit profile"
+                                     size="small"
+                                     onClick={(e) => { e.stopPropagation(); handleOpenEditProfileModal(); }}
+                                 >
+                                     <EditIcon sx={{ fontSize: '14px' }} />
+                                 </EditIconContainer>
+                             </ProfileAvatar>
+                             <UserInfoDetails>
+                                 <Typography variant="h5" component="h1" gutterBottom>
+                                     Welcome, {basicInfo.fullName}!
+                                 </Typography>
+                                 <Typography variant="body2" color="textSecondary">
+                                     {basicInfo.email}
+                                 </Typography>
+                                 <Typography variant="body2" color="textSecondary">
+                                     <strong>ID:</strong> {basicInfo.studentId || 'N/A'} | <strong>Session:</strong> {basicInfo.session || 'N/A'}
+                                 </Typography>
+                                  {/* Display Current Status if available */}
+                                 {basicInfo.currentStatus && (
+                                     <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', mt: 0.5 }}>
+                                         Status: {basicInfo.currentStatus}
+                                     </Typography>
+                                 )}
+                             </UserInfoDetails>
+                         </WelcomeContainer>
+                     </UserInfoContainer>
+
+                     <QuickLinksContainer>
+                         <SectionTitle variant="h6">Quick Links</SectionTitle>
+                         <QuickLinksScroll>
+                             {/* TODO: Replace # with actual routes or handlers */}
+                             {/* If using React Router, use: component={Link} to="/courses" */}
+                             <QuickLinkButton variant="outlined" color="primary" href="#">
+                                 Course Catalog
+                             </QuickLinkButton>
+                             <QuickLinkButton variant="outlined" color="primary" href="#">
+                                 Assignments
+                             </QuickLinkButton>
+                             <QuickLinkButton variant="outlined" color="primary" href="#">
+                                 Grades
+                             </QuickLinkButton>
+                             <QuickLinkButton variant="outlined" color="primary" href="#">
+                                 Discussion Forums
+                             </QuickLinkButton>
+                             <QuickLinkButton variant="outlined" color="secondary" onClick={handleOpenStatusModal}>
+                                 Update Status
+                             </QuickLinkButton>
+                         </QuickLinksScroll>
+                     </QuickLinksContainer>
+                 </>
+             ) : (
+                 // Render something specific if user exists but basicInfo is missing
+                 <Alert severity="info" sx={{ mb: 3 }}>
+                     Welcome! Please complete your profile information by clicking the edit icon on the placeholder avatar.
+                     {/* Render a simplified UserInfoContainer or just the alert */}
+                     <UserInfoContainer>
+                          <WelcomeContainer>
+                             <ProfileAvatar
+                                 onClick={handleOpenEditProfileModal}
+                                 aria-label="Open edit profile modal"
+                             >
+                                 ?
+                                  <EditIconContainer
+                                     aria-label="Edit profile"
+                                     size="small"
+                                     onClick={(e) => { e.stopPropagation(); handleOpenEditProfileModal(); }}
+                                 >
+                                     <EditIcon sx={{ fontSize: '14px' }} />
+                                 </EditIconContainer>
+                             </ProfileAvatar>
+                              <UserInfoDetails>
+                                 <Typography variant="h5" component="h1" gutterBottom>
+                                     Welcome!
+                                 </Typography>
+                                 <Typography variant="body2" color="textSecondary">
+                                     Click the icon to complete your profile.
+                                 </Typography>
+                                </UserInfoDetails>
+                          </WelcomeContainer>
+                     </UserInfoContainer>
+                 </Alert>
+             )}
+
+             {/* Main Dashboard Grid Content */}
+             <Grid container spacing={3}>
+                 {/* Discussions Section - Using Suspense for lazy loading */}
+                 <Grid item xs={12}>
+                     <WidgetCard>
+                         <WidgetCardHeader><Typography variant="h6">Latest Discussions</Typography></WidgetCardHeader>
+                         <WidgetCardContent>
+                             <Suspense fallback={<LinearProgress sx={{ my: 2 }} />}>
+                                 {/* Render the lazy-loaded component */}
+                                 <AllMomentList />
+                             </Suspense>
+                         </WidgetCardContent>
+                     </WidgetCard>
+                 </Grid>
+
+                 {/* Add other grid items here if needed */}
+
+             </Grid>
+         </>
+    );
+
+
     return (
         <>
-            {/* Note: AppBar/Toolbar removed as requested */}
+            {/* AppBar/Toolbar removed as requested */}
 
             <StyledContainer maxWidth="lg" ref={dashboardContentRef}>
-                {/* Loading State */}
-                {loading && (
-                    <>
-                        {/* Skeleton for User Info */}
-                        <UserInfoContainer>
-                            <WelcomeContainer>
-                                <Skeleton variant="circular" width={80} height={80} sx={{ marginRight: '20px' }} />
-                                <UserInfoDetails>
-                                    <Skeleton variant="text" width={200} height={40} />
-                                    <Skeleton variant="text" width={250} />
-                                    <Skeleton variant="text" width={280} />
-                                </UserInfoDetails>
-                            </WelcomeContainer>
-                        </UserInfoContainer>
-                        {/* Skeleton for Quick Links */}
-                        <QuickLinksContainer>
-                            <SectionTitle variant="h6">
-                                <Skeleton variant="text" width={120} />
-                            </SectionTitle>
-                            <QuickLinksScroll>
-                                <Skeleton variant="rounded" width={140} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
-                                <Skeleton variant="rounded" width={180} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
-                                <Skeleton variant="rounded" width={100} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
-                                <Skeleton variant="rounded" width={150} height={36} sx={{ margin: '0 5px', display: 'inline-block' }} />
-                            </QuickLinksScroll>
-                        </QuickLinksContainer>
-                        {/* Optional: Skeleton for the grid content as well */}
-                        <Grid container spacing={3}>
-                            {/* Skeletons for removed blocks */}
-                            {/* <Grid item xs={12}><Skeleton variant="rounded" height={150} /></Grid> */}
-                            {/* <Grid item xs={12} md={6}><Skeleton variant="rounded" height={300} /></Grid> */}
-                            {/* <Grid item xs={12} md={6}><Skeleton variant="rounded" height={300} /></Grid> */}
-                            {/* <Grid item xs={12} md={6}><Skeleton variant="rounded" height={250} /></Grid> */}
-                            {/* <Grid item xs={12} md={6}><Skeleton variant="rounded" height={250} /></Grid> */}
-                            <Grid item xs={12}><Skeleton variant="rounded" height={200} /></Grid> {/* Skeleton for Discussion block */}
-                        </Grid>
-                    </>
-                )}
 
-                 {/* Error State */}
-                 {!loading && error && (
+                {/* Handle Loading State with Skeletons */}
+                {loading && renderSkeletons()}
+
+                {/* Handle Error State */}
+                {!loading && error && (
                     <Alert severity="error" icon={<ErrorOutlineIcon fontSize="inherit" />} sx={{ mb: 3 }}>
                         {error}
+                        {/* Optionally add a retry button */}
+                         {/* <Button color="inherit" size="small" onClick={() => window.location.reload()}>Retry</Button> */}
                     </Alert>
-                    // Optionally render parts of the dashboard that don't depend on user data
+                    // Depending on the error, you might still want to render some parts, like Quick Links if they don't depend on user data
                  )}
 
+                {/* Handle Loaded State (user data might still be partial) */}
+                {!loading && !error && user && renderContent()}
 
-                {/* Loaded State */}
-                {!loading && !error && (
-                    <>
-                       {/* User Info & Quick Links (Render only if basicInfo exists) */}
-                       {basicInfo && (
-                            <>
-                                <UserInfoContainer>
-                                    <WelcomeContainer>
-                                        <ProfileAvatar
-                                            // Use optional chaining and provide a default
-                                            profilebg={basicInfo.profilebg || primaryColor}
-                                            onClick={handleOpenEditProfileModal}
-                                        >
-                                            {basicInfo.fullName?.charAt(0).toUpperCase() || '?'}
-                                            <EditIconContainer
-                                                aria-label="edit profile"
-                                                size="small"
-                                                onClick={(e) => { e.stopPropagation(); handleOpenEditProfileModal(); }} // Prevent avatar click handler
-                                            >
-                                                <EditIcon sx={{ fontSize: '14px' }} /> {/* Adjust icon size */}
-                                            </EditIconContainer>
-                                        </ProfileAvatar>
-                                        <UserInfoDetails>
-                                            <Typography variant="h5" component="h2" gutterBottom>
-                                                Welcome, {basicInfo.fullName}!
-                                            </Typography>
-                                            <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <strong>Email:</strong> {basicInfo.email}
-                                            </Typography>
-                                            <Typography variant="body2" color="textSecondary">
-                                                <strong>Student ID:</strong> {basicInfo.studentId} | <strong>Session:</strong> {basicInfo.session}
-                                            </Typography>
-                                        </UserInfoDetails>
-                                    </WelcomeContainer>
-                                </UserInfoContainer>
-
-                                <QuickLinksContainer>
-                                    <SectionTitle variant="h6">Quick Links</SectionTitle>
-                                    <QuickLinksScroll>
-                                        {/* Replace with Link component if using react-router */}
-                                        <QuickLinkButton variant="outlined" color="primary" /* component={Link} to="/courses" */ >
-                                            Course Catalog
-                                        </QuickLinkButton>
-                                        <QuickLinkButton variant="outlined" color="primary" /* component={Link} to="/assignments" */ >
-                                            Assignments
-                                        </QuickLinkButton>
-                                        <QuickLinkButton variant="outlined" color="primary" /* component={Link} to="/grades" */ >
-                                            Grades
-                                        </QuickLinkButton>
-                                        <QuickLinkButton variant="outlined" color="primary" /* component={Link} to="/forums" */ >
-                                            Discussion Forums
-                                        </QuickLinkButton>
-                                        <QuickLinkButton variant="outlined" color="secondary" onClick={handleOpenStatusModal}>
-                                            Update Status
-                                        </QuickLinkButton>
-                                        {/* Add more functional links */}
-                                    </QuickLinksScroll>
-                                </QuickLinksContainer>
-                            </>
-                        )}
-                        {/* End of conditional basicInfo rendering */}
-
-                        {/* Dashboard Grid - Render main structure */}
-                        <Grid container spacing={3}>
-                            {/* REMOVED: Overview Section */}
-                            {/*
-                            <Grid item xs={12}>
-                                <StyledPaper>
-                                    <SectionTitle variant="h5">Overview</SectionTitle>
-                                    <Grid container spacing={3}>
-                                        <Grid item xs={12} sm={6} md={4}><DataCard>...</DataCard></Grid>
-                                        <Grid item xs={12} sm={6} md={4}><DataCard>...</DataCard></Grid>
-                                        <Grid item xs={12} sm={6} md={4}><DataCard>...</DataCard></Grid>
-                                    </Grid>
-                                </StyledPaper>
-                            </Grid>
-                            */}
-
-                            {/* REMOVED: Chart Section */}
-                            {/*
-                            <Grid item xs={12} md={6}>
-                                <CourseProgressContainer sx={{ minHeight: 300 }}>
-                                    <SectionTitle variant="h6">Course Progress</SectionTitle>
-                                    <Suspense fallback={...}>
-                                        <Box sx={{ flexGrow: 1, position: 'relative', height: '250px' }}>
-                                            <Bar data={chartData} options={chartOptions} />
-                                        </Box>
-                                    </Suspense>
-                                </CourseProgressContainer>
-                            </Grid>
-
-                            <Grid item xs={12} md={6}>
-                                <CourseProgressContainer sx={{ minHeight: 300 }}>
-                                    <SectionTitle variant="h6">Assignment Overview</SectionTitle>
-                                    <Suspense fallback={...}>
-                                        <Box sx={{ flexGrow: 1, position: 'relative', height: '250px' }}>
-                                            <Doughnut data={assignmentData} options={assignmentOptions} />
-                                        </Box>
-                                    </Suspense>
-                                </CourseProgressContainer>
-                            </Grid>
-                            */}
-
-                            {/* REMOVED: Activities & Notifications Sections */}
-                            {/*
-                            <Grid item xs={12} md={6}>
-                                <WidgetCard>
-                                    <WidgetCardHeader><Typography variant="h6">Latest Activities</Typography></WidgetCardHeader>
-                                    <WidgetCardContent>
-                                        <List disablePadding>
-                                            {trendingUsers.map((u) => ( ... ))}
-                                        </List>
-                                    </WidgetCardContent>
-                                </WidgetCard>
-                            </Grid>
-
-                            <Grid item xs={12} md={6}>
-                                <WidgetCard>
-                                    <WidgetCardHeader><Typography variant="h6">Notifications</Typography></WidgetCardHeader>
-                                    <WidgetCardContent>
-                                        <List disablePadding>
-                                            {notifications.map((n) => ( ... ))}
-                                        </List>
-                                    </WidgetCardContent>
-                                </WidgetCard>
-                            </Grid>
-                            */}
-
-                            {/* Discussions Section - Kept */}
-                            <Grid item xs={12}>
-                                <WidgetCard>
-                                    <WidgetCardHeader><Typography variant="h6">Latest Discussions</Typography></WidgetCardHeader>
-                                    <WidgetCardContent>
-                                        <Suspense fallback={<LinearProgress sx={{ my: 2 }} />}>
-                                            <AllMomentList />
-                                        </Suspense>
-                                    </WidgetCardContent>
-                                </WidgetCard>
-                            </Grid>
-                        </Grid>
-                    </>
-                )} {/* End of Loaded State */}
-
-
-                {/* Modals (Kept - These are functional parts, not demo) */}
-                <Modal open={editProfileModalOpen} onClose={handleCloseEditProfileModal} aria-labelledby="edit-profile-modal-title">
+                {/* --- Modals --- */}
+                {/* Keep modals outside the conditional rendering of main content if they can be opened from error states or skeleton states potentially */}
+                <Modal
+                    open={editProfileModalOpen}
+                    onClose={handleCloseEditProfileModal}
+                    aria-labelledby="edit-profile-modal-title"
+                >
                     <Box sx={modalStyle}>
                         <Typography id="edit-profile-modal-title" variant="h6" component="h2">Edit Profile</Typography>
-                        <Typography sx={{ mt: 2 }}>Profile editing form goes here. (Implement actual form fields)</Typography>
-                        {/* Example: Add form fields here */}
+                        <Typography sx={{ mt: 2 }}>
+                            Implement profile editing form here. Fields should likely pre-fill from `basicInfo`.
+                        </Typography>
+                        {/* Example fields (implement with state and handlers) */}
                         {/* <TextField label="Full Name" fullWidth margin="normal" defaultValue={basicInfo?.fullName} /> */}
-                        {/* <TextField label="Email" fullWidth margin="normal" defaultValue={basicInfo?.email} disabled /> */}
+                        {/* <TextField label="Student ID" fullWidth margin="normal" defaultValue={basicInfo?.studentId} /> */}
+                        {/* <TextField label="Session" fullWidth margin="normal" defaultValue={basicInfo?.session} /> */}
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 3 }}>
                              <Button onClick={handleCloseEditProfileModal} color="inherit">Cancel</Button>
-                             <Button variant="contained" color="primary" /* onClick={handleProfileUpdateSubmit} */ >Save</Button>
+                             {/* TODO: Implement handleProfileUpdateSubmit */}
+                             <Button variant="contained" color="primary" /* onClick={handleProfileUpdateSubmit} */ disabled>Save</Button>
                          </Box>
                     </Box>
                 </Modal>
 
-                <Modal open={openStatusModal} onClose={handleCloseStatusModal} aria-labelledby="current-status-modal">
+                <Modal
+                    open={openStatusModal}
+                    onClose={handleCloseStatusModal}
+                    aria-labelledby="current-status-modal-title"
+                >
                     <Box sx={modalStyle}>
-                        <Typography id="current-status-modal" variant="h6" component="h2">Update Current Status</Typography>
+                        <Typography id="current-status-modal-title" variant="h6" component="h2">Update Current Status</Typography>
                         <FormControl fullWidth margin="normal">
                             <InputLabel id="current-status-label">Current Status</InputLabel>
-                            <Select labelId="current-status-label" value={currentStatus} label="Current Status" onChange={handleStatusChange}>
+                            <Select
+                                labelId="current-status-label"
+                                value={currentStatus}
+                                label="Current Status"
+                                onChange={handleStatusChange}
+                            >
+                                <MenuItem value=""><em>None</em></MenuItem> {/* Allow clearing status */}
                                 <MenuItem value="Studying">Studying</MenuItem>
                                 <MenuItem value="Graduated">Graduated</MenuItem>
                                 <MenuItem value="Employed">Employed</MenuItem>
