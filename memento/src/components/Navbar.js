@@ -35,7 +35,9 @@ import {
     collection, query, orderBy, onSnapshot, doc, writeBatch,
     serverTimestamp, getDoc, setDoc, limit, where, getDocs
 } from 'firebase/firestore';
-import { useAuth } from '../auth/PrivateRoute';
+// --- CORRECTED IMPORT PATH FOR useAuth ---
+import { useAuth } from '../auth/AuthContext';
+// --- END CORRECTION ---
 import { formatDistanceToNow } from 'date-fns';
 
 // --- Constants ---
@@ -184,6 +186,7 @@ function Navbar() {
     const theme = useTheme();
     const location = useLocation();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    // useAuth() will now correctly get context because import path is fixed
     const { user, profileBg, userName, isAdmin, userProfile } = useAuth();
     const userId = user?.uid;
 
@@ -387,6 +390,7 @@ function Navbar() {
         setBatchSubmenuOpen(false);
         try {
             await auth.signOut();
+            // Navigation should ideally be handled by App level logic reacting to auth state change
         } catch (error) {
             console.error('Logout Error:', error);
         }
@@ -399,12 +403,10 @@ function Navbar() {
         if (!userId || !notificationId) return;
         const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
         try {
-            // Use set with merge: true instead of update to handle potential missing docs gracefully
             await setDoc(notificationRef, {
                 read: true,
                 readTimestamp: serverTimestamp()
             }, { merge: true });
-            // Note: totalUnreadCount state will update automatically via its onSnapshot listener
         } catch (error) {
             console.error("Navbar: Error marking notification as read:", error);
         }
@@ -418,32 +420,28 @@ function Navbar() {
             markNotificationAsRead(notification.id);
         }
         // ALWAYS navigate to the notifications page, highlighting the item
-        // This prevents opening the link directly from the popover.
         navigate(`/notifications#${notification.id}`);
     }, [handleNotificationPopoverClose, markNotificationAsRead, navigate]);
 
     // --- Mark All As Read (Unchanged Logic, just check implementation) ---
     const handleMarkAllAsRead = useCallback(async () => {
         if (!userId || markingRead || totalUnreadCount === 0) {
-             // Prevent concurrent runs or running if nothing is unread
             return;
         }
 
-        setMarkingRead(true); // Set loading state for the button
+        setMarkingRead(true);
         console.log("Navbar: Attempting to mark all unread notifications as read...");
 
         const userNotificationsRef = collection(db, 'users', userId, 'notifications');
-        // Query for all documents where 'read' is false
         const unreadQuery = query(userNotificationsRef, where('read', '==', false));
 
         try {
-            // Use getDocs for a one-time fetch of all unread documents
             const unreadSnapshot = await getDocs(unreadQuery);
 
             if (unreadSnapshot.empty) {
                 console.log("Navbar: No unread notifications found to mark.");
                 setMarkingRead(false);
-                return; // Exit if no documents were found (though totalUnreadCount should prevent this)
+                return;
             }
 
             const batch = writeBatch(db);
@@ -451,7 +449,6 @@ function Navbar() {
             let count = 0;
 
             unreadSnapshot.docs.forEach((docSnapshot) => {
-                // Add an update operation to the batch for each unread document
                 batch.set(docSnapshot.ref, { read: true, readTimestamp: now }, { merge: true });
                 count++;
             });
@@ -459,13 +456,11 @@ function Navbar() {
             console.log(`Navbar: Committing batch to mark ${count} notifications as read.`);
             await batch.commit();
             console.log("Navbar: Batch commit successful. All unread marked as read.");
-            // Note: totalUnreadCount state will update automatically via its listener after the batch commit
 
         } catch (error) {
             console.error("Navbar: Error in mark all as read batch operation:", error);
-            // Handle error appropriately, maybe show a user message
         } finally {
-            setMarkingRead(false); // Reset loading state regardless of success or failure
+            setMarkingRead(false);
         }
     }, [userId, markingRead, totalUnreadCount]);
 
@@ -602,7 +597,6 @@ function Navbar() {
                 {/* Scrollable Content Area */}
                  <Box sx={{
                     flexGrow: 1, overflowY: 'auto',
-                    // Scrollbar styling
                     '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-track': { backgroundColor: 'transparent', borderRadius: '3px' },
                     '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.action.selected, borderRadius: '3px' },
@@ -662,19 +656,18 @@ function Navbar() {
                                         >
                                             <ListItemText
                                                 primary={
-                                                    // **MODIFIED**: Wrap Category + Title in a Box for single-line layout
                                                     <Box sx={{ display: 'flex', alignItems: 'baseline', width: '100%', overflow: 'hidden' }}>
                                                         {notification.category && (
                                                             <Typography
                                                                 component="span"
-                                                                variant="body2" // Or caption
+                                                                variant="body2"
                                                                 sx={{
-                                                                    color: categoryColor, // Use determined color
+                                                                    color: categoryColor,
                                                                     fontWeight: 600,
-                                                                    mr: 0.75, // Space between category and title
+                                                                    mr: 0.75,
                                                                     textTransform: 'capitalize',
-                                                                    whiteSpace: 'nowrap', // Keep category on one line
-                                                                    flexShrink: 0, // Prevent category from shrinking
+                                                                    whiteSpace: 'nowrap',
+                                                                    flexShrink: 0,
                                                                 }}
                                                             >
                                                                 {notification.category}:
@@ -687,12 +680,11 @@ function Navbar() {
                                                                 fontSize: '0.9rem',
                                                                 lineHeight: 1.35,
                                                                 color: 'text.primary',
-                                                                // Make title single line with ellipsis
                                                                 whiteSpace: 'nowrap',
                                                                 overflow: 'hidden',
                                                                 textOverflow: 'ellipsis',
-                                                                flexGrow: 1, // Allow title to take remaining space
-                                                                minWidth: 0, // Required for flex ellipsis
+                                                                flexGrow: 1,
+                                                                minWidth: 0,
                                                             }}
                                                         >
                                                             {notification.title || 'Notification'}
@@ -701,7 +693,6 @@ function Navbar() {
                                                 }
                                                 secondary={
                                                     <>
-                                                        {/* **MODIFIED**: Ensure description uses the single-line class */}
                                                         <Typography component="span" variant="body2" className="notification-message">
                                                             {notification.message || "..."}
                                                         </Typography>
@@ -813,7 +804,6 @@ function Navbar() {
                                         anchorEl={deptAnchorEl}
                                         open={isDeptMenuOpenDesktop}
                                         onClose={handleDeptMenuClose}
-                                        // **MODIFIED**: Prevent scroll lock on body
                                         disableScrollLock={true}
                                         PaperProps={{ sx: { mt: 1.5, boxShadow: theme.shadows[4] } }}
                                       >
@@ -833,29 +823,16 @@ function Navbar() {
                                         anchorEl={batchAnchorEl}
                                         open={isBatchMenuOpenDesktop}
                                         onClose={handleBatchMenuClose}
-                                        // **MODIFIED**: Prevent scroll lock on body
                                         disableScrollLock={true}
-                                        // **MODIFIED**: Added PaperProps for styling and modern scrollbar
                                         PaperProps={{
                                             sx: {
                                                 mt: 1.5,
                                                 boxShadow: theme.shadows[4],
-                                                maxHeight: 300, // Keep max height
-                                                // Modern Scrollbar Styles
-                                                '&::-webkit-scrollbar': {
-                                                    width: '6px',
-                                                },
-                                                '&::-webkit-scrollbar-track': {
-                                                    backgroundColor: 'transparent', // Or theme.palette.background.paper
-                                                },
-                                                '&::-webkit-scrollbar-thumb': {
-                                                    backgroundColor: theme.palette.action.selected, // Adjust color as needed
-                                                    borderRadius: '3px',
-                                                },
-                                                '&::-webkit-scrollbar-thumb:hover': {
-                                                    backgroundColor: theme.palette.action.active, // Adjust hover color
-                                                },
-                                                // Firefox fallback
+                                                maxHeight: 300,
+                                                '&::-webkit-scrollbar': { width: '6px' },
+                                                '&::-webkit-scrollbar-track': { backgroundColor: 'transparent' },
+                                                '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.action.selected, borderRadius: '3px' },
+                                                '&::-webkit-scrollbar-thumb:hover': { backgroundColor: theme.palette.action.active },
                                                 scrollbarWidth: 'thin',
                                                 scrollbarColor: `${theme.palette.action.selected} transparent`,
                                             }
@@ -884,7 +861,6 @@ function Navbar() {
                                      transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                                      transitionDuration={250}
                                      disableRestoreFocus={true}
-                                     // **MODIFIED**: Prevent scroll lock on body
                                      disableScrollLock={true}
                                      slotProps={{
                                         paper: {
@@ -900,12 +876,11 @@ function Navbar() {
                                                 bgcolor: 'background.paper',
                                                 display: 'flex',
                                                 flexDirection: 'column',
-                                                overflow: 'hidden', // Important for layout
+                                                overflow: 'hidden',
                                             }
                                         }
                                     }}
                                  >
-                                     {/* Render the memoized popover content */}
                                      {notificationPopoverContent}
                                  </Popover>
 
@@ -923,7 +898,6 @@ function Navbar() {
                                         anchorEl={profileAnchorEl}
                                         open={isProfileMenuOpen}
                                         onClose={handleProfileMenuClose}
-                                        // **MODIFIED**: Prevent scroll lock on body
                                         disableScrollLock={true}
                                         PaperProps={{ sx: { mt: 1.5, minWidth: 200, boxShadow: theme.shadows[4], borderRadius: theme.shape.borderRadius }, elevation: 0, variant: 'outlined' }}
                                      >
@@ -951,7 +925,6 @@ function Navbar() {
             {user && (
                 <Drawer
                     variant="temporary" anchor="left" open={mobileOpen} onClose={handleDrawerToggle}
-                    // Keep existing ModalProps including disableScrollLock
                     ModalProps={{ keepMounted: true, disableScrollLock: true, disableRestoreFocus: true }}
                     sx={{ display: { xs: 'block', md: 'none' }, '& .MuiDrawer-paper': { boxSizing: 'border-box', width: DRAWER_WIDTH, borderRight: 'none', bgcolor: 'background.default' } }}
                 >

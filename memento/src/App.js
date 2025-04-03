@@ -5,46 +5,49 @@ import React, { Suspense, lazy } from 'react'; // MUST be first or among first i
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 
 // --- MUI ---
-import { ThemeProvider, CssBaseline, createTheme, Box, CircularProgress } from '@mui/material'; // Added Box, CircularProgress
+import { ThemeProvider, CssBaseline, createTheme, Box, CircularProgress } from '@mui/material';
 
-// --- Auth (Eager Imports) ---
-import PrivateRoute, { AuthProvider, useAuth } from './auth/PrivateRoute'; // Keep AuthProvider wrapping everything
+// --- Auth ---
+// Import the AuthProvider from its new dedicated file
+import { AuthProvider, useAuth } from './auth/AuthContext'; // Correct: Import AuthProvider AND useAuth from AuthContext.js
+// Import the PrivateRoute component from its new dedicated file
+import PrivateRoute from './auth/PrivateRoute'; // Correct: Import PrivateRoute from PrivateRoute.js
 
 // --- Layouts (Eager Imports) ---
 import MainLayout from './components/MainLayout';
-import AuthLayout from './components/AuthLayout'; // Keep if you have specific styling for auth pages, otherwise use React.Fragment
+import AuthLayout from './components/AuthLayout';
 
 // --- Pages & Components (Lazy Loaded) ---
-// Define lazy components AFTER all standard 'import' statements
+// (Keep all lazy imports as they were)
 const Signup = lazy(() => import('./auth/Signup'));
 const Login = lazy(() => import('./auth/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const MomentForm = lazy(() => import('./components/MomentForm')); // Ensure correct path/type (page/component)
+const MomentForm = lazy(() => import('./components/MomentForm'));
 const Batch = lazy(() => import('./pages/Batch'));
 const Profile = lazy(() => import('./pages/Profile'));
-const Alumni = lazy(() => import('./dept/Alumni')); // Ensure correct path
+const Alumni = lazy(() => import('./dept/Alumni'));
 const Admin = lazy(() => import('./pages/Admin'));
 const ViewProfile = lazy(() => import('./pages/ViewProfile'));
-const Notifications = lazy(() => import('./pages/NotificationsPage')); // Ensure correct path/type (page/component)
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage')); // Your dedicated 404 page
+const Notifications = lazy(() => import('./pages/NotificationsPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-// --- Inline Loading Component ---
-// Replaces the need for Loader.js for simple loading states
+// --- Inline Loading Component (Keep as is) ---
 const CenteredLoader = () => (
     <Box
         display="flex"
         justifyContent="center"
         alignItems="center"
-        minHeight="100vh" // Takes full viewport height
+        minHeight="100vh"
     >
         <CircularProgress />
     </Box>
 );
 
 // --- Helper Component for Root Redirect ---
-// Handles initial redirection based on auth state when accessing "/"
+// This component uses useAuth, so the import is handled above
 function RootRedirector() {
-    const { user, loading } = useAuth();
+    // useAuth is correctly imported from AuthContext.js via the App.js imports
+    const { user, authLoading } = useAuth(); // Changed 'loading' to 'authLoading' to match context provider
     const location = useLocation();
 
     // Only act if we are exactly at the root path "/"
@@ -52,25 +55,24 @@ function RootRedirector() {
         return null; // Let other routes handle it
     }
 
-    if (loading) {
-        // Show loader while checking auth status ONLY at root
+    // Show loader while checking auth status ONLY at root
+    if (authLoading) { // Use authLoading from context
         return <CenteredLoader />;
     }
 
+    // If logged in at root, go to dashboard
     if (user) {
-        // If logged in at root, go to dashboard
         return <Navigate to="/dashboard" replace />;
-    } else {
-        // If not logged in at root, go to login
+    }
+    // If not logged in at root, go to login
+    else {
         return <Navigate to="/login" replace />;
     }
 }
 
-// --- MUI Theme (Example) ---
+// --- MUI Theme (Keep as is or define your theme) ---
 const theme = createTheme({
     // Define your theme properties here
-    // palette: { ... },
-    // typography: { ... },
 });
 
 // --- Main App Component ---
@@ -79,25 +81,24 @@ function App() {
         <ThemeProvider theme={theme}>
             <CssBaseline /> {/* Ensures consistent baseline styling */}
             <Router>
-                <AuthProvider> {/* Provides auth context to the entire app */}
+                {/* Use the imported AuthProvider */}
+                <AuthProvider>
                     {/* Suspense handles loading for ALL lazy-loaded components */}
                     <Suspense fallback={<CenteredLoader />}>
                         <Routes>
-                            {/* Handle root path redirection first */}
+                            {/* Root path redirection */}
                             <Route path="/" element={<RootRedirector />} />
 
                             {/* Public Auth Routes */}
-                            {/* Use AuthLayout if it provides specific styling/structure for login/signup */}
-                            {/* Otherwise, React.Fragment is sufficient: <Route element={<React.Fragment />}> */}
                             <Route element={<AuthLayout />}>
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/signup" element={<Signup />} />
-                                {/* Add other public routes like password reset here if needed */}
                             </Route>
 
-                            {/* Protected Routes - Require Authentication */}
-                            <Route element={<PrivateRoute />}> {/* Gatekeeper for auth */}
-                                <Route element={<MainLayout />}> {/* Common layout for authenticated users */}
+                            {/* Protected Routes - Use the imported PrivateRoute */}
+                            <Route element={<PrivateRoute />}> {/* Gatekeeper */}
+                                <Route element={<MainLayout />}> {/* Common layout */}
+                                    {/* (All protected routes remain the same) */}
                                     <Route path="/dashboard" element={<Dashboard />} />
                                     <Route path="/moment-form" element={<MomentForm />} />
                                     <Route path="/batch" element={<Batch />} />
@@ -106,16 +107,10 @@ function App() {
                                     <Route path="/notifications" element={<Notifications />} />
                                     <Route path="/admin" element={<Admin />} />
                                     <Route path="/users/:userId" element={<ViewProfile />} />
-                                    {/* Add other protected routes inside MainLayout */}
-
-                                    {/* NOTE: A "*" route here would catch only unmatched *protected* routes */}
-                                    {/* <Route path="*" element={<NotFoundPage />} /> */}
-                                    {/* It's generally better to have a single top-level catch-all */}
                                 </Route>
                             </Route>
 
                             {/* Top-Level Catch-all 404 Route */}
-                            {/* This will catch any route not matched above (public or protected) */}
                             <Route path="*" element={<NotFoundPage />} />
 
                         </Routes>

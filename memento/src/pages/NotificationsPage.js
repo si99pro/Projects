@@ -1,11 +1,13 @@
-// src/components/NotificationsPage.js
+// src/pages/NotificationsPage.js
 import React, { useState, useEffect, useCallback, Fragment } from 'react';
 import { db } from '../firebase'; // Adjust path if needed
 import {
     collection, query, orderBy, limit, getDocs, doc, setDoc,
     serverTimestamp, startAfter, deleteDoc
 } from 'firebase/firestore';
-import { useAuth } from '../auth/PrivateRoute'; // Adjust path if needed
+// --- CORRECTED IMPORT PATH FOR useAuth ---
+import { useAuth } from '../auth/AuthContext';
+// --- END CORRECTION ---
 import { useNavigate } from 'react-router-dom';
 import {
     Container, Typography, Box, CircularProgress, Button, Alert, Stack,
@@ -41,7 +43,8 @@ const NotificationSkeleton = () => (
 
 // --- Main Page Component ---
 function NotificationsPage() {
-    const { user, isAdmin } = useAuth();
+    // Use the correctly imported useAuth hook
+    const { user, isAdmin, authLoading } = useAuth(); // Ensure 'authLoading' is used if needed
     const userId = user?.uid;
     const navigate = useNavigate();
     const theme = useTheme();
@@ -58,7 +61,10 @@ function NotificationsPage() {
 
     // --- Data Fetching (Identical logic, stable references are good) ---
     const fetchInitialNotifications = useCallback(async () => {
+        // Added check for authLoading - don't fetch if auth isn't ready
+        if (authLoading) { setLoading(true); return; }
         if (!userId) { setLoading(false); setNotifications([]); setHasMore(false); return; }
+
         setLoading(true); setError(null); setLastVisible(null); setHasMore(true);
         setNotifications([]); // Clear existing for a clean load with skeletons
 
@@ -77,9 +83,10 @@ function NotificationsPage() {
         } finally {
             setLoading(false);
         }
-    }, [userId]); // Dependency: userId
+    }, [userId, authLoading]); // Add authLoading as dependency
 
     const fetchMoreNotifications = useCallback(async () => {
+        // No need to check authLoading here as initial load would have waited
         if (!userId || loadingMore || !hasMore || !lastVisible) return;
         setLoadingMore(true); setError(null);
         try {
@@ -87,25 +94,23 @@ function NotificationsPage() {
             const q = query(notificationsRef, orderBy('timestamp', 'desc'), startAfter(lastVisible), limit(NOTIFICATIONS_PER_PAGE));
             const snapshots = await getDocs(q);
             const newNotifications = snapshots.docs.map(d => ({ id: d.id, ...d.data() }));
-            // Use functional update to avoid stale closures if needed, though direct set should be fine here
             setNotifications(prev => [...prev, ...newNotifications]);
             setLastVisible(snapshots.docs[snapshots.docs.length - 1] || null);
             setHasMore(newNotifications.length === NOTIFICATIONS_PER_PAGE);
         } catch (err) {
             console.error("Error fetching more notifications:", err);
             setError("Failed to load more notifications.");
-            // Don't necessarily setHasMore(false) on error, maybe just show error and allow retry?
         } finally {
             setLoadingMore(false);
         }
     }, [userId, loadingMore, hasMore, lastVisible]); // Dependencies for fetching more
 
     useEffect(() => {
-        fetchInitialNotifications();
-    }, [fetchInitialNotifications]); // Effect runs when fetchInitialNotifications definition changes (only when userId changes)
+        // Fetch initial notifications only when userId is available and auth check is done
+         fetchInitialNotifications();
+    }, [fetchInitialNotifications]); // Effect runs when fetchInitialNotifications definition changes
 
     // --- Interaction Handlers (Passed down to NotificationItem) ---
-    // Wrapped in useCallback to ensure stable references for memoized child component
     const handleMarkReadToggle = useCallback(async (notificationId, currentReadState) => {
         if (!userId || !notificationId) return;
         const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
@@ -124,21 +129,17 @@ function NotificationsPage() {
         } catch (error) {
             console.error("Error updating notification read state:", error);
             setError("Couldn't update notification status. Please try again.");
-            // Revert on error - use functional update to get latest state
+            // Revert on error
             setNotifications(prev => prev.map(n =>
-                n.id === notificationId ? { ...n, read: currentReadState } : n // Revert to original state
+                n.id === notificationId ? { ...n, read: currentReadState } : n
             ));
         }
     }, [userId]); // Dependency: userId
 
     const handleNotificationClick = useCallback((notification) => {
-        // Mark as read if unread when clicked (optimistic)
         if (!notification.read) {
-            // Call the toggle handler directly - avoids duplicating logic
             handleMarkReadToggle(notification.id, false);
         }
-
-        // Handle navigation/link opening
         if (notification.link && typeof notification.link === 'string' && notification.link.trim() !== '') {
             try {
                 if (notification.link.startsWith('http')) {
@@ -147,62 +148,68 @@ function NotificationsPage() {
                     navigate(notification.link);
                 } else {
                     console.warn("Unsupported link format:", notification.link);
-                    // Optionally show a user-facing message here if needed
                 }
             } catch (e) {
                 console.error("Error navigating/opening link:", notification.link, e);
                 setError(`Could not open the requested link.`);
             }
         }
-        // If no link, clicking primarily marks as read (handled above)
     }, [navigate, handleMarkReadToggle]); // Dependencies: navigate, handleMarkReadToggle
 
     // --- Delete Handling with Dialog ---
     const handleDeleteRequest = useCallback((notificationId) => {
-        // No need for isAdmin check here, the button won't render in NotificationItem if not admin
         setNotificationToDelete(notificationId);
         setDeleteDialogOpen(true);
-    }, []); // No dependencies needed
+    }, []);
 
     const handleCloseDeleteDialog = useCallback(() => {
         setDeleteDialogOpen(false);
-        // Delay clearing the ID slightly so the dialog can fade out smoothly if needed
-        setTimeout(() => setNotificationToDelete(null), 300);
-    }, []); // No dependencies needed
+        setTimeout(() => setNotificationToDelete(null), 300); // Allow fade out
+    }, []);
 
     const handleConfirmDelete = useCallback(async () => {
-        if (!userId || !notificationToDelete || !isAdmin) {
-             // Added isAdmin check here as a safeguard before DB operation
-             console.error("Delete prevented: Invalid state (userId, notificationId, or permissions).");
+        if (!userId || !notificationToDelete || !isAdmin) { // Added safeguard check
+             console.error("Delete prevented: Invalid state.");
              setError("Could not delete notification due to an internal error.");
-             handleCloseDeleteDialog(); // Close dialog even on internal error
+             handleCloseDeleteDialog();
              return;
         }
 
-        const notificationId = notificationToDelete; // Capture before state changes
-        setDeleteDialogOpen(false); // Close dialog first
+        const notificationId = notificationToDelete;
+        setDeleteDialogOpen(false);
+        const originalNotifications = notifications; // Keep original state for potential rollback
 
-        const originalNotifications = notifications; // Keep reference before optimistic update
-
-        // Optimistic UI update (triggers animation via AnimatePresence)
+        // Optimistic UI update for smoother UX
         setNotifications(prev => prev.filter(n => n.id !== notificationId));
-        setNotificationToDelete(null); // Clear ID after filter starts
+        setNotificationToDelete(null);
 
         const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
         try {
             await deleteDoc(notificationRef);
-            // Success! No need to do anything else, UI is already updated.
+            // Success! UI is already updated.
         } catch (error) {
             console.error("Error deleting notification:", error);
             setError("Failed to delete the notification. Please try again.");
-            // Revert on error
+            // Rollback UI on error
             setNotifications(originalNotifications);
         }
-    }, [userId, isAdmin, notificationToDelete, notifications, handleCloseDeleteDialog]); // Dependencies
+    }, [userId, isAdmin, notificationToDelete, notifications, handleCloseDeleteDialog]);
 
 
     // --- Main Page Render ---
-    if (!userId && !loading) {
+
+    // Show global loading if auth is still checking
+    if (authLoading) {
+         return (
+            <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
+                 <CircularProgress />
+                 <Typography sx={{ mt: 2 }}>Loading user data...</Typography>
+            </Container>
+        );
+    }
+
+    // Show message if not logged in (after auth check)
+    if (!userId) {
         return (
             <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
                  <Alert severity="warning" variant="outlined">Please log in to view your notifications.</Alert>
@@ -210,8 +217,9 @@ function NotificationsPage() {
         );
     }
 
+    // Render actual page content once auth is done and user exists
     return (
-        <Container maxWidth="md" sx={{ py: { xs: 3, sm: 4 } }}> {/* Responsive padding */}
+        <Container maxWidth="md" sx={{ py: { xs: 3, sm: 4 } }}>
             <Typography variant="h4" component="h1" sx={{ mb: { xs: 2, sm: 3 }, fontWeight: 700, color: 'text.primary' }}>
                 Notifications
             </Typography>
@@ -234,32 +242,30 @@ function NotificationsPage() {
 
             {/* Content Area */}
             {loading ? (
-                // Skeletons for initial load
-                <Stack spacing={0} sx={{ mt: 2 }}> {/* Let item margin handle spacing */}
+                // Skeletons for initial notification load
+                <Stack spacing={0} sx={{ mt: 2 }}>
                     {[...Array(NOTIFICATIONS_PER_PAGE / 2)].map((_, index) => <NotificationSkeleton key={`skeleton-${index}`} />)}
                 </Stack>
             ) : notifications.length === 0 ? (
-                 // Enhanced Empty State
+                 // Empty State
                  <Box sx={{ textAlign: 'center', mt: { xs: 6, sm: 10 }, color: 'text.secondary' }}>
                     <NotificationsNoneIcon sx={{ fontSize: '5rem', mb: 2, color: theme.palette.grey[400] }} />
                     <Typography variant="h6" component="p" sx={{ mb: 1, fontWeight: 500 }}>All caught up!</Typography>
-                    <Typography>You have no new notifications right now.</Typography>
+                    <Typography>You have no notifications right now.</Typography>
                  </Box>
             ) : (
                  // Notifications List
                  <Box sx={{ mt: 2 }}>
-                    {/* AnimatePresence manages mounting/unmounting animations */}
-                    {/* Pass stable handlers to the memoized NotificationItem */}
                     <AnimatePresence initial={false}>
-                         <Stack spacing={0}> {/* Let item margin handle spacing */}
+                         <Stack spacing={0}> {/* Let NotificationItem margin handle spacing */}
                             {notifications.map((notification) => (
                                 <NotificationItem
                                     key={notification.id}
                                     notification={notification}
-                                    isAdmin={isAdmin}
+                                    isAdmin={isAdmin} // Pass admin status down
                                     onMarkReadToggle={handleMarkReadToggle}
                                     onNotificationClick={handleNotificationClick}
-                                    onDeleteRequest={handleDeleteRequest}
+                                    onDeleteRequest={handleDeleteRequest} // Pass delete handler
                                 />
                             ))}
                         </Stack>
@@ -269,18 +275,17 @@ function NotificationsPage() {
                     {hasMore && (
                         <Box sx={{ textAlign: 'center', my: 4 }}>
                             <Button
-                                variant="outlined" // Outlined feels more like an action button
+                                variant="outlined"
                                 color="primary"
                                 onClick={fetchMoreNotifications}
                                 disabled={loadingMore}
                                 startIcon={loadingMore ? <CircularProgress size={20} color="inherit" /> : null}
-                                sx={{ textTransform: 'none', borderRadius: '20px', px: 3 }} // Modern styling
+                                sx={{ textTransform: 'none', borderRadius: '20px', px: 3 }}
                             >
                                 {loadingMore ? 'Loading More...' : 'Load More Notifications'}
                             </Button>
                         </Box>
                     )}
-                    {/* Add a subtle indicator if no more notifications exist but some are loaded */}
                     {!hasMore && notifications.length > 0 && !loadingMore && (
                          <Typography variant="caption" display="block" textAlign="center" color="text.disabled" sx={{ my: 4 }}>
                            End of notifications.
@@ -289,18 +294,18 @@ function NotificationsPage() {
                  </Box>
             )}
 
-            {/* Delete Confirmation Dialog - Refined Styling */}
+            {/* Delete Confirmation Dialog */}
              <Dialog
                 open={deleteDialogOpen}
                 onClose={handleCloseDeleteDialog}
                 aria-labelledby="delete-confirm-title"
-                PaperProps={{ sx: { borderRadius: 2 } }} // Slightly rounded corners
+                PaperProps={{ sx: { borderRadius: 2 } }}
             >
                 <DialogTitle id="delete-confirm-title" sx={{ display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}`, pb: 1.5 }}>
                     <DeleteForeverIcon sx={{ mr: 1.5, color: 'error.main' }}/>
                     Confirm Deletion
                 </DialogTitle>
-                <DialogContent sx={{ pt: '20px !important' }}> {/* Ensure padding top after title border */}
+                <DialogContent sx={{ pt: '20px !important' }}>
                     <DialogContentText>
                         Are you sure you want to permanently delete this notification? This action cannot be undone.
                     </DialogContentText>

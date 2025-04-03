@@ -1,7 +1,9 @@
 // src/pages/Admin.js
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/PrivateRoute';
+// --- CORRECTED IMPORT PATH FOR useAuth ---
+import { useAuth } from '../auth/AuthContext';
+// --- END CORRECTION ---
 import NotificationForm from '../components/NotificationForm'; // Assuming this will be updated separately
 
 import {
@@ -17,7 +19,8 @@ import {
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Icon for visual cue
 
 function Admin() {
-    const { user, roles, loading: authLoading } = useAuth(); // Assume useAuth provides a loading state
+    // Use the correctly imported useAuth hook
+    const { user, roles, authLoading } = useAuth(); // Destructure 'authLoading' as provided by context
     const navigate = useNavigate();
     const [isCheckingRoles, setIsCheckingRoles] = useState(true); // Separate state for role check completion
     const [isAdmin, setIsAdmin] = useState(false);
@@ -33,12 +36,13 @@ function Admin() {
         // Once auth loading is done and user exists, check roles
         if (!authLoading && user) {
             console.log("Admin Page: User found, checking roles:", roles);
-            if (roles === undefined) {
-                // Still waiting for roles to be populated by useAuth
-                console.log("Admin Page: Roles are undefined, waiting...");
-                setIsCheckingRoles(true);
+            // The roles variable from useAuth now directly reflects userProfile.roles
+            // It could be undefined initially, null if profile doesn't exist, or an array.
+            if (roles === undefined && authLoading) { // Check if still waiting on initial load
+                console.log("Admin Page: Auth/Roles still loading...");
+                setIsCheckingRoles(true); // Keep checking
             } else {
-                 // Roles are available (could be null, empty array, or populated)
+                 // Roles *should* be available now (even if null or empty array)
                 const hasAdminRole = Array.isArray(roles) && roles.includes('admin');
                 console.log("Admin Page: Has admin role?", hasAdminRole);
                 setIsAdmin(hasAdminRole);
@@ -52,7 +56,7 @@ function Admin() {
     }, [user, roles, authLoading, navigate]);
 
     // --- Loading State ---
-    // Show loading indicator while auth is loading or roles are being checked
+    // Show loading indicator while auth is loading OR roles are being definitively checked
     if (authLoading || isCheckingRoles) {
         return (
             <Container maxWidth="sm" sx={{ mt: 4, textAlign: 'center' }}>
