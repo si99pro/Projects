@@ -62,8 +62,8 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
     }),
     // Desktop: Positioned next to the drawer
     [theme.breakpoints.up('md')]: {
-        // width: `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)`, // DISABLED
-        // marginLeft: `${DESKTOP_DRAWER_WIDTH}px`,         // DISABLED
+        width: `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)`,
+        marginLeft: `${DESKTOP_DRAWER_WIDTH}px`,
     },
     // Mobile: Full width
     [theme.breakpoints.down('md')]: {
@@ -1000,9 +1000,6 @@ function Navbar() {
                     const { user } = useAuth(); // Get user state
 
                     const bottomNavHeightActual = user && isMobile ? MOBILE_BOTTOM_NAV_HEIGHT : 0;
-                    const appBarMarginLeftActual = user && !isMobile ? DESKTOP_DRAWER_WIDTH : 0; // Check if user exists AND is not mobile
-                    const appBarWidthActual = user && !isMobile ? `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)` : '100%'; // Check if user exists AND is not mobile
-
 
                     return (
                         <Box sx={{ display: 'flex', minHeight: '100vh' }}> {/* Ensure Box takes full height */}
@@ -1014,11 +1011,8 @@ function Navbar() {
                                     flexGrow: 1,
                                     p: { xs: 2, sm: 3 }, // Content padding
                                     bgcolor: theme.palette.grey[100], // Background for content area
-                                    // Adjust margin based on drawer state for desktop
-                                    // ml: { md: `${DESKTOP_DRAWER_WIDTH}px` }, // ORIGINAL - Use appBarMarginLeftActual instead if AppBar style is disabled
-                                    ml: { md: user ? `${DESKTOP_DRAWER_WIDTH}px` : 0 }, // Apply margin only if user logged in and on desktop
-                                    // width: { xs: '100%', md: `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)` }, // ORIGINAL - Use appBarWidthActual instead if AppBar style is disabled
-                                    width: { xs: '100%', md: user ? `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)` : '100%' }, // Correct width calculation only if user logged in and on desktop
+                                    ml: { md: `${DESKTOP_DRAWER_WIDTH}px` }, // Margin for desktop drawer
+                                    width: { xs: '100%', md: `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)` }, // Correct width calculation
                                     mt: `${APP_BAR_HEIGHT}px`, // Margin for AppBar
                                     pb: `${bottomNavHeightActual}px`, // Padding for mobile BottomNav
                                     // Calculate minHeight to push footer down even with short content
