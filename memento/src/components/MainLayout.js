@@ -1,5 +1,3 @@
-/* eslint-disable no-dupe-keys */
-/* eslint-disable no-unused-vars */
 // src/components/MainLayout.js
 import React from 'react';
 import { Outlet } from 'react-router-dom';
@@ -10,8 +8,7 @@ import { useAuth } from '../auth/AuthContext';
 
 // --- Define Constants Consistently ---
 const APP_BAR_HEIGHT = 64;
-// DESKTOP_DRAWER_WIDTH is likely still needed in Navbar.js
-const DESKTOP_DRAWER_WIDTH = 260;
+const DESKTOP_DRAWER_WIDTH = 260; // Ensure this matches Navbar.js
 const MOBILE_BOTTOM_NAV_HEIGHT = 56; // Ensure this matches Navbar.js
 // ********************************************
 
@@ -23,11 +20,19 @@ function MainLayout() {
   // Calculate actual height needed for bottom spacing (for Mobile BottomNav)
   const bottomNavHeightActual = user && isMobile ? MOBILE_BOTTOM_NAV_HEIGHT : 0;
 
+  // Determine if the drawer's space should be accounted for in the layout
+  // Set to 0 if you want the content to go under the drawer
+  const effectiveDrawerWidth = user && !isMobile ? 0 : 0; // <<< CHANGED: Always 0 for margin/width calculations below
+  // If you wanted the standard behavior back, you'd use:
+  // const effectiveDrawerWidth = user && !isMobile ? DESKTOP_DRAWER_WIDTH : 0;
+
+
   return (
     // Root Box: Handles the primary horizontal layout (Sidebar | Content+Footer Column)
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
 
       {/* Navbar: Renders Fixed AppBar, Conditional Drawers, Fixed Mobile BottomNav */}
+      {/* The Navbar component itself handles its own positioning (fixed AppBar, drawers) */}
       <Navbar />
 
       {/* "Content Column" Box: Sits next to sidebar, holds Content + Footer */}
@@ -38,9 +43,13 @@ function MainLayout() {
           flexGrow: 1,
           minHeight: '100vh', // Ensure column fills height
 
-          // --- REMOVED a block here that set width and margin-left for desktop ---
-          // width: { xs: '100%', md: `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)` }, // <<< REMOVED
-          // ml: { md: `${DESKTOP_DRAWER_WIDTH}px` },                            // <<< REMOVED
+          // Positioning relative to the sidebar (ONLY on desktop)
+          // --- V V V --- MODIFIED LINES TO REMOVE MARGIN/WIDTH ADJUSTMENT --- V V V ---
+          width: '100%', // Always occupy full width available (parent is flex)
+          ml: { md: 0 },    // No margin-left on desktop anymore
+          // width: { xs: '100%', md: `calc(100% - ${effectiveDrawerWidth}px)` }, // Original logic based on effectiveDrawerWidth
+          // ml: { md: `${effectiveDrawerWidth}px` },                               // Original logic based on effectiveDrawerWidth
+          // --- ^ ^ ^ --- END OF MODIFIED LINES --- ^ ^ ^ ---
 
           // Background for the entire content area + footer space
           bgcolor: theme.palette.grey[100],
@@ -49,7 +58,6 @@ function MainLayout() {
           mt: `${APP_BAR_HEIGHT}px`,
 
           // Apply padding-bottom for Fixed Mobile BottomNav (space below the whole column)
-          // ***** MOVED pb HERE *****
           pb: `${bottomNavHeightActual}px`,
 
           // Adjust overall column height calculation
@@ -70,10 +78,6 @@ function MainLayout() {
             overflowY: 'auto', // Enable vertical scroll ONLY for the content area
             overflowX: 'hidden',
             boxSizing: 'border-box',
-
-            // NO mt needed here, parent has it
-            // NO pb needed here, parent has it
-            // pb: `${bottomNavHeightActual}px`, // <<< REMOVED FROM HERE
 
             // Inner padding for the content itself
             p: { xs: 2, sm: 3 },
