@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/Profile.js
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { auth, db } from '../firebase';

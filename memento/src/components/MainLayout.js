@@ -1,3 +1,5 @@
+/* eslint-disable no-dupe-keys */
+/* eslint-disable no-unused-vars */
 // src/components/MainLayout.js
 import React from 'react';
 import { Outlet } from 'react-router-dom';

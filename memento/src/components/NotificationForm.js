@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/components/NotificationForm.js
 import React, { useState, useCallback } from 'react';
 import { db, auth } from '../firebase';

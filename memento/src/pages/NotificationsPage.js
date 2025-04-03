@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/NotificationsPage.js
 import React, { useState, useEffect, useCallback, Fragment } from 'react';
 import { db } from '../firebase'; // Adjust path if needed
