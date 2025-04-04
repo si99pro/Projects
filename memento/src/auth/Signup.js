@@ -1,261 +1,322 @@
+/* eslint-disable no-unused-vars */
 // src/auth/Signup.js
-import React, { useState } from 'react'; // Removed useEffect from import
-import { auth, db } from '../firebase'; // Import Firebase auth and db
+import React, { useState, useMemo } from 'react';
+import { auth, db } from '../firebase';
 import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
-    TextField,
-    Button,
-    Container,
-    Typography,
-    Alert,
-    Box,
-    Select,
-    MenuItem,
-    InputLabel,
-    FormControl,
+    TextField, Button, Container, Typography, Alert, Box, Select, MenuItem, InputLabel, FormControl,
+    Paper, Stack, CircularProgress, IconButton, InputAdornment, Avatar, Link,
 } from '@mui/material';
-import styled from '@emotion/styled';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
-const StyledContainer = styled(Container)`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-`;
-
-const StyledForm = styled.form`
-  width: 100%;
-  max-width: 400px;
-  padding: 32px;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
-`;
-
-const StyledButton = styled(Button)`
-  margin-top: 20px;
-  width: 100%;
-`;
-
-const LoginLink = styled(Link)`
-  margin-top: 16px;
-  display: block;
-  text-align: center;
-  text-decoration: none;
-  color: #1976d2;
-
-  &:hover {
-    text-decoration: underline;
-  }
-`;
-
-const ErrorMessageSpace = styled(Box)`
-  min-height: 53px;
-  margin-bottom: 8px;
-`;
-
-const StudentSessionRow = styled(Box)`
-  display: flex;
-  gap: 20px;
-
-  & > div {
-    width: 100%;
-  }
-`;
+// Constants
+const MIN_PASSWORD_LENGTH = 6;
+const STUDENT_ID_LENGTH = 7; // Define length as a constant
 
 function Signup() {
+    // --- State ---
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [studentId, setStudentId] = useState('');
     const [session, setSession] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
 
-    const generateRandomColor = () => {
-        // Generate a random hex color code
-        return `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+    // --- Derived Data & Memoized Values ---
+    const currentYear = new Date().getFullYear();
+    const currentYearLastTwoDigits = currentYear % 100;
+
+    // --- Helper Functions ---
+    const generateRandomColor = () => `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
+
+    const getBatchFromStudentIdPrefix = (idPrefix) => {
+        const prefixYear = parseInt(idPrefix, 10);
+        if (isNaN(prefixYear) || prefixYear < 16 || prefixYear > currentYearLastTwoDigits) {
+            return null;
+        }
+        return (2000 + prefixYear).toString();
     };
 
+    const generateSessionOptions = useMemo(() => {
+        const startYear = 2016;
+        const options = [];
+        for (let i = startYear; i <= currentYear; i++) {
+            const sessionValue = `${i}-${i + 3}`;
+            options.push(<MenuItem key={sessionValue} value={sessionValue}>{sessionValue}</MenuItem>);
+        }
+        return options;
+    }, [currentYear]);
+
+    // --- Event Handlers ---
+    const handleClickShowPassword = () => setShowPassword((show) => !show);
+    const handleMouseDownPassword = (event) => event.preventDefault();
+
+    const handleStudentIdChange = (event) => {
+        const value = event.target.value;
+        if (/^[0-9]*$/.test(value) && value.length <= STUDENT_ID_LENGTH) {
+            setStudentId(value);
+        }
+    };
+
+    // *** handleSubmit with CONSOLE LOGS for debugging ***
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log("handleSubmit triggered"); // Log start
         setError('');
         setSuccess('');
+        console.log("Setting isSubmitting to true");
+        setIsSubmitting(true); // Start loading
 
-        if (studentId.length !== 7) {
-            setError('Student ID must be 7 digits.');
-            return;
-        }
+        try { // Wrap validation potentially throwing parsing errors
+            // --- Student ID Validation ---
+            if (studentId.length !== STUDENT_ID_LENGTH) {
+                console.log("Validation Fail: Student ID Length");
+                setError(`Student ID must be exactly ${STUDENT_ID_LENGTH} digits.`);
+                setIsSubmitting(false);
+                return;
+            }
 
-        const batch = getBatchFromStudentId(studentId);
-        if (!batch) {
-            setError(
-                'Could not determine batch from Student ID. ID must start with 16, 17, 18, 19, 20, 21, 22, 23, 24 or 25'
-            );
-            return;
-        }
+            const prefixStr = studentId.substring(0, 2);
+            const middleStr = studentId.substring(2, 5);
+            const suffixStr = studentId.substring(5, 7);
 
-        const studentIdPrefix = parseInt(studentId.substring(0, 2));
-        const sessionStartYear = parseInt(session.substring(0, 4)); //parse the start year to check with the id prefix
-        if (studentIdPrefix > sessionStartYear.toString().substring(2, 4)) {
-            setError('Make sure that you have typed correct ID and Session.');
-            return;
-        }
+            const prefixYearNum = parseInt(prefixStr, 10);
+            const suffixNum = parseInt(suffixStr, 10);
 
-        try {
-            const userCredential = await createUserWithEmailAndPassword(
-                auth,
-                email,
-                password
-            );
+            if (middleStr !== '074') {
+                console.log("Validation Fail: Middle Section is not 074");
+                setError('Invalid Student ID format. Middle section must be "074".');
+                setIsSubmitting(false);
+                return;
+            }
+
+            if (isNaN(prefixYearNum) || prefixYearNum < 16 || prefixYearNum > currentYearLastTwoDigits) {
+                console.log("Validation Fail: Invalid Prefix Year", prefixYearNum);
+                setError(`Invalid Student ID. Year prefix must be between 16 and ${currentYearLastTwoDigits}.`);
+                setIsSubmitting(false);
+                return;
+            }
+
+            if (isNaN(suffixNum) || suffixNum < 1 || suffixNum > 99) {
+                console.log("Validation Fail: Invalid Suffix Number", suffixNum);
+                setError('Invalid Student ID. Serial number (last 2 digits) must be between 01 and 99.');
+                setIsSubmitting(false);
+                return;
+            }
+
+            const batch = getBatchFromStudentIdPrefix(prefixStr);
+            if (!batch) {
+                console.log("Validation Fail: Batch derivation failed unexpectedly for prefix:", prefixStr);
+                setError("Internal error deriving batch year. Please check ID prefix.");
+                setIsSubmitting(false);
+                return;
+            }
+             console.log("Validation Passed: Batch derived:", batch);
+
+            // --- Other Validations ---
+            if (password.length < MIN_PASSWORD_LENGTH) {
+                console.log("Validation Fail: Password Length");
+                setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
+                setIsSubmitting(false);
+                return;
+            }
+            if (!session) {
+                console.log("Validation Fail: Session not selected");
+                setError('Please select your session.');
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Validate Session Start Year against Derived Batch Year
+            const sessionStartYear = parseInt(session.substring(0, 4), 10);
+            const batchYearNum = parseInt(batch, 10);
+            if (isNaN(sessionStartYear) || isNaN(batchYearNum)) {
+                 console.log("Validation Fail: Error parsing session/batch years");
+                 setError('Error parsing session/batch year. Please check selection.');
+                 setIsSubmitting(false);
+                 return;
+            }
+            if (batchYearNum !== sessionStartYear) {
+                console.log("Validation Fail: Batch/Session Mismatch", { batchYearNum, sessionStartYear });
+                setError(`The derived batch year (${batch}) does not match the selected session start year (${sessionStartYear}).`);
+                setIsSubmitting(false);
+                return;
+            }
+            console.log("Validation Passed: All checks complete.");
+
+            // --- Firebase Interaction ---
+            console.log("Attempting Firebase operations...");
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+            console.log("Firebase Auth user created:", user.uid);
 
             await sendEmailVerification(user);
+            console.log("Verification email sent.");
 
-            // Generate profile background color and create basicInfo object
-            const profilebg = generateRandomColor();
             const basicInfo = {
-                fullName,
-                email,
-                studentId,
-                batch,
-                session,
-                profilebg,
-                emailStatus: false, // Initially set to false (not verified)
+                fullName: fullName.trim(), email: user.email, studentId, batch, session,
+                profilebg: generateRandomColor(), emailStatus: false, createdAt: new Date(),
             };
+            const userData = { basicInfo, roles: ['user'] };
 
-            // Store user data in Firestore
-            const userData = {
-                basicInfo: basicInfo, // Store basicInfo object as an array
-                roles: ['user'], // SET DEFAULT ROLE HERE
-            };
             await setDoc(doc(db, 'users', user.uid), userData);
+            console.log("Firestore document written for user:", user.uid);
 
-            setSuccess('Check your inbox to verify your email address.');
-            navigate('/login');
+            setSuccess('Account created! Check your email inbox (and spam folder) to verify your address before logging in.');
+            console.log("Success state set.");
 
         } catch (err) {
-            console.error(err);
-            setError(err.message);
+            // Log the raw error and the specific message shown to user
+            console.error("SIGNUP ERROR CAUGHT:", err);
+            let specificError = 'Failed to create account. Please try again.';
+            switch (err.code) {
+                case 'auth/email-already-in-use': specificError = 'This email address is already registered. Try logging in.'; break;
+                case 'auth/invalid-email': specificError = 'Please enter a valid email address.'; break;
+                case 'auth/weak-password': specificError = `Password is too weak. It must be at least ${MIN_PASSWORD_LENGTH} characters.`; break;
+                case 'auth/operation-not-allowed': specificError = 'Email/password sign up is currently disabled.'; break;
+                default: specificError = `An error occurred: ${err.message}`;
+            }
+            setError(specificError);
+             console.log("Error state set:", specificError);
+
+        } finally {
+            console.log("Finally block: Setting isSubmitting to false");
+            setIsSubmitting(false); // Stop loading regardless of success/error
         }
     };
 
-    const getBatchFromStudentId = (studentId) => {
-        if (studentId.length === 7 && studentId.startsWith('16')) {
-            return '2016';
-        } else if (studentId.length === 7 && studentId.startsWith('17')) {
-            return '2017';
-        } else if (studentId.length === 7 && studentId.startsWith('18')) {
-            return '2018';
-        } else if (studentId.length === 7 && studentId.startsWith('19')) {
-            return '2019';
-        } else if (studentId.length === 7 && studentId.startsWith('20')) {
-            return '2020';
-        } else if (studentId.length === 7 && studentId.startsWith('21')) {
-            return '2021';
-        } else if (studentId.length === 7 && studentId.startsWith('22')) {
-            return '2022';
-        } else if (studentId.length === 7 && studentId.startsWith('23')) {
-            return '2023';
-        } else if (studentId.length === 7 && studentId.startsWith('24')) {
-            return '2024';
-        } else if (studentId.length === 7 && studentId.startsWith('25')) {
-            return '2025';
-        } else {
-            return null; // Or some default value, or handle the error
-        }
-    };
 
-    const generateSessionOptions = () => {
-        const startYear = 2016;
-        const currentYear = new Date().getFullYear(); // Get current year
-        const options = [];
-
-        for (let i = startYear; i <= currentYear; i++) {
-            const sessionValue = `${i} - ${i + 3}`;
-            options.push(
-                <MenuItem key={i} value={sessionValue}>
-                    {sessionValue}
-                </MenuItem>
-            );
-        }
-
-        return options;
-    };
-
+    // --- Render ---
     return (
-        <StyledContainer maxWidth="sm">
-            <Typography variant="h4" align="center" gutterBottom>
+        <Container component="main" maxWidth="xs" sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+             <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
+                <LockOutlinedIcon />
+            </Avatar>
+            <Typography component="h1" variant="h5">
                 Create Account
             </Typography>
-            <ErrorMessageSpace>
-                {error && <Alert severity="error">{error}</Alert>}
-                {success && <Alert severity="success">{success}</Alert>}
-            </ErrorMessageSpace>
-            <StyledForm onSubmit={handleSubmit}>
-                <TextField
-                    label="Full Name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    fullWidth
-                    margin="normal"
-                    required
-                />
-                <TextField
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    fullWidth
-                    margin="normal"
-                    required
-                />
-                <StudentSessionRow>
-                    <TextField
-                        label="Student ID"
-                        value={studentId}
-                        onChange={(e) => setStudentId(e.target.value)}
-                        fullWidth
-                        margin="normal"
-                        required
-                    />
-                    <FormControl fullWidth margin="normal" required>
-                        <InputLabel id="session-label">Session</InputLabel>
-                        <Select
-                            labelId="session-label"
-                            id="session"
-                            value={session}
-                            onChange={(e) => setSession(e.target.value)}
-                            label="Session"
-                        >
-                            <MenuItem value="">Session</MenuItem>
-                            {generateSessionOptions()}
-                        </Select>
-                    </FormControl>
-                </StudentSessionRow>
 
-                <TextField
-                    label="Password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    fullWidth
-                    margin="normal"
-                    required
-                />
-                <StyledButton variant="contained" color="primary" type="submit">
-                    Sign Up
-                </StyledButton>
-                <LoginLink to="/login">Already have an account? Login</LoginLink>
-            </StyledForm>
-        </StyledContainer>
+            <Box sx={{ width: '100%', mt: 1, minHeight: '60px' }}>
+                {error && <Alert severity="error" sx={{ width: '100%' }}>{error}</Alert>}
+                {success && <Alert severity="success" sx={{ width: '100%' }}>{success}</Alert>}
+            </Box>
+
+            {!success && (
+                <Paper elevation={3} sx={{ p: 4, mt: 1, width: '100%' }}>
+                    <Box component="form" onSubmit={handleSubmit} noValidate>
+                        <Stack spacing={2}>
+                            <TextField
+                                required
+                                fullWidth
+                                id="fullName"
+                                label="Full Name"
+                                name="fullName"
+                                autoComplete="name"
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                disabled={isSubmitting}
+                            />
+                            <TextField
+                                required
+                                fullWidth
+                                id="email"
+                                label="Email Address"
+                                name="email"
+                                autoComplete="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                disabled={isSubmitting}
+                            />
+                            <Stack direction="row" spacing={2}>
+                                <TextField
+                                    required
+                                    fullWidth
+                                    id="studentId"
+                                    label="Student ID (YY074XX)"
+                                    name="studentId"
+                                    value={studentId}
+                                    onChange={handleStudentIdChange} // Use custom handler
+                                    disabled={isSubmitting}
+                                    type="tel" // Use tel type
+                                    error={!!error && error.toLowerCase().includes('student id')}
+                                    inputProps={{
+                                        maxLength: STUDENT_ID_LENGTH,
+                                        inputMode: 'numeric',
+                                        pattern: '[0-9]*'
+                                    }}
+                                />
+                                <FormControl fullWidth required disabled={isSubmitting} error={!!error && error.toLowerCase().includes('session')}>
+                                    <InputLabel id="session-label">Session</InputLabel>
+                                    <Select
+                                        labelId="session-label"
+                                        id="session"
+                                        value={session}
+                                        onChange={(e) => setSession(e.target.value)}
+                                        label="Session"
+                                    >
+                                        <MenuItem value="" disabled><em>Select Session</em></MenuItem>
+                                        {generateSessionOptions}
+                                    </Select>
+                                </FormControl>
+                            </Stack>
+                            <TextField
+                                required
+                                fullWidth
+                                name="password"
+                                label="Password"
+                                type={showPassword ? 'text' : 'password'}
+                                id="password"
+                                autoComplete="new-password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={isSubmitting}
+                                error={!!error && error.toLowerCase().includes('password')}
+                                InputProps={{
+                                    endAdornment: (
+                                        <InputAdornment position="end">
+                                            <IconButton
+                                                aria-label="toggle password visibility"
+                                                onClick={handleClickShowPassword}
+                                                onMouseDown={handleMouseDownPassword}
+                                                edge="end"
+                                                disabled={isSubmitting}
+                                            >
+                                                {showPassword ? <VisibilityOff /> : <Visibility />}
+                                            </IconButton>
+                                        </InputAdornment>
+                                    ),
+                                }}
+                            />
+                            <Button
+                                type="submit"
+                                fullWidth
+                                variant="contained"
+                                sx={{ mt: 2, mb: 1, height: 40 }}
+                                disabled={isSubmitting}
+                            >
+                                {isSubmitting ? <CircularProgress size={24} color="inherit" /> : 'Sign Up'}
+                            </Button>
+                        </Stack>
+                    </Box>
+                </Paper>
+             )}
+
+            <Link component={RouterLink} to="/login" variant="body2" sx={{ mt: 3 }}>
+                Already have an account? Sign in
+            </Link>
+        </Container>
     );
 }
 
