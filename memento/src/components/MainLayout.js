@@ -1,105 +1,99 @@
-/* eslint-disable no-dupe-keys */
 /* eslint-disable no-unused-vars */
 // src/components/MainLayout.js
 import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Footer from './Footer';
-import Navbar from './Navbar';
+import Navbar from './Navbar'; // Assuming Navbar.js contains the redesigned component
 import { Box, useTheme, useMediaQuery } from '@mui/material';
 import { useAuth } from '../auth/AuthContext';
 
-// --- Define Constants Consistently ---
+// --- Define Constants Consistently (Match these with Navbar.js) ---
 const APP_BAR_HEIGHT = 64;
-const DESKTOP_DRAWER_WIDTH = 260; // Ensure this matches Navbar.js if used
-const MOBILE_BOTTOM_NAV_HEIGHT = 56; // Ensure this matches Navbar.js
-// ********************************************
+const SIDEBAR_WIDTH_DESKTOP = 260; // *** USE THE VALUE FROM YOUR REDESIGNED NAVBAR ***
+const MOBILE_BOTTOM_NAV_HEIGHT = 56; // *** USE THE VALUE FROM YOUR REDESIGNED NAVBAR ***
+// ******************************************************************
 
 function MainLayout() {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md')); // md breakpoint often used for layout shifts
+  // Use 'md' breakpoint to differentiate between mobile/tablet and desktop layouts
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const { user } = useAuth();
 
-  // Calculate actual height needed for bottom spacing (for Mobile BottomNav)
-  const bottomNavHeightActual = user && isMobile ? MOBILE_BOTTOM_NAV_HEIGHT : 0;
+  // Determine the actual height needed for bottom spacing (for Mobile BottomNav)
+  const bottomNavHeightActual = user && !isDesktop ? MOBILE_BOTTOM_NAV_HEIGHT : 0;
 
-  // Determine if the drawer's space should be accounted for in the layout
-  // You previously modified this to always be 0, keeping that change.
-  const effectiveDrawerWidth = 0; // No margin/width adjustment based on drawer
+  // Determine the space occupied by the sidebar (only on desktop)
+  const sidebarWidthActual = user && isDesktop ? SIDEBAR_WIDTH_DESKTOP : 0;
 
   return (
-    // Root Box: Handles the primary horizontal layout (Sidebar | Content+Footer Column)
+    // Root Box: Manages the overall layout including the Navbar elements
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
 
-      {/* Navbar: Renders Fixed AppBar, Conditional Drawers, Fixed Mobile BottomNav */}
-      {/* The Navbar component itself handles its own positioning (fixed AppBar, drawers) */}
+      {/* Navbar: Renders the Fixed AppBar, conditionally the Drawers/Sidebar, and Fixed Mobile BottomNav */}
+      {/* The Navbar component handles its own internal positioning based on screen size */}
       <Navbar />
 
-      {/* "Content Column" Box: Sits next to sidebar, holds Content + Footer */}
+      {/* Main Content Area Wrapper */}
+      {/* This Box sits visually to the right of the sidebar (on desktop) and below the AppBar */}
       <Box
+        component="main" // Use 'main' semantic tag for the primary content area
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flexGrow: 1,
-          minHeight: '100vh', // Ensure column fills height
+          flexGrow: 1, // Take up remaining horizontal space
+          display: 'flex', // Use flexbox internally to position Outlet and Footer
+          flexDirection: 'column', // Stack Outlet and Footer vertically
+          minHeight: '100vh', // Ensure it tries to fill viewport height
 
-          // Positioning relative to the sidebar (effectively none due to effectiveDrawerWidth = 0)
-          width: '100%', // Always occupy full width available
-          ml: { md: `${effectiveDrawerWidth}px` }, // Margin left only on medium screens+, based on effective width
+          // Crucial: Add paddingTop to account for the fixed AppBar height
+          pt: `${APP_BAR_HEIGHT}px`,
 
-          // Background for the entire content area + footer space
-          bgcolor: theme.palette.grey[100], // Or your desired background
-
-          // Apply margin-top for Fixed AppBar (space above the whole column)
-          mt: `${APP_BAR_HEIGHT}px`,
-
-          // Apply padding-bottom for Fixed Mobile BottomNav (space below the whole column)
-          // This padding is INSIDE the content column, pushing content up from bottom
+          // Crucial: Add paddingBottom to account for the fixed BottomNav height (mobile only)
           pb: `${bottomNavHeightActual}px`,
 
-          // Adjust overall column height calculation
-          boxSizing: 'border-box', // Include padding (pb) in height calculation
-          minHeight: `calc(100vh - ${APP_BAR_HEIGHT}px)`, // Start with viewport minus AppBar
-          // Note: The 'pb' adds space *inside* this box, effectively reducing the
-          // available height for children, achieving the desired effect without margin.
+          // Crucial: Define width, considering the sidebar on desktop
+          width: `calc(100% - ${sidebarWidthActual}px)`, // Full width minus sidebar on desktop
+
+          // Apply margin-left ONLY on desktop to push content right of the fixed sidebar
+          ml: `${sidebarWidthActual}px`,
+
+          // Background for the main content area
+          bgcolor: theme.palette.background.default, // Use the theme's default background
+
+          boxSizing: 'border-box', // Ensure padding is included in height/width calculations
         }}
       >
-        {/* Main Scrollable Content Area */}
-        {/* This Box holds the page content from Outlet */}
+        {/* Scrollable Content Area (Houses the Outlet) */}
         <Box
-          component="main"
           sx={{
-            flexGrow: 1, // Allows this area to grow, pushing the footer down
-            overflowY: 'auto', // Enable vertical scroll ONLY for the content area
-            overflowX: 'hidden',
+            flexGrow: 1, // Allows this area to expand vertically, pushing footer down
+            overflowY: 'auto', // Enable vertical scrolling ONLY for this content part
+            overflowX: 'hidden', // Prevent horizontal scrolling for the content box
             boxSizing: 'border-box',
 
-            // Inner padding for the content itself
-            // V V V --- THIS IS THE MODIFIED LINE --- V V V
+            // Apply consistent inner padding for the page content itself
+            // Adjust these values based on your design preference
             p: {
-                xs: 0, // No padding on extra-small screens (mobile)
-                sm: 3  // Padding theme.spacing(3) (e.g., 24px) on small screens and up
+                xs: theme.spacing(2), // Padding on extra-small screens (e.g., 16px)
+                sm: theme.spacing(3), // Padding on small screens and up (e.g., 24px)
             },
-            // ^ ^ ^ --- END OF MODIFIED LINE --- ^ ^ ^
-
-            // No specific minHeight needed, flexGrow handles it within the parent's constraints
+            // Note: The padding here is INSIDE the scrollable area.
+            // Page components rendered by Outlet might add their own padding too.
           }}
         >
           {/* ===================================================================== */}
           {/* Your Page Content (e.g., Dashboard, Profile) renders inside here!   */}
-          {/* Remember: Components rendered here might *also* have their own      */}
-          {/* Container/Box with padding/margin that you might need to adjust.    */}
           {/* ===================================================================== */}
           <Outlet />
         </Box>
 
         {/* Footer Area */}
-        {/* Placed directly inside the "Content Column" Box, after the <main> Box */}
-        {/* It sits above the padding-bottom applied to the "Content Column" */}
+        {/* Rendered at the bottom of the main content area, above the BottomNav space */}
+        {/* Ensure the Footer component itself doesn't have excessive top margin */}
         {user && (
-          <Footer /> // The Footer component itself
+          <Box component="footer" sx={{ flexShrink: 0 /* Prevent footer from shrinking */ }}>
+            <Footer />
+          </Box>
         )}
-
-      </Box> {/* End "Content Column" Box */}
+      </Box> {/* End Main Content Area Wrapper */}
 
     </Box> // End Root Box
   );
