@@ -11,13 +11,14 @@ import {
     Divider, Badge, styled, Drawer, useTheme, useMediaQuery, alpha,
     Collapse, CircularProgress, Popover, SvgIcon, BottomNavigation, BottomNavigationAction
 } from '@mui/material';
+// --- Icons (Grouped for Readability) ---
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import AccountCircle from '@mui/icons-material/AccountCircle';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import EditIcon from '@mui/icons-material/Edit';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
-import MenuIcon from '@mui/icons-material/Menu'; // Re-added MenuIcon for hamburger
+import MenuIcon from '@mui/icons-material/Menu';
 import SchoolIcon from '@mui/icons-material/School';
 import FolderIcon from '@mui/icons-material/Folder';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
@@ -32,6 +33,7 @@ import ReadMoreIcon from '@mui/icons-material/ReadMore';
 import SupportAgentIcon from '@mui/icons-material/SupportAgent';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // Example: For empty state
 
 import {
     collection, query, orderBy, onSnapshot, doc, writeBatch,
@@ -42,20 +44,21 @@ import { formatDistanceToNow } from 'date-fns';
 
 // --- Constants ---
 const DESKTOP_DRAWER_WIDTH = 260;
-const MOBILE_DRAWER_WIDTH = 280; // Mobile drawer can be slightly wider if needed
+const MOBILE_DRAWER_WIDTH = 280;
 const MOBILE_BOTTOM_NAV_HEIGHT = 56;
 const NOTIFICATION_POPOVER_WIDTH = 380;
 const NOTIFICATION_LIMIT = 7;
 const BATCH_START_YEAR = 2016;
-
-// --- Firestore Data Structure Note --- remains the same ---
+const APP_BAR_HEIGHT = 64; // Keep consistent with Layout
 
 // --- Styles ---
+
+// **AppBar**
 const StyledAppBar = styled(AppBar)(({ theme }) => ({
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: theme.palette.background.paper, // Clean paper background
     color: theme.palette.text.primary,
-    boxShadow: `inset 0px -1px 0px ${theme.palette.divider}`,
-    zIndex: theme.zIndex.drawer + 1, // Keep above desktop drawer
+    boxShadow: `inset 0px -1px 0px ${alpha(theme.palette.divider, 0.6)}`, // Subtle bottom border
+    zIndex: theme.zIndex.drawer + 1, // Keep above permanent desktop drawer
     transition: theme.transitions.create(['width', 'margin'], {
         easing: theme.transitions.easing.sharp,
         duration: theme.transitions.duration.leavingScreen,
@@ -72,127 +75,227 @@ const StyledAppBar = styled(AppBar)(({ theme }) => ({
     },
 }));
 
+// **Toolbar** - Ensure consistent height and padding
 const StyledToolbar = styled(Toolbar)(({ theme }) => ({
     display: 'flex',
     justifyContent: 'space-between',
     paddingLeft: theme.spacing(2),
     paddingRight: theme.spacing(2),
-    minHeight: 64,
+    minHeight: APP_BAR_HEIGHT,
 }));
 
-// --- Desktop/Mobile Sidebar Styles ---
+// **Sidebar/Drawer Components**
 const SidebarHeader = styled(Box)(({ theme }) => ({
-    padding: theme.spacing(0, 2), // Adjusted padding
-    minHeight: 64, // Match AppBar height
+    padding: theme.spacing(0, 2), // Consistent padding
+    minHeight: APP_BAR_HEIGHT, // Match AppBar height
     display: 'flex',
     alignItems: 'center',
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    borderBottom: `1px solid ${theme.palette.divider}`, // Clear separator
 }));
 
 const SidebarFooter = styled(Box)(({ theme }) => ({
-    padding: theme.spacing(1.5, 2),
-    borderTop: `1px solid ${theme.palette.divider}`,
+    padding: theme.spacing(1.5, 2), // Consistent padding
+    borderTop: `1px solid ${theme.palette.divider}`, // Clear separator
     display: 'flex',
     alignItems: 'center',
     gap: theme.spacing(1.5),
-    // Sticky footer for long sidebars
-    position: 'sticky',
+    position: 'sticky', // Keep footer visible
     bottom: 0,
-    backgroundColor: theme.palette.background.paper, // Ensure background matches
+    backgroundColor: theme.palette.background.paper, // Ensure background matches drawer
     zIndex: 1, // Keep above scrolling content
 }));
 
-// IMPROVED styles for sidebar list items
-const sidebarListItemStyles = (theme, isActive, isSubItem = false) => ({
-    margin: theme.spacing(0.5, 1.5), // Consistent margin
-    padding: theme.spacing(1, 1.5), // Slightly reduced padding for density
-    paddingLeft: isSubItem ? theme.spacing(5.5) : theme.spacing(1.5), // Indentation for sub-items
-    borderRadius: theme.shape.borderRadius * 1.5, // Slightly more rounded
-    minHeight: 44, // Good touch target size
-    color: isActive ? theme.palette.primary.main : theme.palette.text.secondary,
-    backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-    position: 'relative', // For potential active indicator
-    '&:hover': {
-        backgroundColor: alpha(theme.palette.text.primary, 0.04),
-        color: theme.palette.text.primary, // Darken text on hover
-    },
-    '& .MuiListItemIcon-root': {
-        minWidth: 'auto',
-        marginRight: theme.spacing(1.5),
-        color: isActive ? theme.palette.primary.main : theme.palette.action.active,
-        fontSize: '1.25rem', // Standardized icon size
-    },
-    '& .MuiListItemText-primary': {
-        fontWeight: isActive ? 600 : 400, // Bolder active text
-        fontSize: '0.9rem',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-    },
-     // Style for batch year items (making them look less like primary nav)
-     '&.batch-year-item': {
-        padding: theme.spacing(0.5, 1.5),
-        paddingLeft: theme.spacing(5.5), // Keep indentation
-        minHeight: 36,
-        color: isActive ? theme.palette.primary.dark : theme.palette.text.secondary,
-        backgroundColor: isActive ? alpha(theme.palette.primary.main, 0.1) : 'transparent',
-        '& .MuiListItemText-primary': {
-            fontSize: '0.85rem',
-            fontWeight: isActive ? 500 : 400,
-        },
+// **IMPROVED Sidebar List Item Styles Function**
+const sidebarListItemStyles = (theme, isActive, isSubItem = false, isBatchYear = false) => {
+    const baseStyles = {
+        margin: theme.spacing(0.5, 1.5), // Consistent vertical/horizontal margin
+        padding: theme.spacing(1, 1.5), // Consistent padding
+        borderRadius: theme.shape.borderRadius * 1.5, // Slightly rounded corners
+        minHeight: 44, // Good touch target size
+        color: theme.palette.text.secondary, // Default secondary color
+        position: 'relative', // For potential future active indicators (like a left border)
+        transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out', // Smooth transitions
         '&:hover': {
+            backgroundColor: alpha(theme.palette.action.hover, 0.04), // Standard hover
+            color: theme.palette.text.primary, // Darken text on hover
+        },
+        '& .MuiListItemIcon-root': {
+            minWidth: 'auto',
+            marginRight: theme.spacing(1.5), // Consistent icon spacing
+            color: theme.palette.action.active, // Default icon color
+            fontSize: '1.3rem', // Slightly larger, consistent icon size
+            transition: 'color 0.2s ease-in-out',
+        },
+        '& .MuiListItemText-primary': {
+            fontWeight: 400, // Default weight
+            fontSize: '0.9rem', // Standard text size
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            transition: 'font-weight 0.2s ease-in-out',
+        },
+    };
+
+    // Indentation for sub-items
+    if (isSubItem) {
+        baseStyles.paddingLeft = theme.spacing(5.5); // Standard indentation
+        baseStyles['& .MuiListItemText-primary'].fontSize = '0.875rem'; // Slightly smaller sub-item text
+        baseStyles.minHeight = 40; // Slightly smaller sub-item height
+    }
+
+    // Specific styling for Batch Year items (less emphasis)
+    if (isBatchYear) {
+        baseStyles.minHeight = 36;
+        baseStyles.padding = theme.spacing(0.5, 1.5);
+        baseStyles.paddingLeft = theme.spacing(5.5); // Keep indentation
+        baseStyles.color = isActive ? theme.palette.primary.dark : theme.palette.text.secondary; // Different active color
+        baseStyles.backgroundColor = isActive ? alpha(theme.palette.primary.main, 0.05) : 'transparent'; // Subtle active bg
+        baseStyles['& .MuiListItemText-primary'].fontSize = '0.85rem';
+        baseStyles['& .MuiListItemText-primary'].fontWeight = isActive ? 500 : 400;
+        baseStyles['&:hover'] = { // Specific hover for batch items if needed
             backgroundColor: alpha(theme.palette.text.primary, 0.04),
             color: theme.palette.text.primary,
-        },
-     }
-});
+        };
+        // Override general active styles for batch items
+        if (isActive) {
+            baseStyles['& .MuiListItemIcon-root'].color = theme.palette.primary.dark; // Match text color
+        }
+         // No icon for batch years, so icon styling is less relevant here
+    } else if (isActive) {
+        // Active state styles for REGULAR items
+        baseStyles.color = theme.palette.primary.main;
+        baseStyles.backgroundColor = alpha(theme.palette.primary.main, 0.08); // Standard active bg
+        baseStyles['& .MuiListItemIcon-root'].color = theme.palette.primary.main; // Active icon color
+        baseStyles['& .MuiListItemText-primary'].fontWeight = 600; // Bold active text
+    }
 
-// --- Notification Popover Styles ---
+    return baseStyles;
+};
+
+
+// **IMPROVED Notification Popover Styles**
 const NotificationItem = styled(ListItemButton, {
     shouldForwardProp: (prop) => prop !== 'read',
 })(({ theme, read }) => ({
-    alignItems: 'flex-start',
-    padding: theme.spacing(1.5, 2),
-    backgroundColor: read ? 'transparent' : alpha(theme.palette.primary.light, 0.08),
-    borderLeft: read ? 'none' : `3px solid ${theme.palette.primary.main}`,
-    '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.05) },
-    '& .MuiListItemText-root': { marginTop: 0, marginBottom: 0, minWidth: 0, overflow: 'hidden' },
-    '& .MuiListItemText-secondary': {
-        display: 'flex', flexDirection: 'column', fontSize: '0.8rem', color: theme.palette.text.secondary,
-        '& .notification-message': {
-            lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            marginBottom: theme.spacing(0.5), color: theme.palette.text.primary,
-        },
-        '& .notification-meta': {
-            fontSize: '0.75rem', color: theme.palette.text.disabled, whiteSpace: 'nowrap',
-            overflow: 'hidden', textOverflow: 'ellipsis',
-            display: 'flex', alignItems: 'center', gap: theme.spacing(0.75),
-        }
+    alignItems: 'flex-start', // Align items to the top for multi-line text
+    padding: theme.spacing(1.5, 2), // Consistent padding
+    backgroundColor: read ? 'transparent' : alpha(theme.palette.primary.light, 0.1), // Clearer unread bg
+    borderLeft: read ? '4px solid transparent' : `4px solid ${theme.palette.primary.main}`, // Prominent unread indicator
+    transition: 'background-color 0.2s ease, border-color 0.2s ease',
+    '&:hover': {
+        backgroundColor: alpha(theme.palette.action.hover, 0.06), // Slightly stronger hover
+    },
+    '& .MuiListItemText-root': {
+        marginTop: 0,
+        marginBottom: 0,
+        minWidth: 0,
+        overflow: 'hidden',
+    },
+    '& .notification-primary': { // Custom class for primary content wrapper
+        display: 'flex',
+        alignItems: 'baseline',
+        width: '100%',
+        overflow: 'hidden',
+        marginBottom: theme.spacing(0.5), // Space between title line and secondary
+    },
+    '& .notification-category': { // Custom class for category
+        fontWeight: 600,
+        mr: 0.75,
+        textTransform: 'capitalize',
+        whiteSpace: 'nowrap',
+        flexShrink: 0,
+        fontSize: '0.875rem', // Slightly smaller category
+    },
+    '& .notification-title': { // Custom class for title
+        fontWeight: read ? 400 : 600, // Bold unread title
+        fontSize: '0.9rem',
+        lineHeight: 1.35,
+        color: 'text.primary',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        flexGrow: 1,
+        minWidth: 0,
+    },
+    '& .MuiListItemText-secondary': { // Container for message and meta
+        display: 'flex',
+        flexDirection: 'column',
+        fontSize: '0.8rem',
+        color: theme.palette.text.secondary,
+        lineHeight: 1.4,
+    },
+    '& .notification-message': { // Custom class for message
+        whiteSpace: 'normal', // Allow wrapping for message
+        overflow: 'hidden',
+        // textOverflow: 'ellipsis', // Might hide too much if wrapping
+        display: '-webkit-box',
+        '-webkit-line-clamp': '2', // Limit message to 2 lines
+        '-webkit-box-orient': 'vertical',
+        marginBottom: theme.spacing(0.75), // More space before meta
+        color: theme.palette.text.primary, // Slightly darker message
+    },
+    '& .notification-meta': { // Custom class for meta info row
+        fontSize: '0.75rem',
+        color: theme.palette.text.disabled, // Use disabled color for meta
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        display: 'flex',
+        alignItems: 'center',
+        gap: theme.spacing(0.75),
     },
 }));
 
+// Consistent category color logic
 const getCategoryChipColor = (category, theme) => {
+    // ... (keep existing logic)
     const catLower = category?.toLowerCase() || 'general';
     switch (catLower) {
-        case 'important': return { bgcolor: theme.palette.error.light, color: theme.palette.error.dark };
-        case 'academic': return { bgcolor: theme.palette.info.light, color: theme.palette.info.dark };
-        case 'event': return { bgcolor: theme.palette.warning.light, color: theme.palette.warning.dark };
-        case 'discussion': return { bgcolor: theme.palette.success.light, color: theme.palette.success.dark };
-        case 'general': return { bgcolor: theme.palette.grey[300], color: theme.palette.text.secondary };
-        case 'other': return { bgcolor: theme.palette.secondary.light, color: theme.palette.secondary.dark };
-        default: return { bgcolor: theme.palette.grey[200], color: theme.palette.text.secondary };
+        case 'important': return { bgcolor: alpha(theme.palette.error.main, 0.1), color: theme.palette.error.dark };
+        case 'academic': return { bgcolor: alpha(theme.palette.info.main, 0.1), color: theme.palette.info.dark };
+        case 'event': return { bgcolor: alpha(theme.palette.warning.main, 0.1), color: theme.palette.warning.dark };
+        case 'discussion': return { bgcolor: alpha(theme.palette.success.main, 0.1), color: theme.palette.success.dark };
+        case 'general': return { bgcolor: theme.palette.grey[200], color: theme.palette.text.secondary };
+        case 'other': return { bgcolor: alpha(theme.palette.secondary.main, 0.1), color: theme.palette.secondary.dark };
+        default: return { bgcolor: theme.palette.grey[100], color: theme.palette.text.disabled };
     }
 };
 
+// **Profile Menu Header**
 const ProfileMenuHeader = styled(Box)(({ theme }) => ({
-    padding: theme.spacing(1.5, 2),
-    pointerEvents: 'none',
+    padding: theme.spacing(1.5, 2), // Consistent padding
+    pointerEvents: 'none', // Not interactive
     borderBottom: `1px solid ${theme.palette.divider}`,
+    marginBottom: theme.spacing(0.5), // Space before menu items
 }));
+
+// **Styled Bottom Navigation Action** (for finer control)
+const StyledBottomNavigationAction = styled(BottomNavigationAction)(({ theme }) => ({
+    minWidth: 'auto', // Allow items to shrink naturally
+    padding: theme.spacing(0.75, 1, 1), // Consistent padding (top, sides, bottom)
+    '& .MuiBottomNavigationAction-label': {
+        fontSize: '0.7rem', // Standard small label size
+        marginTop: '2px', // Ensure consistent spacing between icon and label
+        '&.Mui-selected': { // Make selected label slightly bolder
+            fontWeight: 500,
+        }
+    },
+    // Active state styling
+    '&.Mui-selected': {
+        color: theme.palette.primary.main,
+        // Optional: Add subtle background on active?
+        // backgroundColor: alpha(theme.palette.primary.main, 0.05),
+        // borderRadius: theme.shape.borderRadius,
+    },
+}));
+
+
 // --- End Styles ---
+
 
 // --- Navigation Data ---
 const deptNavItems = [
+    // ... (keep existing items)
     { label: 'Overview', path: '/dept/overview', icon: <BusinessIcon /> },
     { label: 'Teachers', path: '/dept/teachers', icon: <PeopleIcon /> },
     { label: 'Students', path: '/dept/students', icon: <SchoolIcon /> },
@@ -200,12 +303,13 @@ const deptNavItems = [
     { label: 'Materials', path: '/dept/materials', icon: <FolderIcon /> },
 ];
 
-// Define items for the Mobile Bottom Navigation
 const mobileBottomNavItems = [
+     // ... (keep existing items)
     { label: 'Dashboard', value: '/dashboard', path: '/dashboard', icon: <DashboardIcon /> },
-    { label: 'Department', value: '/dept', path: '/dept/overview', icon: <BusinessIcon /> }, // Example: Link to dept overview
+    { label: 'Department', value: '/dept', path: '/dept/overview', icon: <BusinessIcon /> },
     { label: 'Profile', value: '/profile', path: '/profile', icon: <AccountCircle /> },
-    // { label: 'More', value: 'more', icon: <MoreHorizIcon /> }, // Can be used to trigger the temporary drawer as well, or a different menu
+    // Consider if 'More' is truly needed if Temporary Drawer handles everything else
+    // { label: 'More', value: 'more', icon: <MoreHorizIcon /> },
 ];
 
 
@@ -220,7 +324,7 @@ function Navbar() {
     // --- States ---
     const [profileAnchorEl, setProfileAnchorEl] = useState(null);
     const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
-    const [mobileOpen, setMobileOpen] = useState(false); // State for mobile temporary drawer
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     // Notification State
     const [notifications, setNotifications] = useState([]);
@@ -229,10 +333,16 @@ function Navbar() {
     const [senderInfo, setSenderInfo] = useState({});
     const [markingRead, setMarkingRead] = useState(false);
 
-    // Drawer Submenu States
-    // Keep track of submenu state independently for potentially different behaviors if needed
+    // Drawer Submenu States - Initial state based on current path
     const [deptSubmenuOpen, setDeptSubmenuOpen] = useState(location.pathname.startsWith('/dept'));
     const [batchSubmenuOpen, setBatchSubmenuOpen] = useState(location.pathname.startsWith('/batch'));
+
+     // Update submenu state if path changes *after* initial load
+     useEffect(() => {
+        setDeptSubmenuOpen(location.pathname.startsWith('/dept'));
+        setBatchSubmenuOpen(location.pathname.startsWith('/batch'));
+    }, [location.pathname]);
+
 
     // --- Derived states ---
     const isProfileMenuOpen = Boolean(profileAnchorEl);
@@ -241,7 +351,8 @@ function Navbar() {
 
     // --- Firebase Hooks & Fetching ---
     const fetchSenderInfo = useCallback(async (senderId) => {
-         if (!senderId || senderInfo[senderId]) return;
+        // ... (keep existing fetch logic)
+        if (!senderId || senderInfo[senderId]) return;
          setSenderInfo(prev => ({ ...prev, [senderId]: { loading: true } }));
          try {
              const userRef = doc(db, 'users', senderId);
@@ -264,9 +375,10 @@ function Navbar() {
              console.error(`Error fetching sender user info for ID: ${senderId}`, error);
              setSenderInfo(prev => ({ ...prev, [senderId]: { fullName: "Error Fetching User", studentId: null, loading: false } }));
          }
-     }, [senderInfo]); // Dependency only on senderInfo state
+    }, [senderInfo]); // Dependency only on senderInfo state
 
     useEffect(() => {
+         // ... (keep existing notification fetching logic)
          if (!userId) {
              setNotifications([]);
              setTotalUnreadCount(0);
@@ -290,18 +402,13 @@ function Navbar() {
                  ...doc.data()
              }));
 
-             // Optional: Ensure state fields exist (consider if still needed or handled by backend rules)
-            //  const checkAndEnsureState = async (notification) => { /* ... */ };
-            //  fetchedNotifications.forEach(checkAndEnsureState);
-
              setNotifications(fetchedNotifications);
 
-             // Only set loading to false after the first successful fetch
-             if (loadingNotifications) {
+             if (loadingNotifications) { // Only set loading false on first successful fetch
                  setLoadingNotifications(false);
              }
 
-             // Fetch sender info if needed for *these* notifications
+             // Fetch sender info if needed
              const uniqueSenderIdsToFetch = [...new Set(
                  fetchedNotifications
                      .filter(n => n.senderId && !n.senderName && (!senderInfo[n.senderId] || (!senderInfo[n.senderId].fullName && !senderInfo[n.senderId].loading)))
@@ -314,7 +421,7 @@ function Navbar() {
          }, (error) => {
              console.error("Navbar: Error fetching display notifications:", error);
              if (isStillMounted) {
-                 setLoadingNotifications(false); // Set loading false even on error
+                 setLoadingNotifications(false);
              }
          });
 
@@ -333,41 +440,44 @@ function Navbar() {
              unsubscribeDisplay();
              unsubscribeCount();
          };
-
-     }, [userId, fetchSenderInfo]); // Dependencies: userId and the fetch function itself
+     }, [userId, fetchSenderInfo]);
 
     const batchYears = useMemo(() => {
+        // ... (keep existing batch year generation)
         const currentYear = new Date().getFullYear();
         const years = [];
         for (let year = BATCH_START_YEAR; year <= currentYear; year++) {
             years.push(year);
         }
         return years.reverse();
-     }, []);
+    }, []);
 
     // --- Handlers ---
     const handleProfileMenuOpen = useCallback((event) => setProfileAnchorEl(event.currentTarget), []);
     const handleProfileMenuClose = useCallback(() => setProfileAnchorEl(null), []);
     const handleNotificationPopoverOpen = useCallback((event) => setNotificationAnchorEl(event.currentTarget), []);
     const handleNotificationPopoverClose = useCallback(() => setNotificationAnchorEl(null), []);
-    const handleDrawerToggle = useCallback(() => setMobileOpen(prev => !prev), []); // Handler for mobile drawer toggle
+    const handleDrawerToggle = useCallback(() => setMobileOpen(prev => !prev), []);
 
     const handleDeptSubmenuToggle = useCallback(() => setDeptSubmenuOpen(prev => !prev), []);
     const handleBatchSubmenuToggle = useCallback(() => setBatchSubmenuOpen(prev => !prev), []);
 
-    // UPDATED handleNavigate to close mobile drawer
+    // Centralized Navigation Handler (closes menus/drawers)
     const handleNavigate = useCallback((path) => {
         if (path && typeof path === 'string') {
             navigate(path);
         } else {
-            console.warn('handleNavigate called with invalid path:', path)
+            console.warn('handleNavigate called with invalid path:', path);
+            return; // Don't close menus if navigation didn't happen
         }
         handleProfileMenuClose();
         handleNotificationPopoverClose();
-        setMobileOpen(false); // Close mobile drawer on navigation
-    }, [navigate, handleProfileMenuClose, handleNotificationPopoverClose, setMobileOpen]); // Added setMobileOpen dependency
+        if (mobileOpen) { // Only close mobile drawer if it's open
+            setMobileOpen(false);
+        }
+    }, [navigate, handleProfileMenuClose, handleNotificationPopoverClose, mobileOpen, setMobileOpen]);
 
-    // Specific navigation handlers point to handleNavigate, closing the mobile drawer implicitly
+    // Specific navigation handlers use the central handler
     const handleGoToDashboard = useCallback(() => handleNavigate('/dashboard'), [handleNavigate]);
     const handleBatchYearClick = useCallback((year) => handleNavigate(`/batch?year=${year}`), [handleNavigate]);
     const handleDeptItemClick = useCallback((path) => handleNavigate(path), [handleNavigate]);
@@ -377,55 +487,57 @@ function Navbar() {
     const handleViewAllNotificationsClick = useCallback(() => handleNavigate('/notifications'), [handleNavigate]);
     const handleSupportClick = useCallback(() => handleNavigate('/support'), [handleNavigate]);
 
-    // UPDATED handleLogout to close mobile drawer
     const handleLogout = useCallback(async () => {
         handleProfileMenuClose();
         handleNotificationPopoverClose();
-        setMobileOpen(false); // Close mobile drawer on logout
+        if (mobileOpen) { // Only close mobile drawer if it's open
+             setMobileOpen(false);
+        }
         try {
             await auth.signOut();
-            // Optional: Redirect to login after logout
+            // Optional: Explicitly navigate to login after sign out
             // navigate('/login');
         } catch (error) {
             console.error('Logout Error:', error);
+            // Maybe show a snackbar error to the user
         }
-    }, [handleProfileMenuClose, handleNotificationPopoverClose, setMobileOpen]); // Added setMobileOpen dependency
+    }, [handleProfileMenuClose, handleNotificationPopoverClose, mobileOpen, setMobileOpen]); // Updated dependencies
 
     // --- Notification Actions ---
     const markNotificationAsRead = useCallback(async (notificationId) => {
-        if (!userId || !notificationId) return;
+        // ... (keep existing logic)
+         if (!userId || !notificationId) return;
         const notificationRef = doc(db, 'users', userId, 'notifications', notificationId);
         try {
             await setDoc(notificationRef, {
                 read: true,
                 readTimestamp: serverTimestamp()
             }, { merge: true });
-            // No need to update state locally, listener will handle it
         } catch (error) {
             console.error("Navbar: Error marking notification as read:", error);
         }
     }, [userId]);
 
     const handleNotificationItemClick = useCallback((notification) => {
-        handleNotificationPopoverClose();
+        // ... (keep existing logic, maybe slight tweak for optimistic update)
+         handleNotificationPopoverClose();
         if (notification && notification.id) {
             if (!notification.read) {
-                // Mark as read optimistically or wait for listener? Mark optimistically for faster UI feedback.
-                 markNotificationAsRead(notification.id);
-                 // Update local state immediately for better UX if desired, though listener should catch up
+                 // Mark as read optimistically for faster UI feedback. Listener will confirm.
                  setNotifications(prev => prev.map(n => n.id === notification.id ? {...n, read: true} : n));
-                 setTotalUnreadCount(prev => Math.max(0, prev -1));
+                 setTotalUnreadCount(prev => Math.max(0, prev -1)); // Decrement count optimistically
+                 markNotificationAsRead(notification.id); // Still call the backend update
             }
-            // Navigate to the specific notification anchor within the notifications page
-            navigate(`/notifications#${notification.id}`); // Assumes /notifications page handles anchors
+            navigate(`/notifications#${notification.id}`);
         } else {
             console.warn('handleNotificationItemClick called with invalid notification:', notification);
-            navigate('/notifications'); // Fallback
+            navigate('/notifications');
         }
-    }, [handleNotificationPopoverClose, markNotificationAsRead, navigate, userId]); // Added userId as markNotificationAsRead depends on it
+    }, [handleNotificationPopoverClose, markNotificationAsRead, navigate, userId]);
 
     const handleMarkAllAsRead = useCallback(async () => {
-        if (!userId || markingRead || totalUnreadCount === 0) {
+        // ... (keep existing logic, maybe refine UI update)
+         if (!userId || markingRead || totalUnreadCount === 0) {
             return;
         }
         setMarkingRead(true);
@@ -443,25 +555,26 @@ function Navbar() {
                 batch.set(docSnapshot.ref, { read: true, readTimestamp: now }, { merge: true });
             });
             await batch.commit();
-            // Optimistically update UI while listener catches up
+            // Optimistic UI update (listener will eventually sync, but this is faster)
             setNotifications(prev => prev.map(n => n.read ? n : {...n, read: true}));
             setTotalUnreadCount(0);
         } catch (error) {
             console.error("Navbar: Error in mark all as read batch operation:", error);
+            // Consider showing a user-facing error message
         } finally {
-            // Set markingRead false slightly delayed to allow UI updates
+             // Ensure markingRead is set to false even if listener is slow
              setTimeout(() => setMarkingRead(false), 300);
         }
     }, [userId, markingRead, totalUnreadCount]);
 
-
     // --- Helper functions for sidebar active state ---
     const isNavItemActive = useCallback((path) => path && currentPath === path, [currentPath]);
     const isBatchActive = useCallback((year) => currentPath === `/batch?year=${year}`, [currentPath]);
+     // Helper to check if *any* sub-item of a section is active (for parent item styling)
+    const isSubmenuActive = useCallback((basePath) => currentPath.startsWith(basePath), [currentPath]);
 
-    // --- Memoized Drawer Content (Used by both Desktop Permanent and Mobile Temporary Drawers) ---
+    // --- **Memoized Drawer Content** (Used by both Desktop Permanent and Mobile Temporary Drawers) ---
     const drawerContent = useMemo(() => {
-        // Functions are defined outside and passed via dependencies
         return (
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', bgcolor: 'background.paper' }}>
                 {/* 1. Top Logo Section */}
@@ -475,7 +588,7 @@ function Navbar() {
                 </SidebarHeader>
 
                 {/* 2. Main Navigation (Scrollable) */}
-                <Box sx={{ flexGrow: 1, overflowY: 'auto', pt: 1, '&::-webkit-scrollbar': { width: '5px' }, '&::-webkit-scrollbar-thumb': { background: theme.palette.grey[300], borderRadius: '3px' } }}>
+                <Box sx={{ flexGrow: 1, overflowY: 'auto', pt: 1, '&::-webkit-scrollbar': { width: '6px' }, '&::-webkit-scrollbar-thumb': { background: theme.palette.action.hover, borderRadius: '3px' }, scrollbarWidth: 'thin', scrollbarColor: `${theme.palette.action.hover} transparent` }}>
                     <List component="nav" sx={{ px: 1 }} >
                         {/* Dashboard */}
                         <ListItemButton onClick={handleGoToDashboard} sx={sidebarListItemStyles(theme, isNavItemActive('/dashboard'))}>
@@ -483,8 +596,8 @@ function Navbar() {
                             <ListItemText primary="Dashboard" />
                         </ListItemButton>
 
-                        {/* Department (Collapsible) */}
-                        <ListItemButton onClick={handleDeptSubmenuToggle} sx={sidebarListItemStyles(theme, currentPath.startsWith('/dept') && !isNavItemActive('/dept/overview') && !isNavItemActive('/dept/teachers') /* etc. */)}> {/* More specific active check for parent */}
+                        {/* Department (Collapsible) - Active state considers children */}
+                        <ListItemButton onClick={handleDeptSubmenuToggle} sx={sidebarListItemStyles(theme, isSubmenuActive('/dept'))}>
                             <ListItemIcon><BusinessIcon /></ListItemIcon>
                             <ListItemText primary="Department" />
                             {deptSubmenuOpen ? <ExpandLess sx={{fontSize: '1.3rem', color: 'text.secondary', ml: 1}} /> : <ExpandMore sx={{fontSize: '1.3rem', color: 'text.secondary', ml: 1}} />}
@@ -493,16 +606,15 @@ function Navbar() {
                             <List component="div" disablePadding sx={{ py: 0.5 }}>
                                 {deptNavItems.map((item) => (
                                     <ListItemButton key={item.label} onClick={() => handleDeptItemClick(item.path)} sx={sidebarListItemStyles(theme, isNavItemActive(item.path), true)}>
-                                        {/* Optional: Add icon back for subitems if desired */}
-                                        {/* <ListItemIcon sx={{ fontSize: '1rem', mr: 1 }}>{item.icon}</ListItemIcon> */}
-                                        <ListItemText primary={item.label} primaryTypographyProps={{ fontSize: '0.875rem' }}/>
+                                        {/* No icon for subitems for cleaner look */}
+                                        <ListItemText primary={item.label} />
                                     </ListItemButton>
                                 ))}
                             </List>
                         </Collapse>
 
-                         {/* Batch (Collapsible) */}
-                         <ListItemButton onClick={handleBatchSubmenuToggle} sx={sidebarListItemStyles(theme, currentPath.startsWith('/batch') && !batchYears.some(year => isBatchActive(year)))}> {/* More specific active check */}
+                         {/* Batch (Collapsible) - Active state considers children */}
+                         <ListItemButton onClick={handleBatchSubmenuToggle} sx={sidebarListItemStyles(theme, isSubmenuActive('/batch'))}>
                              <ListItemIcon><CalendarMonthIcon /></ListItemIcon>
                              <ListItemText primary="Batch" />
                              {batchSubmenuOpen ? <ExpandLess sx={{fontSize: '1.3rem', color: 'text.secondary', ml: 1}} /> : <ExpandMore sx={{fontSize: '1.3rem', color: 'text.secondary', ml: 1}} />}
@@ -513,16 +625,15 @@ function Navbar() {
                                      <ListItemButton
                                          key={year}
                                          onClick={() => handleBatchYearClick(year)}
-                                         sx={sidebarListItemStyles(theme, isBatchActive(year), true)}
-                                         className="batch-year-item"
+                                         sx={sidebarListItemStyles(theme, isBatchActive(year), true, true)} // Pass isBatchYear=true
                                      >
-                                         <ListItemText primary={year} primaryTypographyProps={{ fontSize: '0.875rem' }}/>
+                                         <ListItemText primary={year} />
                                      </ListItemButton>
                                  ))}
                              </List>
                          </Collapse>
 
-                        {/* Optional Divider */}
+                        {/* Divider */}
                         <Divider sx={{ my: 1.5, mx: 1.5 }} light />
 
                          {/* Static Bottom Links */}
@@ -545,10 +656,11 @@ function Navbar() {
 
                 {/* 3. User Info & Logout Section (Sticky Footer) */}
                 <SidebarFooter>
-                    <Tooltip title="Edit Profile" placement="top">
+                    {/* Make entire user section clickable */}
+                    <Tooltip title="View Profile" placement="top">
                         <Box
-                            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', cursor: 'pointer', flexGrow: 1 }}
-                            onClick={handleProfileClick} // Use specific handler
+                            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, overflow: 'hidden', cursor: 'pointer', flexGrow: 1, borderRadius: theme.shape.borderRadius, p: 0.5, '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.04)} }}
+                            onClick={handleProfileClick}
                         >
                             <Avatar sx={{ width: 40, height: 40 }} alt={userName || ''}>
                                 {userName ? userName.charAt(0).toUpperCase() : <AccountCircle />}
@@ -557,12 +669,13 @@ function Navbar() {
                                 <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, lineHeight: 1.3, color: 'text.primary' }}>
                                     {userName || 'User Name'}
                                 </Typography>
-                                <Typography variant="caption" noWrap sx={{ color: 'text.secondary', display: 'block' }}>
-                                    {user?.email || ''}
+                                <Typography variant="caption" noWrap sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.2 }}>
+                                    {user?.email || '...'}
                                 </Typography>
                             </Box>
                         </Box>
                     </Tooltip>
+                    {/* Logout Button */}
                     <Tooltip title="Logout">
                          <IconButton onClick={handleLogout} size="medium" sx={{ color: 'text.secondary', '&:hover': { color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.1) } }}>
                              <LogoutIcon />
@@ -572,14 +685,14 @@ function Navbar() {
             </Box>
         )
     }, [
-        user, userName, isAdmin, theme, currentPath,
-        handleGoToDashboard, handleProfileClick, handleSettingsClick, handleAdminPanelClick, handleLogout, handleSupportClick,
-        handleDeptSubmenuToggle, handleBatchSubmenuToggle, handleDeptItemClick, handleBatchYearClick, // handleNavigate not needed here as specific handlers are used
-        deptSubmenuOpen, batchSubmenuOpen, deptNavItems, batchYears,
-        isNavItemActive, isBatchActive
-    ]); // Ensure all dependencies are correct
+        user, userName, isAdmin, theme, currentPath, // Core dependencies
+        handleGoToDashboard, handleProfileClick, handleSettingsClick, handleAdminPanelClick, handleLogout, handleSupportClick, // Action handlers
+        handleDeptSubmenuToggle, handleBatchSubmenuToggle, handleDeptItemClick, handleBatchYearClick, // Navigation handlers
+        deptSubmenuOpen, batchSubmenuOpen, deptNavItems, batchYears, // State & Data for menus
+        isNavItemActive, isBatchActive, isSubmenuActive // Active state helpers
+    ]);
 
-    // --- Notification Popover Content (Memoized) ---
+    // --- **Memoized Notification Popover Content** ---
     const notificationPopoverContent = useMemo(() => {
         const showViewAllButton = !loadingNotifications && notifications.length === NOTIFICATION_LIMIT;
 
@@ -588,12 +701,12 @@ function Navbar() {
                 {/* Header */}
                 <Box display="flex" justifyContent="space-between" alignItems="center" sx={{ px: 2, py: 1.5, borderBottom: `1px solid ${theme.palette.divider}`, flexShrink: 0 }} >
                     <Typography variant="h6" component="div" sx={{ fontWeight: 600, fontSize: '1.1rem' }}>Notifications</Typography>
-                    {notifications.length > 0 && totalUnreadCount > 0 && ( // Show only if there are unread notifications
+                    {notifications.length > 0 && totalUnreadCount > 0 && (
                         <Button
                             onClick={handleMarkAllAsRead}
                             color="primary"
                             size="small"
-                            disabled={markingRead} // Disable only while processing
+                            disabled={markingRead}
                             startIcon={markingRead ? <CircularProgress size={14} color="inherit" /> : <MarkChatReadIcon fontSize='small' />}
                             sx={{ textTransform: 'none', fontWeight: 500, py: 0.25, px: 1, ml: 1 }}
                         >
@@ -602,20 +715,20 @@ function Navbar() {
                     )}
                 </Box>
 
-                {/* Scrollable Content Area */}
+                {/* Scrollable Content Area - Improved Scrollbar Styling */}
                  <Box sx={{
                     flexGrow: 1, overflowY: 'auto',
-                    maxHeight: { xs: '60vh', sm: 'calc(100vh - 150px)' }, // Limit height
+                    maxHeight: { xs: '60vh', sm: 'calc(100vh - 200px)' }, // Adjusted max height
                     '&::-webkit-scrollbar': { width: '6px' },
                     '&::-webkit-scrollbar-track': { backgroundColor: 'transparent', borderRadius: '3px' },
-                    '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.action.selected, borderRadius: '3px' },
-                    '&::-webkit-scrollbar-thumb:hover': { backgroundColor: theme.palette.action.active },
+                    '&::-webkit-scrollbar-thumb': { backgroundColor: theme.palette.action.hover, borderRadius: '3px' },
+                    '&::-webkit-scrollbar-thumb:hover': { backgroundColor: theme.palette.action.selected },
                     scrollbarWidth: 'thin',
-                    scrollbarColor: `${theme.palette.action.selected} transparent`,
+                    scrollbarColor: `${theme.palette.action.hover} transparent`,
                 }} >
                     {/* Loading Indicator */}
                     {loadingNotifications && (
-                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, minHeight: 100 }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, minHeight: 150 }}>
                             <CircularProgress size={24} />
                         </Box>
                     )}
@@ -625,7 +738,9 @@ function Navbar() {
                         <List disablePadding sx={{ py: 0.5 }}>
                             {notifications.map((notification, index) => {
                                 const isRead = !!notification.read;
+                                // Sender display logic (keep existing)
                                 let senderDisplayName = "System";
+                                // ... (rest of sender name logic) ...
                                 if (notification.senderName) {
                                     senderDisplayName = notification.senderName;
                                     if (notification.senderStudentId) senderDisplayName += ` (${notification.senderStudentId})`;
@@ -637,6 +752,7 @@ function Navbar() {
                                         if (fetchedSender.studentId) senderDisplayName += ` (${fetchedSender.studentId})`;
                                     } else senderDisplayName = 'Unknown Sender';
                                 }
+
                                 const timeAgo = notification.timestamp?.toDate()
                                     ? formatDistanceToNow(notification.timestamp.toDate(), { addSuffix: true })
                                     : 'just now';
@@ -661,14 +777,15 @@ function Navbar() {
                                             onClick={() => handleNotificationItemClick(notification)}
                                         >
                                             <ListItemText
+                                                disableTypography // Allow custom layout below
                                                 primary={
-                                                    <Box sx={{ display: 'flex', alignItems: 'baseline', width: '100%', overflow: 'hidden' }}>
+                                                    <Box className="notification-primary">
                                                         {notification.category && (
-                                                            <Typography component="span" variant="body2" sx={{ color: categoryColor, fontWeight: 600, mr: 0.75, textTransform: 'capitalize', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                                                            <Typography component="span" variant="body2" className="notification-category" sx={{ color: categoryColor }}>
                                                                 {notification.category}:
                                                             </Typography>
                                                         )}
-                                                        <Typography component="span" sx={{ fontWeight: isRead ? 400 : 600, fontSize: '0.9rem', lineHeight: 1.35, color: 'text.primary', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flexGrow: 1, minWidth: 0 }}>
+                                                        <Typography component="span" className="notification-title">
                                                             {notification.title || 'Notification'}
                                                         </Typography>
                                                     </Box>
@@ -676,7 +793,7 @@ function Navbar() {
                                                 secondary={
                                                     <>
                                                         <Typography component="span" variant="body2" className="notification-message">
-                                                            {notification.message || "..."}
+                                                            {notification.message || "No message content."}
                                                         </Typography>
                                                         <Typography component="div" variant="caption" className="notification-meta">
                                                             {AudienceIcon && (
@@ -687,7 +804,7 @@ function Navbar() {
                                                             <Box component="span" sx={{ flexShrink: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                                 {senderDisplayName}
                                                             </Box>
-                                                            <Box component="span" sx={{ mx: 0.25 }}>•</Box>
+                                                            <Box component="span" sx={{ mx: 0.5 }}>•</Box>
                                                             <Box component="span" sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
                                                                 {timeAgo}
                                                             </Box>
@@ -698,7 +815,7 @@ function Navbar() {
                                             />
                                         </NotificationItem>
                                         {index < notifications.length - 1 && (
-                                            <Divider component="li" variant="inset" sx={{ ml: theme.spacing(2), mr: theme.spacing(1) }}/>
+                                            <Divider component="li" variant="inset" sx={{ ml: `calc(${theme.spacing(2)} + 4px)`, mr: theme.spacing(1) }}/> // Align divider with text
                                         )}
                                     </React.Fragment>
                                 );
@@ -706,22 +823,29 @@ function Navbar() {
                         </List>
                     )}
 
-                     {/* "No Notifications" Message */}
+                     {/* Improved "No Notifications" Message */}
                     {!loadingNotifications && notifications.length === 0 && (
-                        <Typography sx={{ p: 4, textAlign: 'center', color: 'text.secondary', fontStyle: 'italic' }} variant="body2">
-                            No new notifications.
-                        </Typography>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', p: 4, minHeight: 150, textAlign: 'center' }}>
+                             <InfoOutlinedIcon sx={{ fontSize: 40, color: 'text.disabled', mb: 1.5 }} />
+                            <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }} variant="body2">
+                                You're all caught up!
+                            </Typography>
+                            <Typography sx={{ color: 'text.disabled', fontSize: '0.8rem', mt: 0.5 }} variant="caption">
+                                No new notifications right now.
+                            </Typography>
+                        </Box>
                     )}
                  </Box> {/* End Scrollable Content Area */}
 
-                 {/* View All Button (fixed at bottom of popover) */}
+                 {/* Footer / View All Button */}
                  {showViewAllButton && (
                     <Box sx={{ textAlign: 'center', py: 1, borderTop: `1px solid ${theme.palette.divider}`, flexShrink: 0 }}>
                         <Button
                             onClick={handleViewAllNotificationsClick}
                             size="small"
+                            fullWidth // Make button fill width for better click target
                             startIcon={<ReadMoreIcon fontSize='small'/>}
-                            sx={{ textTransform: 'none', fontWeight: 500 }}
+                            sx={{ textTransform: 'none', fontWeight: 500, color: 'primary.main', '&:hover': { bgcolor: alpha(theme.palette.primary.main, 0.04) }}}
                         >
                             View All Notifications
                         </Button>
@@ -730,72 +854,71 @@ function Navbar() {
             </>
         )
     }, [
-        loadingNotifications, notifications, senderInfo, totalUnreadCount, markingRead,
-        handleNotificationItemClick, handleMarkAllAsRead, handleViewAllNotificationsClick,
-        theme
+        loadingNotifications, notifications, senderInfo, totalUnreadCount, markingRead, // Data and state
+        handleNotificationItemClick, handleMarkAllAsRead, handleViewAllNotificationsClick, // Handlers
+        theme // Theme for styling
     ]);
-
 
     // --- Determine active value for Bottom Navigation ---
      const getMobileNavValue = useCallback(() => {
-        const exactMatch = mobileBottomNavItems.find(item => item.value === currentPath);
+        // Prioritize exact match
+        const exactMatch = mobileBottomNavItems.find(item => item.path && currentPath === item.path);
         if (exactMatch) return exactMatch.value;
-        // Handle cases like /dept/* matching the /dept item
-        if (currentPath.startsWith('/dept')) {
-            const deptItem = mobileBottomNavItems.find(item => item.value === '/dept');
-            if (deptItem) return deptItem.value;
-        }
-        if (currentPath.startsWith('/batch')) {
-             // No specific batch item in bottom nav, return false or maybe highlight dashboard?
-             return '/dashboard'; // Example: fallback to dashboard
-        }
-        return false; // No match
+
+        // Handle nested paths - find the base path item
+        const nestedMatch = mobileBottomNavItems.find(item => item.value !== '/' && item.path && currentPath.startsWith(item.path));
+         if (nestedMatch) return nestedMatch.value;
+
+         // Fallback (e.g., if on a path not represented, maybe highlight dashboard or nothing)
+        // If dashboard is the default/fallback:
+        // if (currentPath.startsWith('/')) return '/dashboard';
+
+        return false; // No match or specific fallback
      }, [currentPath]); // Depends only on currentPath
      const mobileNavValue = getMobileNavValue();
 
     // --- Main Render ---
     return (
-        <Box sx={{ display: 'flex' }}>
+        <Box sx={{ display: 'flex' }}> {/* Root element */}
 
-            {/* AppBar: Always visible */}
+            {/* AppBar */}
             <StyledAppBar position="fixed">
                 <StyledToolbar>
                     {/* Left Side: Hamburger (Mobile Only) & Title */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, flexGrow: { xs: 1, md: 0 } }}> {/* Allow title to grow on mobile */}
                          {/* Hamburger Icon - Mobile Only */}
                          {user && isMobile && (
                             <IconButton
-                                color="inherit" // Inherit color from AppBar (which is default/text color now)
+                                color="inherit"
                                 aria-label="open drawer"
                                 edge="start"
                                 onClick={handleDrawerToggle}
-                                sx={{ mr: 1.5 }} // Add margin to the right
+                                sx={{ mr: 1.5 }} // Consistent margin
                             >
                                 <MenuIcon />
                             </IconButton>
                          )}
 
-                         {/* Title - Show on Mobile */}
+                         {/* Title - Show only on Mobile (Logo is in sidebar on desktop) */}
                          {isMobile && (
-                            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600, flexGrow: 1 }}>
+                            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
                                 MEmento
                             </Typography>
                          )}
-                         {/* Desktop: This area remains empty as title/logo is in the sidebar */}
                     </Box>
 
-                    {/* Right Side: Icons (Notifications, Profile Menu) */}
-                    {user && (
+                    {/* Right Side: Icons (Notifications, Profile Menu) / Login Button */}
+                    {user ? ( // User is logged in
                         <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center">
                              {/* Notifications Icon & Popover */}
                              <Tooltip title="Notifications">
                                  <IconButton
                                      id="notification-button"
-                                     color="default" // Use default color as AppBar bg is paper now
+                                     color="inherit" // Inherits text color from AppBar
                                      onClick={handleNotificationPopoverOpen}
-                                     aria-haspopup="true" aria-controls="notification-popover" aria-expanded={isNotificationPopoverOpen ? 'true' : undefined}
+                                     aria-haspopup="true" aria-controls={isNotificationPopoverOpen ? 'notification-popover' : undefined} aria-expanded={isNotificationPopoverOpen ? 'true' : undefined}
                                  >
-                                    <Badge badgeContent={totalUnreadCount} color="error" max={99}> {/* Increased max */}
+                                    <Badge badgeContent={totalUnreadCount} color="error" max={99}>
                                         <NotificationsIcon />
                                     </Badge>
                                 </IconButton>
@@ -807,16 +930,16 @@ function Navbar() {
                                  onClose={handleNotificationPopoverClose}
                                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                                 transitionDuration={250}
-                                 disableRestoreFocus={true}
-                                 disableScrollLock={true} // Allows interaction with background
+                                 transitionDuration={200} // Faster transition
+                                 disableRestoreFocus // Prevents focus issues on close
+                                 disableScrollLock // Allows background interaction
                                  slotProps={{
                                     paper: {
-                                        elevation: 0,
+                                        elevation: 0, // Use border/shadow instead of elevation level
                                         sx: {
                                             mt: 1.5,
-                                            boxShadow: theme.shadows[6],
-                                            borderRadius: '12px',
+                                            boxShadow: theme.shadows[6], // Defined shadow
+                                            borderRadius: '12px', // Consistent rounded corners
                                             border: `1px solid ${theme.palette.divider}`,
                                             width: NOTIFICATION_POPOVER_WIDTH,
                                             maxWidth: '95vw',
@@ -826,7 +949,7 @@ function Navbar() {
                                             overflow: 'hidden', // Parent controls overflow
                                         }
                                     }
-                                }}
+                                 }}
                              >
                                  {notificationPopoverContent}
                              </Popover>
@@ -835,11 +958,17 @@ function Navbar() {
                              <Tooltip title={userName || "Profile Settings"}>
                                  <IconButton
                                      id="profile-button" size="small" onClick={handleProfileMenuOpen}
-                                     color="default" // Use default color
-                                     aria-haspopup="true" aria-controls="profile-menu" aria-expanded={isProfileMenuOpen ? 'true' : undefined} sx={{ p: 0 }}
+                                     color="inherit"
+                                     aria-haspopup="true" aria-controls={isProfileMenuOpen ? 'profile-menu' : undefined} aria-expanded={isProfileMenuOpen ? 'true' : undefined} sx={{ p: 0 }}
                                  >
-                                    <Avatar sx={{ bgcolor: theme.palette.grey[200], color: theme.palette.text.secondary, width: 32, height: 32, fontSize: '0.9rem' }} alt={userName || ''} >
-                                        {userName ? userName.charAt(0).toUpperCase() : <AccountCircle sx={{ fontSize: '1.7rem'}}/>}
+                                    {/* Use fetched profile picture if available, fallback to Avatar */}
+                                    <Avatar
+                                        sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1), color: theme.palette.primary.main, width: 34, height: 34, fontSize: '0.9rem', fontWeight: 500 }}
+                                        alt={userName || ''}
+                                        src={userProfile?.basicInfo?.profileImageUrl || undefined} // Use profile image URL if present
+                                    >
+                                        {/* Fallback to initials if no image */}
+                                        {!userProfile?.basicInfo?.profileImageUrl && userName ? userName.charAt(0).toUpperCase() : <AccountCircle sx={{ fontSize: '1.8rem'}}/>}
                                     </Avatar>
                                  </IconButton>
                              </Tooltip>
@@ -848,32 +977,45 @@ function Navbar() {
                                 anchorEl={profileAnchorEl}
                                 open={isProfileMenuOpen}
                                 onClose={handleProfileMenuClose}
-                                disableScrollLock={true}
-                                PaperProps={{ sx: { mt: 1.5, minWidth: 200, boxShadow: theme.shadows[4], borderRadius: theme.shape.borderRadius }, elevation: 0, variant: 'outlined' }}
+                                disableScrollLock
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                                slotProps={{ // Use slotProps for Paper styling consistency
+                                     paper: {
+                                         elevation: 0,
+                                         sx: {
+                                             mt: 1.5, minWidth: 220, // Slightly wider
+                                             boxShadow: theme.shadows[4], borderRadius: theme.shape.borderRadius * 1.5, // Consistent radius
+                                             border: `1px solid ${theme.palette.divider}`,
+                                             overflow: 'visible', // Allow potential pseudo-elements if needed
+                                             // Optional: Add arrow pointing to anchor
+                                             // '&:before': { content: '""', display: 'block', position: 'absolute', top: 0, right: 14, width: 10, height: 10, bgcolor: 'background.paper', transform: 'translateY(-50%) rotate(45deg)', zIndex: 0, borderTop: `1px solid ${theme.palette.divider}`, borderLeft: `1px solid ${theme.palette.divider}` },
+                                         },
+                                     }
+                                }}
                              >
-                                 {userName && (
+                                 {userName && ( // Display header only if user info is available
                                     <ProfileMenuHeader>
-                                         <Typography variant="subtitle2" fontWeight="medium" noWrap>{userName}</Typography>
+                                         <Typography variant="subtitle2" fontWeight="600" noWrap>{userName}</Typography>
                                          <Typography variant="caption" color="text.secondary" noWrap>{user?.email}</Typography>
                                     </ProfileMenuHeader>
                                 )}
-                                <MenuItem onClick={handleProfileClick}> <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon> Edit Profile </MenuItem>
-                                <MenuItem onClick={handleSettingsClick}> <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon> Settings </MenuItem>
-                                <MenuItem onClick={handleSupportClick}> <ListItemIcon><SupportAgentIcon fontSize="small" /></ListItemIcon> Support </MenuItem>
-                                {isAdmin && ( <MenuItem onClick={handleAdminPanelClick}> <ListItemIcon><AdminPanelSettingsIcon fontSize="small" /></ListItemIcon> Admin Panel </MenuItem> )}
+                                {/* Use consistent font size for menu items */}
+                                <MenuItem onClick={handleProfileClick} sx={{ fontSize: '0.9rem' }}> <ListItemIcon><EditIcon fontSize="small" /></ListItemIcon> Edit Profile </MenuItem>
+                                <MenuItem onClick={handleSettingsClick} sx={{ fontSize: '0.9rem' }}> <ListItemIcon><SettingsIcon fontSize="small" /></ListItemIcon> Settings </MenuItem>
+                                <MenuItem onClick={handleSupportClick} sx={{ fontSize: '0.9rem' }}> <ListItemIcon><SupportAgentIcon fontSize="small" /></ListItemIcon> Support </MenuItem>
+                                {isAdmin && ( <MenuItem onClick={handleAdminPanelClick} sx={{ fontSize: '0.9rem' }}> <ListItemIcon><AdminPanelSettingsIcon fontSize="small" /></ListItemIcon> Admin Panel </MenuItem> )}
                                 <Divider sx={{ my: 0.5 }} />
-                                <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}> <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon> Sign Out </MenuItem>
+                                <MenuItem onClick={handleLogout} sx={{ color: 'error.main', fontSize: '0.9rem' }}> <ListItemIcon><LogoutIcon fontSize="small" color="error" /></ListItemIcon> Sign Out </MenuItem>
                              </Menu>
                         </Stack>
-                    )}
-                     {/* Login Button */}
-                     {!user && (
+                    ) : ( // User is logged out
                         <Button
                             color="primary"
-                            onClick={() => navigate('/login')}
-                            variant="contained" // Consistent prominent login button
+                            onClick={() => navigate('/login')} // Simple navigation
+                            variant="contained" // Prominent login action
                             size="small"
-                            sx={{ ml: 1 }} // Add some margin if needed
+                            disableElevation // Cleaner look
                         >
                             Login
                         </Button>
@@ -881,11 +1023,10 @@ function Navbar() {
                 </StyledToolbar>
             </StyledAppBar>
 
-             {/* Navigation Drawers */}
+             {/* Navigation Drawers (Render only if user is logged in) */}
              {user && (
                 <Box
                     component="nav"
-                    // Width is set by the individual drawers now
                     sx={{ width: { md: DESKTOP_DRAWER_WIDTH }, flexShrink: { md: 0 } }}
                     aria-label="main navigation"
                 >
@@ -894,142 +1035,84 @@ function Navbar() {
                         variant="temporary"
                         anchor="left"
                         open={mobileOpen}
-                        onClose={handleDrawerToggle}
-                        ModalProps={{ keepMounted: true }} // Better open performance on mobile.
+                        onClose={handleDrawerToggle} // Close on backdrop click
+                        ModalProps={{ keepMounted: true }} // Better open performance
                         sx={{
-                            display: { xs: 'block', md: 'none' }, // Show only on mobile
+                            display: { xs: 'block', md: 'none' },
                             '& .MuiDrawer-paper': {
                                 boxSizing: 'border-box',
-                                width: MOBILE_DRAWER_WIDTH, // Use mobile width
+                                width: MOBILE_DRAWER_WIDTH,
                                 bgcolor: 'background.paper',
-                                // borderRight: `1px solid ${theme.palette.divider}` // Optional: add border if desired
+                                borderRight: 'none', // Usually no border needed for temp drawer
+                                boxShadow: theme.shadows[2], // Add shadow for elevation
                             },
                         }}
                     >
-                        {drawerContent} {/* <<< REUSE the drawer content */}
+                        {drawerContent} {/* REUSE the drawer content */}
                     </Drawer>
 
                     {/* Permanent Drawer (Desktop) */}
                     <Drawer
                         variant="permanent"
                         anchor="left"
-                        open // Permanent is always open
+                        open // Always open
                         sx={{
-                            display: { xs: 'none', md: 'block' }, // Show only on desktop
+                            display: { xs: 'none', md: 'block' },
                             '& .MuiDrawer-paper': {
                                 boxSizing: 'border-box',
-                                width: DESKTOP_DRAWER_WIDTH, // Use desktop width
-                                borderRight: `1px solid ${theme.palette.divider}`,
+                                width: DESKTOP_DRAWER_WIDTH,
+                                borderRight: `1px solid ${theme.palette.divider}`, // Keep border for desktop separation
                                 bgcolor: 'background.paper',
                             },
                         }}
                     >
-                        {drawerContent} {/* <<< REUSE the drawer content */}
+                        {drawerContent} {/* REUSE the drawer content */}
                     </Drawer>
                 </Box>
              )}
 
             {/* Mobile Bottom Navigation */}
-            {user && isMobile && ( // Render only for logged-in users on mobile screens
-                <BottomNavigation
+            {user && isMobile && (
+                <AppBar
+                    position="fixed"
                     sx={{
-                        width: '100%',
-                        height: MOBILE_BOTTOM_NAV_HEIGHT,
-                        position: 'fixed',
+                        top: 'auto', // Position at bottom
                         bottom: 0,
-                        left: 0,
-                        right: 0,
-                        zIndex: theme.zIndex.appBar, // Ensure it's above content, below AppBar modals/popovers
-                        borderTop: `1px solid ${theme.palette.divider}`,
-                        bgcolor: 'background.paper',
-                    }}
-                    value={mobileNavValue}
-                    onChange={(event, newValue) => {
-                        const selectedItem = mobileBottomNavItems.find(item => item.value === newValue);
-                        if (selectedItem && selectedItem.path) {
-                            handleNavigate(selectedItem.path); // Use the main navigate handler
-                        } else if (newValue === 'more') {
-                            // Optionally, the 'More' button could also open the temporary drawer
-                            handleDrawerToggle();
-                            console.log("More clicked - opening drawer");
-                        }
-                    }}
-                    showLabels // Keep labels visible
-                >
-                    {mobileBottomNavItems.map((item) => (
-                        <BottomNavigationAction
-                            key={item.value}
-                            label={item.label}
-                            value={item.value}
-                            icon={item.icon}
-                            sx={{
-                                // Optional: Style tweaks for active state
-                                '&.Mui-selected': {
-                                    color: theme.palette.primary.main,
-                                },
-                                minWidth: 'auto', // Allow items to shrink
-                                padding: '6px 8px 8px 8px', // Adjust padding if needed
-                                '& .MuiBottomNavigationAction-label': {
-                                     fontSize: '0.7rem', // Slightly smaller label if needed
-                                }
-                            }}
-                        />
-                    ))}
-                </BottomNavigation>
+                        zIndex: theme.zIndex.appBar, // Standard z-index for bottom nav
+                        bgcolor: 'background.paper', // Match theme
+                        boxShadow: `inset 0px 1px 0px ${alpha(theme.palette.divider, 0.6)}`, // Subtle top border instead of box shadow
+                     }}
+                 >
+                     <BottomNavigation
+                        sx={{ height: MOBILE_BOTTOM_NAV_HEIGHT }} // Ensure consistent height
+                        value={mobileNavValue}
+                        onChange={(event, newValue) => {
+                            const selectedItem = mobileBottomNavItems.find(item => item.value === newValue);
+                            if (selectedItem?.path) { // Check if path exists
+                                handleNavigate(selectedItem.path);
+                            } else {
+                                console.warn(`BottomNav: No path found for value: ${newValue}`);
+                                // Potentially open drawer if 'more' was clicked, or handle other actions
+                            }
+                        }}
+                        showLabels // Always show labels for clarity
+                    >
+                        {mobileBottomNavItems.map((item) => (
+                            // Use the styled component for consistent styling
+                            <StyledBottomNavigationAction
+                                key={item.value}
+                                label={item.label}
+                                value={item.value}
+                                icon={item.icon}
+                            />
+                        ))}
+                    </BottomNavigation>
+                 </AppBar>
             )}
 
              {/* =================================================================== */}
-             {/* IMPORTANT: Main Content Area defined in Parent Layout Component     */}
-             {/* (Layout guidance comment remains the same as previous version)     */}
-             {/* =================================================================== */}
-             {/*
-                // In your Layout/App component:
-                import { useTheme, useMediaQuery, Box } from '@mui/material';
-                import { Outlet } from 'react-router-dom'; // If using react-router
-                import Navbar from './components/Navbar'; // Import your Navbar
-                import { useAuth } from './auth/AuthContext'; // Import your auth context
-
-                // Define constants consistently or import them
-                const DESKTOP_DRAWER_WIDTH = 260;
-                const MOBILE_BOTTOM_NAV_HEIGHT = 56;
-                const APP_BAR_HEIGHT = 64;
-
-                function Layout() {
-                    const theme = useTheme();
-                    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-                    const { user } = useAuth(); // Get user state
-
-                    const bottomNavHeightActual = user && isMobile ? MOBILE_BOTTOM_NAV_HEIGHT : 0;
-
-                    return (
-                        <Box sx={{ display: 'flex', minHeight: '100vh' }}> {/* Ensure Box takes full height */}
-             {/*            <Navbar /> {/* Render the Navbar component */}
-
-             {/*            <Box
-                                component="main"
-                                sx={{
-                                    flexGrow: 1,
-                                    p: { xs: 2, sm: 3 }, // Content padding
-                                    bgcolor: theme.palette.grey[100], // Background for content area
-                                    ml: { md: `${DESKTOP_DRAWER_WIDTH}px` }, // Margin for desktop drawer
-                                    width: { xs: '100%', md: `calc(100% - ${DESKTOP_DRAWER_WIDTH}px)` }, // Correct width calculation
-                                    mt: `${APP_BAR_HEIGHT}px`, // Margin for AppBar
-                                    pb: `${bottomNavHeightActual}px`, // Padding for mobile BottomNav
-                                    // Calculate minHeight to push footer down even with short content
-                                    minHeight: `calc(100vh - ${APP_BAR_HEIGHT}px - ${bottomNavHeightActual}px)`,
-                                    boxSizing: 'border-box',
-                                    display: 'flex', // Use flexbox for potential footer sticking
-                                    flexDirection: 'column', // Stack content vertically
-                                    // overflowY: 'auto' // Let content scroll if needed, but Box itself shouldn't scroll primary content
-                                }}
-                            >
-                                {/* Your main page content renders here */}
-             {/*                    <Outlet />
-                            </Box>
-                       </Box>
-                    );
-                }
-             */}
+             {/* Main Content Area defined in Parent Layout Component (e.g., MainLayout.js) */}
+             {/* Ensure the Layout component correctly calculates offsets for AppBar, Desktop Drawer, and Mobile BottomNav */}
              {/* =================================================================== */}
 
         </Box> /* End Root Box */
