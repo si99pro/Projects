@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/components/MessageItem.js
 import React, { memo } from 'react';
 import {
