@@ -10,7 +10,7 @@ import {
   Avatar,
   Box,
   IconButton,
-  Skeleton,
+  // Skeleton, // Removed: No longer needed
   Stack,
   Typography,
   Paper, // Added for chat container feel
@@ -65,28 +65,8 @@ function stringAvatar(name = 'User') {
     };
 }
 
-// ========= SKELETON COMPONENT (Chat Message Style) =========
-const PostSkeleton = ({ theme }) => (
-    // Mimics MomentItem structure
-    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.5, px: { xs: 1.5, sm: 2 } }}>
-        <Skeleton animation="wave" variant="circular" width={40} height={40} sx={{ mt: 0.5, flexShrink: 0 }} />
-        <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-            {/* Skeleton for Header (Name + Time) */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Skeleton animation="wave" height={18} width="40%" />
-                <Skeleton animation="wave" height={14} width="25%" />
-            </Box>
-            {/* Skeleton for Message Body */}
-            <Skeleton variant="text" sx={{ fontSize: '0.9rem', mb: 1 }} />
-            <Skeleton variant="text" sx={{ fontSize: '0.9rem', width: '80%', mb: 1 }} />
-             {/* Optional: Skeleton for action icons */}
-            <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
-                <Skeleton variant="circular" width={24} height={24} />
-                <Skeleton variant="circular" width={24} height={24} />
-            </Stack>
-        </Box>
-    </Box>
-);
+// ========= SKELETON COMPONENT (Removed) =========
+// const PostSkeleton = (...) // Removed this entire component definition
 
 // ========= MOMENT ITEM COMPONENT (Chat Message Style) =========
 const MomentItem = React.memo(({ momentItem, onInteraction, onCommentClick, theme }) => {
@@ -236,14 +216,16 @@ MomentItem.displayName = 'MomentItem'; // Add display name for React DevTools
 function AllMomentList() {
   const theme = useTheme(); // Get theme for styling children
   const [allMoments, setAllMoments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true); // Removed loading state
   const [error, setError] = useState(null);
+  const [isFetching, setIsFetching] = useState(true); // Use a flag to know if initial fetch is done
 
   // --- Data Fetching ---
   useEffect(() => {
     const fetchAllMoments = async () => {
-      setLoading(true);
+      // setLoading(true); // Removed
       setError(null);
+      setIsFetching(true); // Indicate fetching starts
       console.log("Fetching discussions..."); // Log start
       try {
         const usersSnapshot = await getDocs(collection(db, "users"));
@@ -295,7 +277,8 @@ function AllMomentList() {
         setError('Failed to load discussions. Please try again later.');
         setAllMoments([]); // Clear moments on error
       } finally {
-         setLoading(false); // Stop loading indicator
+         // setLoading(false); // Removed
+         setIsFetching(false); // Indicate fetching finished
          console.log("Fetching process finished."); // Log end
       }
     };
@@ -322,24 +305,17 @@ function AllMomentList() {
 
 
   // --- Render Logic ---
-  if (loading) {
-    // Use Paper container for skeletons too for consistent look
-    return (
-        <Paper variant="outlined" sx={{ border: 'none', bgcolor:'transparent' }}>
-            {/* Show more skeletons for perceived performance */}
-            {Array.from(new Array(5)).map((_, index) => (
-                <PostSkeleton key={index} theme={theme} />
-            ))}
-        </Paper>
-    );
-  }
+
+  // Removed the loading block that showed skeletons:
+  // if (loading) { ... }
 
   if (error) {
     // Display error within the component area
     return <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>; // Use error severity
   }
 
-  if (allMoments.length === 0) {
+  // Check if fetching is done AND there are no moments
+  if (!isFetching && allMoments.length === 0 && !error) {
     // Centered message for no content
     return (
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', p: 4, minHeight: 150, textAlign: 'center' }}>
@@ -352,6 +328,7 @@ function AllMomentList() {
 
   // Render the list of messages within a Paper container
   // Note: If this list gets very long, consider using react-window or react-virtualized for performance.
+  // Render nothing until fetch is complete OR show moments if already fetched
   return (
     <Paper
         variant="outlined"
@@ -361,9 +338,13 @@ function AllMomentList() {
             // Consider adding overflowY: 'auto' and a maxHeight if this component itself should scroll
             // maxHeight: 'calc(100vh - 200px)', // Example: Adjust based on surrounding layout
             // overflowY: 'auto',
+            // Hide visually until content is ready to avoid empty flash if needed,
+            // although usually showing nothing is acceptable during initial load without skeletons.
+            // visibility: isFetching ? 'hidden' : 'visible',
          }}
     >
-        {allMoments.map((momentItem) => (
+        {/* Only map if not fetching or if moments exist (to avoid mapping empty array unnecessarily) */}
+        {!isFetching && allMoments.map((momentItem) => (
             <MomentItem
                 key={momentItem.id} // Use the unique ID
                 momentItem={momentItem}
@@ -372,6 +353,12 @@ function AllMomentList() {
                 theme={theme}
             />
         ))}
+        {/* If you want to show *something* while fetching, uncomment below */}
+        {/* {isFetching && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <Typography color="text.secondary">Loading discussions...</Typography>
+            </Box>
+        )} */}
     </Paper>
   );
 }
