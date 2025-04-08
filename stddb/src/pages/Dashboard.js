@@ -1,6 +1,6 @@
 /* eslint-disable no-dupe-keys */
 /* eslint-disable no-unused-vars */
-// src/pages/Dashboard.js (REDESIGNED V6 - Fixed Chat - Corrected Imports)
+// src/pages/Dashboard.js (REDESIGNED V6 - Fixed Chat - Corrected Imports V2)
 import React, { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
@@ -25,8 +25,8 @@ import {
     Alert,
     useTheme, // Keep if used for theme.spacing, etc.
     Divider,
-    TextField
-    // REMOVED: Skeleton, List, ListItem, ListItemText, ListItemAvatar, MuiLink, useMediaQuery, alpha
+    TextField,
+    alpha // <<<=== ADD alpha BACK HERE
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
@@ -46,7 +46,10 @@ const DashboardRoot = styled(Box)(({ theme }) => ({ display: 'flex', width: '100
 const StyledInfoCard = styled(Card)(({ theme }) => ({ borderRadius: theme.shape.borderRadius, backgroundColor: theme.palette.background.paper, display: 'flex', flexDirection: 'column', border: `1px solid ${theme.palette.divider}`, boxShadow: 'none', width: '100%', }));
 const FixedChatContainer = styled(Paper)(({ theme }) => ({ position: 'fixed', top: APP_BAR_HEIGHT + theme.spacing(2), right: theme.spacing(2), width: CHAT_WIDTH, zIndex: theme.zIndex.drawer, border: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[3], borderRadius: theme.shape.borderRadius, backgroundColor: theme.palette.background.paper, display: 'flex', flexDirection: 'column', maxHeight: `calc(100vh - ${APP_BAR_HEIGHT}px - ${theme.spacing(4)})`, overflow: 'hidden', display: 'none', [theme.breakpoints.up('lg')]: { display: 'flex', } }));
 const ProfileAvatar = styled(Avatar)(({ theme, profilebg }) => ({ position: 'relative', backgroundColor: profilebg || theme.palette.primary.main, color: theme.palette.common.white, cursor: 'pointer', boxShadow: 'none', flexShrink: 0, overflow: 'visible', border: `2px solid ${theme.palette.divider}`}));
-const EditIconContainer = styled(IconButton)(({ theme }) => ({ position: 'absolute', bottom: -5, right: -5, backgroundColor: theme.palette.background.paper, padding: theme.spacing(0.5), border: `1px solid ${theme.palette.divider}`, borderRadius: '50%', transition: theme.transitions.create(['background-color', 'transform']), zIndex: 1, boxShadow: `0 1px 3px ${alpha(theme.palette.common.black, 0.1)}`, '&:hover': { backgroundColor: theme.palette.action.hover, transform: 'scale(1.1)', }, '& .MuiSvgIcon-root': { fontSize: '0.9rem', color: theme.palette.primary.main, }, }));
+// This component uses alpha - ensure alpha is imported
+const EditIconContainer = styled(IconButton)(({ theme }) => ({
+    position: 'absolute', bottom: -5, right: -5, backgroundColor: theme.palette.background.paper, padding: theme.spacing(0.5), border: `1px solid ${theme.palette.divider}`, borderRadius: '50%', transition: theme.transitions.create(['background-color', 'transform']), zIndex: 1, boxShadow: `0 1px 3px ${alpha(theme.palette.common.black, 0.1)}`, '&:hover': { backgroundColor: theme.palette.action.hover, transform: 'scale(1.1)', }, '& .MuiSvgIcon-root': { fontSize: '0.9rem', color: theme.palette.primary.main, },
+}));
 const WelcomeContainer = styled(Box)({ display: 'flex', alignItems: 'center', textAlign: 'left', width: '100%', });
 const UserInfoDetails = styled(Box)({ display: 'flex', flexDirection: 'column', flexGrow: 1, minWidth: 0, });
 const modalStyle = (theme) => ({ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: { xs: '90%', sm: 450 }, bgcolor: 'background.paper', border: `1px solid ${theme.palette.divider}`, borderRadius: theme.shape.borderRadius, boxShadow: 'none', p: { xs: 2, sm: 3 }, });
