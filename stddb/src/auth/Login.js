@@ -8,7 +8,7 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth';
 // Firestore query functions
-import { collection, query, where, getDocs, getFirestore } from 'firebase/firestore';
+import { collection, query, where, getDocs, getFirestore, limit } from 'firebase/firestore'; // limit is imported
 import { useNavigate, Link as RouterLink } from 'react-router-dom'; // Use RouterLink for navigation
 
 // Material UI Components
@@ -28,6 +28,9 @@ import {
 } from '@mui/material';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+
+// **** ADDED CONSTANT ****
+const MIN_PASSWORD_LENGTH = 6;
 
 // Copyright component
 function Copyright(props) {
@@ -59,7 +62,7 @@ function Login() {
 
   // --- LOGIC ---
 
-  // Auth state listener (no changes needed)
+  // Auth state listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user && user.emailVerified) {
@@ -71,14 +74,14 @@ function Login() {
     return () => unsubscribe();
   }, []);
 
-  // Error message helper (Adjusted messages slightly)
+  // Error message helper
   const getFirebaseAuthErrorMessage = (errorCode) => {
       switch (errorCode) {
-        case 'auth/user-not-found': // Now less likely if we find by student ID first
+        case 'auth/user-not-found':
         case 'auth/wrong-password':
-        case 'auth/invalid-credential': // Most common error now for bad identifier/pass combo
+        case 'auth/invalid-credential':
           return 'Invalid credentials. Please check your Email/Student ID and password.';
-        case 'auth/invalid-email': // Will only trigger if user explicitly enters badly formatted email
+        case 'auth/invalid-email':
             return 'Invalid email address format entered.';
         case 'auth/user-disabled':
           return 'This user account has been disabled.';
@@ -92,19 +95,19 @@ function Login() {
   };
 
 
-  // Resend verification email handler (no changes needed)
+  // Resend verification email handler
   const handleResendVerification = async () => {
     setError('');
     setResendStatus('Sending...');
-    setLoading(true);
+    setLoading(true); // Use the main loading state to disable the button during resend too
 
-    const userToVerify = auth.currentUser; // This still relies on the *last* user context
+    const userToVerify = auth.currentUser;
 
     if (userToVerify) {
       try {
         await sendEmailVerification(userToVerify);
         setResendStatus('Verification email resent. Check your inbox/spam folder.');
-        setError(''); // Clear the verification error
+        setError('');
       } catch (err) {
         console.error("Resend Error:", err);
         let resendError = `Error resending: ${err.message}`;
@@ -113,22 +116,23 @@ function Login() {
         }
         setResendStatus(resendError);
       } finally {
-         setLoading(false);
+         // Don't set loading false here if the main error still requires action
+         // Let the user re-attempt login or handle the main error state
+         // Only set loading false if resend was the *only* action intended
+         if(!error.startsWith('Please verify your email')) {
+            setLoading(false);
+         }
       }
     } else {
-      // We might not have user context if login failed before verification check
       console.warn("Resend Error: No user context found. Could not automatically resend.");
-      // Provide guidance if email needs verification but user context is lost
-      setResendStatus('Could not automatically resend. Please try logging in again to trigger the prompt if needed, or contact support.');
-       setError(''); // Clear the main error perhaps? Or leave it? Let's clear resend status instead.
-      // setResendStatus(''); // Clear resend status to avoid confusion
-      // setError('Login first to resend verification email.'); // More direct error
-      setLoading(false);
+      setResendStatus('Could not automatically resend. Please try logging in again.');
+      setError(''); // Clear main error if resend is attempted
+      setLoading(false); // Resend failed, re-enable button
     }
   };
 
 
-  // Handle form submission (Major changes here)
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -145,8 +149,14 @@ function Login() {
     const identifier = loginIdentifier.trim();
     const finalPassword = password; // No trim needed usually
 
-    if (!identifier || !finalPassword) {
-        setError('Please enter both your Email/Student ID and password.');
+    // **Client-side validation (matches button disabled state)**
+    if (!identifier || finalPassword.length < MIN_PASSWORD_LENGTH) {
+        // Set a more specific error if needed, or just prevent submission
+        // This check is mostly redundant because the button *should* be disabled,
+        // but it's a good safeguard against programmatic form submission or race conditions.
+        console.warn("Submit called with invalid input (should have been disabled).");
+        // Optionally set an error, though usually not needed if button logic is correct.
+        // setError('Please ensure all fields are filled correctly.');
         setLoading(false);
         return;
     }
@@ -161,39 +171,31 @@ function Login() {
             // If not an email, assume it's a Student ID and query Firestore
             console.log("Identifier is not an email, querying Firestore for Student ID:", identifier);
             const usersRef = collection(db, 'users');
-            // Query where basicInfo.studentId matches the identifier
-            const q = query(usersRef, where('basicInfo.studentId', '==', identifier));
+            const q = query(usersRef, where('basicInfo.studentId', '==', identifier), limit(1));
 
             const querySnapshot = await getDocs(q);
 
             if (querySnapshot.empty) {
                 console.log("No user found with Student ID:", identifier);
-                setError('Invalid credentials. Please check your Email/Student ID and password.'); // Generic error
-                setLoading(false);
-                return;
-            } else if (querySnapshot.size > 1) {
-                // Should not happen with unique student IDs, but handle defensively
-                console.error("Multiple users found with the same Student ID:", identifier);
-                setError('An error occurred. Multiple accounts found for this ID.');
+                setError(getFirebaseAuthErrorMessage('auth/invalid-credential')); // Use consistent error
                 setLoading(false);
                 return;
             } else {
-                // Found exactly one user
+                // Found exactly one user (due to limit(1))
                 const userDoc = querySnapshot.docs[0];
                 const userData = userDoc.data();
-                if (userData.basicInfo && userData.basicInfo.email) {
-                    emailToSignIn = userData.basicInfo.email; // Get the actual email associated with the student ID
+                if (userData?.basicInfo?.email) { // Optional chaining for safety
+                    emailToSignIn = userData.basicInfo.email;
                     console.log("Found user via Student ID, using email:", emailToSignIn);
                 } else {
                     console.error("User document found but missing email for Student ID:", identifier, userDoc.id);
-                    setError('An error occurred. User data is incomplete.');
+                    setError('An error occurred retrieving user data.');
                     setLoading(false);
                     return;
                 }
             }
         } else {
              console.log("Identifier looks like an email:", identifier);
-             // It's an email, use it directly (emailToSignIn already holds the identifier)
         }
 
         // Now attempt sign-in using the determined email and the provided password
@@ -204,10 +206,7 @@ function Login() {
         // Check email verification AFTER successful login attempt
         if (!user.emailVerified) {
             console.warn("Login attempt successful but email not verified.", user.email);
-            setError(
-            'Please verify your email before logging in. Check your inbox/spam folder.' // Keep verification error specific
-            );
-            // Keep user context in auth.currentUser for potential resend
+            setError('Please verify your email before logging in. Check your inbox/spam folder.');
             setLoading(false);
             return;
         }
@@ -219,22 +218,19 @@ function Login() {
 
     } catch (err) {
         console.error("Login Error:", err);
-        // Use the helper function for Firebase auth errors
         const friendlyError = getFirebaseAuthErrorMessage(err.code);
-        // If the error was specifically "user-not-found" and we tried via Student ID,
-        // the generic 'Invalid credentials' is fine. If we tried via email, it's also fine.
         setError(friendlyError);
         setLoading(false);
     }
   };
 
-  // Determine if the resend link should be shown (Logic remains the same)
+  // Determine if the resend link should be shown
   const showResendLink = error && error.startsWith('Please verify your email');
 
 
   // --- RENDER LOGIC ---
 
-  // 1. Initial Loading State (No change)
+  // 1. Initial Loading State
   if (authStatus.loading) {
     return (
       <Container component="main" maxWidth="xs">
@@ -246,7 +242,7 @@ function Login() {
     );
   }
 
-  // 2. Already Logged In State (No change)
+  // 2. Already Logged In State
   if (authStatus.isLoggedIn) {
     return (
       <Container component="main" maxWidth="xs">
@@ -266,7 +262,7 @@ function Login() {
     );
   }
 
-  // 3. Login Form (Update identifier field)
+  // 3. Login Form
   return (
     <Container component="main" maxWidth="xs">
       <CssBaseline />
@@ -276,7 +272,7 @@ function Login() {
 
          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ width: '100%', mt: 3 }} >
              <Stack spacing={2}>
-                 {/* Error Alert Area - Modified for inline link (No change here) */}
+                 {/* Error Alert Area - Modified for inline link */}
                  {error && (
                    <Alert severity="error" sx={{ width: '100%' }} >
                       {error}
@@ -284,9 +280,10 @@ function Login() {
                           <>
                               {' '}
                               <Link
-                                component="button"
+                                component="button" // Render as button for better semantics/accessibility
+                                type="button"      // Explicitly set type to prevent form submission
                                 onClick={handleResendVerification}
-                                disabled={loading || resendStatus === 'Sending...'}
+                                disabled={loading} // Disable if main form is loading (e.g., during resend)
                                 sx={{
                                     fontWeight: 'normal',
                                     color: 'inherit',
@@ -294,9 +291,16 @@ function Login() {
                                     verticalAlign: 'baseline',
                                     fontSize: 'inherit',
                                     textDecoration: 'underline',
+                                    border: 'none',      // Remove button default border
+                                    background: 'none', // Remove button default background
+                                    padding: 0,         // Remove button default padding
+                                    '&:hover': {
+                                        textDecoration: 'underline', // Ensure underline on hover
+                                    },
                                     '&.Mui-disabled': {
                                         opacity: 0.6,
-                                        textDecoration: 'none'
+                                        textDecoration: 'none',
+                                        cursor: 'default',
                                     },
                                 }}
                               >
@@ -307,27 +311,27 @@ function Login() {
                    </Alert>
                  )}
 
-                 {/* Resend Status Alert Area (No change here) */}
+                 {/* Resend Status Alert Area */}
                  {resendStatus && !error && (
                    <Alert severity={resendStatus.startsWith('Error:') || resendStatus.startsWith('Could not') ? "warning" : "info"} sx={{ width: '100%' }} >
                      {resendStatus}
                    </Alert>
                  )}
 
-                 {/* Form Fields - Updated Email field */}
+                 {/* Form Fields */}
                  <TextField
-                    id="loginIdentifier" // Changed ID
-                    label="Email or Student ID" // Changed Label
-                    name="loginIdentifier" // Changed Name
-                    // type="email" // REMOVED type="email"
-                    value={loginIdentifier} // Use new state variable
-                    onChange={(e) => setLoginIdentifier(e.target.value)} // Use new setter
+                    id="loginIdentifier"
+                    label="Email or Student ID"
+                    name="loginIdentifier"
+                    value={loginIdentifier}
+                    onChange={(e) => setLoginIdentifier(e.target.value)}
                     disabled={loading}
                     required
                     fullWidth
                     autoFocus
-                    autoComplete="username" // Changed autocomplete suggestion
-                  />
+                    autoComplete="username" // Common suggestion for username/email/ID
+                    error={!!error && !showResendLink} // Show error highlight if there's an error *unless* it's the "verify email" error
+                 />
                  <TextField
                     id="password"
                     label="Password"
@@ -339,17 +343,46 @@ function Login() {
                     required
                     fullWidth
                     autoComplete="current-password"
+                    error={!!error && !showResendLink} // Show error highlight if there's an error *unless* it's the "verify email" error
+                    // Optionally add helper text for password length requirement
+                    // helperText={`Minimum ${MIN_PASSWORD_LENGTH} characters`}
                  />
 
-                 {/* Submit Button (No change) */}
-                 <Button type="submit" fullWidth variant="contained" disabled={loading} sx={{ mt: 2, mb: 1 }} >
+                 {/* Submit Button -- UPDATED DISABLED LOGIC -- */}
+                 <Button
+                    type="submit"
+                    fullWidth
+                    variant="contained"
+                    // Disable if loading OR if identifier is empty OR if password length is less than minimum
+                    disabled={loading || !loginIdentifier.trim() || password.length < MIN_PASSWORD_LENGTH}
+                    sx={{ mt: 2, mb: 1, height: 40 }} // Consistent height
+                 >
                     {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
                  </Button>
 
-                 {/* Links (No change) */}
+                 {/* Links */}
                  <Grid container justifyContent="space-between">
-                     <Grid item> <Link href="#" variant="body2"> Forgot password? </Link> </Grid>
-                     <Grid item> <Link component={RouterLink} to="/signup" variant="body2" disabled={loading}> {"Don't have an account? Sign Up"} </Link> </Grid>
+                     {/* Forgot password link - disable during loading */}
+                     <Grid item>
+                         <Link
+                             href="#" // Implement forgot password later
+                             variant="body2"
+                             sx={{ pointerEvents: loading ? 'none' : 'auto', opacity: loading ? 0.5 : 1 }}
+                         >
+                            Forgot password?
+                         </Link>
+                     </Grid>
+                     {/* Sign up link - disable during loading */}
+                     <Grid item>
+                         <Link
+                             component={RouterLink}
+                             to="/signup"
+                             variant="body2"
+                             sx={{ pointerEvents: loading ? 'none' : 'auto', opacity: loading ? 0.5 : 1 }}
+                         >
+                            {"Don't have an account? Sign Up"}
+                         </Link>
+                     </Grid>
                  </Grid>
              </Stack> {/* End of Stack */}
          </Box> {/* End of Form Box */}
