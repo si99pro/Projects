@@ -8,21 +8,20 @@ import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'r
 import { ThemeProvider, CssBaseline, createTheme, Box, CircularProgress } from '@mui/material';
 
 // --- Auth ---
-// Import the AuthProvider from its new dedicated file
-import { AuthProvider, useAuth } from './auth/AuthContext'; // Correct: Import AuthProvider AND useAuth from AuthContext.js
-// Import the PrivateRoute component from its new dedicated file
-import PrivateRoute from './auth/PrivateRoute'; // Correct: Import PrivateRoute from PrivateRoute.js
+import { AuthProvider, useAuth } from './auth/AuthContext';
+import PrivateRoute from './auth/PrivateRoute';
 
 // --- Layouts (Eager Imports) ---
 import MainLayout from './components/MainLayout';
 import AuthLayout from './components/AuthLayout';
 
 // --- Pages & Components (Lazy Loaded) ---
-// (Keep all lazy imports as they were)
+// **** 1. ADD LAZY IMPORT FOR WELCOME ****
+const Welcome = lazy(() => import('./auth/Welcome')); // Assuming Welcome.js is in ./auth/
 const Signup = lazy(() => import('./auth/Signup'));
 const Login = lazy(() => import('./auth/Login'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
-const MomentForm = lazy(() => import('./components/MomentForm'));
+// const MomentForm = lazy(() => import('./components/MomentForm')); // <<< REMOVED IMPORT
 const Batch = lazy(() => import('./pages/Batch'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Alumni = lazy(() => import('./dept/Alumni'));
@@ -31,7 +30,7 @@ const ViewProfile = lazy(() => import('./pages/ViewProfile'));
 const Notifications = lazy(() => import('./pages/NotificationsPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-// --- Inline Loading Component (Keep as is) ---
+// --- Inline Loading Component ---
 const CenteredLoader = () => (
     <Box
         display="flex"
@@ -43,20 +42,19 @@ const CenteredLoader = () => (
     </Box>
 );
 
-// --- Helper Component for Root Redirect ---
-// This component uses useAuth, so the import is handled above
+// --- Helper Component for Root Path Handling ---
 function RootRedirector() {
-    // useAuth is correctly imported from AuthContext.js via the App.js imports
-    const { user, authLoading } = useAuth(); // Changed 'loading' to 'authLoading' to match context provider
+    const { user, authLoading } = useAuth();
     const location = useLocation();
 
     // Only act if we are exactly at the root path "/"
+    // If navigating elsewhere (e.g. directly to /login), let other routes handle it.
     if (location.pathname !== '/') {
-        return null; // Let other routes handle it
+        return null;
     }
 
     // Show loader while checking auth status ONLY at root
-    if (authLoading) { // Use authLoading from context
+    if (authLoading) {
         return <CenteredLoader />;
     }
 
@@ -64,13 +62,15 @@ function RootRedirector() {
     if (user) {
         return <Navigate to="/dashboard" replace />;
     }
-    // If not logged in at root, go to login
+    // **** 2. MODIFIED: If NOT logged in at root, RENDER Welcome Component ****
     else {
-        return <Navigate to="/login" replace />;
+        // Instead of navigating away, render the Welcome component directly at "/"
+        return <Welcome />;
+        // return <Navigate to="/login" replace />; // OLD BEHAVIOR
     }
 }
 
-// --- MUI Theme (Keep as is or define your theme) ---
+// --- MUI Theme ---
 const theme = createTheme({
     // Define your theme properties here
 });
@@ -79,28 +79,31 @@ const theme = createTheme({
 function App() {
     return (
         <ThemeProvider theme={theme}>
-            <CssBaseline /> {/* Ensures consistent baseline styling */}
+            <CssBaseline />
             <Router>
-                {/* Use the imported AuthProvider */}
                 <AuthProvider>
-                    {/* Suspense handles loading for ALL lazy-loaded components */}
                     <Suspense fallback={<CenteredLoader />}>
                         <Routes>
-                            {/* Root path redirection */}
+                            {/* Root path handler: Will render Welcome or redirect to Dashboard */}
                             <Route path="/" element={<RootRedirector />} />
 
                             {/* Public Auth Routes */}
+                            {/* AuthLayout provides the visual wrapper */}
+                            {/* Users can still navigate DIRECTLY to /login or /signup */}
                             <Route element={<AuthLayout />}>
                                 <Route path="/login" element={<Login />} />
                                 <Route path="/signup" element={<Signup />} />
+                                {/* If Welcome should also use AuthLayout, add it here */}
+                                {/* <Route path="/welcome-explicit" element={<Welcome />} /> */}
+                                {/* NOTE: The RootRedirector handles showing Welcome at "/", */}
+                                {/* so a separate /welcome route might be redundant unless needed */}
                             </Route>
 
-                            {/* Protected Routes - Use the imported PrivateRoute */}
-                            <Route element={<PrivateRoute />}> {/* Gatekeeper */}
-                                <Route element={<MainLayout />}> {/* Common layout */}
-                                    {/* (All protected routes remain the same) */}
+                            {/* Protected Routes */}
+                            <Route element={<PrivateRoute />}>
+                                <Route element={<MainLayout />}>
                                     <Route path="/dashboard" element={<Dashboard />} />
-                                    <Route path="/moment-form" element={<MomentForm />} />
+                                    {/* <Route path="/moment-form" element={<MomentForm />} /> */} {/* <<< REMOVED ROUTE */}
                                     <Route path="/batch" element={<Batch />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/dept/alumni" element={<Alumni />} />

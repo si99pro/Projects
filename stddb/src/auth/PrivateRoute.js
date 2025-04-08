@@ -1,34 +1,37 @@
 // src/auth/PrivateRoute.js
-import React from 'react'; // Keep React import
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { useAuth } from './AuthContext'; // <-- Import useAuth from the dedicated context file
+// VERSION THAT ASSUMES Login.js BLOCKS UNVERIFIED USERS
 
-// This component acts as a gatekeeper for protected routes.
+import React from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuth } from './AuthContext'; // Assuming AuthContext provides user object
+// import Loader from '../components/Loader'; // Keep if you use Option 2 below for loading
+
 function PrivateRoute() {
-    // Get authentication status and user data from the AuthContext
+    // Use 'user' from AuthContext. If Login.js works as intended,
+    // 'user' will only be non-null here if they are ALSO verified.
     const { user, authLoading } = useAuth();
-    const location = useLocation(); // Get current location for potential redirect state
+    const location = useLocation();
 
     // 1. Handle Loading State:
-    // While the AuthProvider is still performing its initial check (authLoading is true),
-    // render 'null'. This lets the parent <Suspense> boundary handle the loading UI.
     if (authLoading) {
+        // Option 1: Return null (relies on parent/global loader like Suspense)
         return null;
+        // Option 2: Render a loader directly
+        // return <Loader />;
     }
 
     // 2. Handle Not Authenticated (After Loading):
-    // If the check is complete (authLoading is false) and there's no logged-in user,
-    // redirect to the '/login' page. Pass the original intended location ('from')
-    // in the state so the login page can redirect back after success.
+    // This covers users who failed login OR were signed out by Login.js
+    // because they weren't verified.
     if (!user) {
+        console.log("PrivateRoute (Simplified): No authenticated user found, redirecting to login.");
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // 3. Handle Authenticated (After Loading):
-    // If the check is complete and a user exists, render the child routes
-    // specified within this PrivateRoute in App.js (passed via <Outlet />).
-    return <Outlet />;
+    // 3. Handle Authenticated (implicitly verified due to Login.js changes):
+    // *** Email verification check REMOVED from here ***
+    console.log("PrivateRoute (Simplified): Authenticated user found, allowing access.");
+    return <Outlet />; // User is present (and implicitly verified), render the child route.
 }
 
-// Export the component for use in App.js routing
 export default PrivateRoute;

@@ -1,311 +1,80 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-// src/components/Navbar.js - REDESIGNED
+// src/components/Navbar.js - REDESIGNED V7 (Popovers Anchored to Same Point)
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { auth, db } from '../firebase';
+import { auth, db } from '../firebase'; // Assuming firebase config is correct
+import { useAuth } from '../auth/AuthContext'; // Assuming AuthContext provides user, userName, isAdmin, userProfile
+import { formatDistanceToNow } from 'date-fns';
+
+// --- MUI Core Components ---
 import {
-    AppBar, Toolbar, Typography, Button, Menu, MenuItem, Avatar, IconButton,
+    AppBar, Toolbar, Typography, Button, Avatar, IconButton,
     Box, Tooltip, Stack, List, ListItem, ListItemText, ListItemButton, ListItemIcon,
     Divider, Badge, styled, Drawer, useTheme, useMediaQuery, alpha,
-    Collapse, CircularProgress, Popover, InputBase, BottomNavigation, BottomNavigationAction
+    Collapse, CircularProgress, Popover, BottomNavigation, BottomNavigationAction,
+    ListItemIcon as MuiListItemIcon // Alias to avoid conflict
 } from '@mui/material';
 
-// --- Icons ---
-import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined'; // Use outlined versions for cleaner look
+// --- MUI Icons ---
+import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import MenuIcon from '@mui/icons-material/Menu';
-import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
-import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
-import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
-import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
-import MarkChatReadOutlinedIcon from '@mui/icons-material/MarkChatReadOutlined';
-import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
-import PublicOutlinedIcon from '@mui/icons-material/PublicOutlined'; // Changed from specific icon
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined'; // Changed from specific icon
-import ReadMoreOutlinedIcon from '@mui/icons-material/ReadMoreOutlined';
-import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
 import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
-import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import SearchIcon from '@mui/icons-material/Search';
+import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined'; // Department
+import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined'; // Batch
 import MailOutlineIcon from '@mui/icons-material/MailOutline';
-import ClearIcon from '@mui/icons-material/Clear';
-import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
-import SendTimeExtensionIcon from '@mui/icons-material/SendTimeExtension'; // Placeholder
-import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'; // Simple indicator for profile link
-import LaunchIcon from '@mui/icons-material/Launch'; // Logo Icon (Example)
+import MarkChatReadOutlinedIcon from '@mui/icons-material/MarkChatReadOutlined';
+import SupportAgentOutlinedIcon from '@mui/icons-material/SupportAgentOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // For empty states
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline'; // For empty states
+import LaunchIcon from '@mui/icons-material/Launch'; // Example Logo Icon
 
-
+// --- Firebase Firestore ---
 import {
     collection, query, orderBy, onSnapshot, doc, writeBatch,
     serverTimestamp, getDoc, setDoc, limit, where, getDocs
 } from 'firebase/firestore';
-import { useAuth } from '../auth/AuthContext';
-import { formatDistanceToNow } from 'date-fns';
 
 // --- Constants ---
 const SIDEBAR_WIDTH_DESKTOP = 260;
 const SIDEBAR_WIDTH_MOBILE = 280;
 const APP_BAR_HEIGHT = 64;
 const MOBILE_BOTTOM_NAV_HEIGHT = 56;
-const POPOVER_WIDTH = 360; // Standard width for Notifications & Messages
-const SEARCH_POPOVER_WIDTH = 320;
+const POPOVER_WIDTH = 360;
 const NOTIFICATION_LIMIT = 7;
-const MESSAGE_LIMIT = 5;
-const SEARCH_RESULTS_LIMIT = 5;
-const SEARCH_DEBOUNCE_MS = 350; // Slightly longer debounce
+const MESSAGE_LIMIT = 5; // Placeholder limit
 
-// --- Styled Components (Redesigned) ---
+// --- Unified Popover Style Constants ---
+const POPOVER_BORDER_RADIUS_MULTIPLIER = 1;
+const POPOVER_SHADOW_INDEX = 8;
 
-// ** Root Container **
-const StyledRoot = styled(Box)({
-    display: 'flex',
-    minHeight: '100vh', // Ensure layout takes full height
-    backgroundColor: (theme) => theme.palette.background.default, // Use default background for the page
-});
+// --- Styled Components (Unchanged) ---
+const StyledRoot = styled(Box)({ /* ... */ display: 'flex', minHeight: '100vh', backgroundColor: (theme) => theme.palette.background.default, });
+const StyledAppBar = styled(AppBar)(({ theme }) => ({ /* ... */ backgroundColor: alpha(theme.palette.background.paper, 0.85), backdropFilter: 'blur(8px)', color: theme.palette.text.primary, boxShadow: 'none', borderBottom: `1px solid ${theme.palette.divider}`, zIndex: theme.zIndex.drawer + 1, }));
+const StyledDrawer = styled(Drawer)(({ theme }) => ({ /* ... */ flexShrink: 0, '& .MuiDrawer-paper': { boxSizing: 'border-box', backgroundColor: theme.palette.background.paper, borderRight: `1px solid ${theme.palette.divider}`, boxShadow: 'none', [theme.breakpoints.up('md')]: { width: SIDEBAR_WIDTH_DESKTOP }, [theme.breakpoints.down('md')]: { width: SIDEBAR_WIDTH_MOBILE }, } }));
+const LogoBox = styled(Box)(({ theme }) => ({ /* ... */ minHeight: APP_BAR_HEIGHT, display: 'flex', alignItems: 'center', gap: theme.spacing(1.5), padding: theme.spacing(0, 2.5), cursor: 'pointer', borderBottom: `1px dashed ${alpha(theme.palette.divider, 0.6)}`, transition: 'opacity 0.3s ease', '&:hover': { opacity: 0.85 } }));
+const NavList = styled(List)(({ theme }) => ({ /* ... */ padding: theme.spacing(1.5, 1), }));
+const NavItemButton = styled(ListItemButton, { shouldForwardProp: (prop) => prop !== 'active', })(({ theme, active }) => ({ /* ... */ margin: theme.spacing(0.5, 0), padding: theme.spacing(1, 1.5), borderRadius: theme.shape.borderRadius * 1.5, minHeight: 46, color: active ? theme.palette.primary.main : theme.palette.text.secondary, backgroundColor: active ? alpha(theme.palette.primary.main, 0.08) : 'transparent', transition: 'background-color 0.2s ease-in-out, color 0.2s ease-in-out', '&:hover': { backgroundColor: active ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.action.hover, 0.04), color: active ? theme.palette.primary.dark : theme.palette.text.primary, }, }));
+const NavItemIcon = styled(MuiListItemIcon, { shouldForwardProp: (prop) => prop !== 'active', })(({ theme, active }) => ({ /* ... */ minWidth: 'auto', marginRight: theme.spacing(2), color: 'inherit', fontSize: '1.3rem', transition: 'color 0.2s ease-in-out', }));
+const NavItemText = styled(ListItemText, { shouldForwardProp: (prop) => prop !== 'active', })(({ theme, active }) => ({ /* ... */ '& .MuiListItemText-primary': { fontSize: '0.9rem', fontWeight: active ? 600 : 400, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'font-weight 0.2s ease-in-out', } }));
+const UserFooter = styled(Box)(({ theme }) => ({ /* ... */ padding: theme.spacing(2, 1.5), borderTop: `1px dashed ${alpha(theme.palette.divider, 0.6)}`, display: 'flex', alignItems: 'center', gap: theme.spacing(1.5), position: 'sticky', bottom: 0, backgroundColor: theme.palette.background.paper, zIndex: 1, }));
+const StyledPopoverPaper = styled(Box)(({ theme }) => ({ /* ... */ marginTop: theme.spacing(1), boxShadow: theme.shadows[POPOVER_SHADOW_INDEX], borderRadius: theme.shape.borderRadius * POPOVER_BORDER_RADIUS_MULTIPLIER, border: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: 'flex', flexDirection: 'column', overflow: 'hidden', maxWidth: '95vw', }));
+const PopoverHeader = styled(Box)(({ theme }) => ({ /* ... */ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: theme.spacing(1.5, 2), borderBottom: `1px solid ${theme.palette.divider}`, backgroundColor: alpha(theme.palette.background.default, 0.5), flexShrink: 0, }));
+const PopoverFooter = styled(Box)(({ theme }) => ({ /* ... */ textAlign: 'center', padding: theme.spacing(0.5, 0), borderTop: `1px solid ${theme.palette.divider}`, flexShrink: 0, backgroundColor: alpha(theme.palette.background.default, 0.5), }));
+const ViewAllButton = styled(Button)(({ theme }) => ({ /* ... */ textTransform: 'none', color: theme.palette.primary.main, fontWeight: 500, padding: theme.spacing(0.75, 2), '&:hover': { backgroundColor: alpha(theme.palette.primary.main, 0.05) } }));
+const PopoverListItem = styled(ListItemButton, { shouldForwardProp: (prop) => prop !== 'unread', })(({ theme, unread }) => ({ /* ... */ alignItems: 'flex-start', padding: theme.spacing(1.5, 2), transition: 'background-color 0.2s ease', backgroundColor: unread ? alpha(theme.palette.primary.light, 0.08) : 'transparent', '&:hover': { backgroundColor: alpha(theme.palette.action.hover, 0.06) }, '& .MuiListItemIcon-root': { minWidth: 'auto', marginRight: theme.spacing(1.5), marginTop: theme.spacing(0.5) }, '& .MuiListItemText-primary': { fontWeight: unread ? 600 : 500, fontSize: '0.9rem', marginBottom: theme.spacing(0.25), color: theme.palette.text.primary, lineHeight: 1.3 }, '& .MuiListItemText-secondary': { fontSize: '0.8rem', color: theme.palette.text.secondary, lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: '2', WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', maxHeight: '2.8em' }, '& .item-meta': { fontSize: '0.75rem', color: theme.palette.text.disabled, marginTop: theme.spacing(0.5), textAlign: 'right', marginLeft: 'auto', paddingLeft: theme.spacing(1), whiteSpace: 'nowrap', alignSelf: 'flex-start', paddingTop: theme.spacing(0.25) } }));
+const StyledBottomNavigation = styled(BottomNavigation)(({ theme }) => ({ /* ... */ height: MOBILE_BOTTOM_NAV_HEIGHT, backgroundColor: theme.palette.background.paper, borderTop: `1px solid ${theme.palette.divider}`, boxShadow: theme.shadows[2], }));
+const StyledBottomNavigationAction = styled(BottomNavigationAction)(({ theme }) => ({ /* ... */ minWidth: 'auto', padding: theme.spacing(.75, 1, 1), color: theme.palette.text.secondary, transition: 'color 0.2s ease-in-out, transform 0.1s ease-in-out', '& .MuiBottomNavigationAction-label': { fontSize: ".7rem", marginTop: "2px", transition: "font-weight .2s ease-in-out, color .2s ease-in-out", '&.Mui-selected': { fontWeight: 600 } }, '& .MuiSvgIcon-root': { fontSize: "1.4rem", transition: "color .2s ease-in-out" }, '&.Mui-selected': { color: theme.palette.primary.main, transform: 'translateY(-2px)' } }));
 
-// ** Top AppBar ** (Now full width)
-const StyledAppBar = styled(AppBar)(({ theme }) => ({
-    backgroundColor: alpha(theme.palette.background.paper, 0.95), // Slightly transparent paper bg
-    backdropFilter: 'blur(6px)', // Frosted glass effect
-    color: theme.palette.text.primary,
-    boxShadow: 'none', // Remove default shadow
-    borderBottom: `1px solid ${theme.palette.divider}`, // Clean border
-    zIndex: theme.zIndex.drawer + 1, // Stay above sidebar
-}));
-
-// ** Sidebar Drawer **
-const StyledDrawer = styled(Drawer)(({ theme }) => ({
-    '& .MuiDrawer-paper': {
-        boxSizing: 'border-box',
-        backgroundColor: theme.palette.background.paper,
-        borderRight: `1px solid ${theme.palette.divider}`,
-        boxShadow: 'none',
-        // Desktop styles (Permanent)
-        [theme.breakpoints.up('md')]: {
-            width: SIDEBAR_WIDTH_DESKTOP,
-            flexShrink: 0,
-        },
-        // Mobile styles (Temporary)
-        [theme.breakpoints.down('md')]: {
-            width: SIDEBAR_WIDTH_MOBILE,
-        },
-    }
-}));
-
-// ** Logo Area in Sidebar **
-const LogoBox = styled(Box)(({ theme }) => ({
-    minHeight: APP_BAR_HEIGHT,
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1.5),
-    padding: theme.spacing(0, 2.5), // More horizontal padding
-    cursor: 'pointer',
-    borderBottom: `1px dashed ${theme.palette.divider}`, // Softer divider
-}));
-
-// ** Sidebar Navigation List **
-const NavList = styled(List)(({ theme }) => ({
-    padding: theme.spacing(1.5, 1), // Padding around the list items
-}));
-
-// ** Sidebar Navigation Item Button **
-const NavItemButton = styled(ListItemButton, {
-    shouldForwardProp: (prop) => prop !== 'active',
-})(({ theme, active }) => ({
-    margin: theme.spacing(0.5, 0), // Vertical margin between items
-    padding: theme.spacing(1, 1.5),
-    borderRadius: theme.shape.borderRadius * 1.5,
-    minHeight: 46,
-    color: active ? theme.palette.primary.main : theme.palette.text.secondary,
-    backgroundColor: active ? alpha(theme.palette.primary.main, 0.08) : 'transparent',
-    transition: 'background-color 0.2s ease, color 0.2s ease',
-
-    '&:hover': {
-        backgroundColor: active ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.action.hover, 0.04),
-        color: active ? theme.palette.primary.dark : theme.palette.text.primary,
-    },
-}));
-
-// ** Sidebar Navigation Item Icon **
-const NavItemIcon = styled(ListItemIcon)(({ theme, active }) => ({
-    minWidth: 'auto',
-    marginRight: theme.spacing(2),
-    color: 'inherit', // Inherits color from NavItemButton
-    fontSize: '1.3rem', // Consistent icon size
-}));
-
-// ** Sidebar Navigation Item Text **
-const NavItemText = styled(ListItemText)(({ theme, active }) => ({
-    '& .MuiListItemText-primary': {
-        fontSize: '0.9rem',
-        fontWeight: active ? 600 : 400,
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-    }
-}));
-
-// ** Sidebar User Footer **
-const UserFooter = styled(Box)(({ theme }) => ({
-    padding: theme.spacing(2, 1.5), // Consistent padding
-    borderTop: `1px dashed ${theme.palette.divider}`, // Softer divider
-    display: 'flex',
-    alignItems: 'center',
-    gap: theme.spacing(1.5),
-    position: 'sticky',
-    bottom: 0,
-    backgroundColor: theme.palette.background.paper,
-    zIndex: 1,
-}));
-
-// ** AppBar Search **
-const Search = styled('div')(({ theme }) => ({
-    position: 'relative',
-    borderRadius: theme.shape.borderRadius * 5, // More rounded search bar
-    backgroundColor: theme.palette.background.default, // Use page background for contrast
-    border: `1px solid ${theme.palette.divider}`,
-    '&:hover': {
-        borderColor: theme.palette.text.secondary,
-    },
-    marginRight: theme.spacing(1),
-    marginLeft: 'auto', // Push search towards the right, before icons
-    width: '100%',
-    maxWidth: 320, // Limit max width
-    height: 40,
-    display: 'flex',
-    alignItems: 'center',
-    transition: theme.transitions.create(['border-color', 'max-width']),
-    [theme.breakpoints.down('sm')]: {
-        marginLeft: theme.spacing(1),
-        maxWidth: '100%', // Allow full width on mobile
-        flexGrow: 1, // Take available space
-    },
-}));
-
-const SearchIconWrapper = styled('div')(({ theme }) => ({ /* Same as before */
-    padding: theme.spacing(0, 1.5), height: '100%', position: 'absolute', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: theme.palette.text.secondary,
-}));
-
-const StyledInputBase = styled(InputBase)(({ theme }) => ({ /* Same as before */
-    color: 'inherit', width: '100%', height: '100%', '& .MuiInputBase-input': { padding: theme.spacing(1, 1, 1, 0), paddingLeft: `calc(1em + ${theme.spacing(3)})`, paddingRight: theme.spacing(4), transition: theme.transitions.create('width'), width: '100%', fontSize: '0.9rem', },
-}));
-
-// ** Common Popover Paper Style **
-const StyledPopoverPaper = styled(Box)(({ theme }) => ({
-    marginTop: theme.spacing(1),
-    boxShadow: theme.shadows[6],
-    borderRadius: theme.shape.borderRadius * 2, // Consistent rounded corners
-    border: `1px solid ${theme.palette.divider}`,
-    backgroundColor: theme.palette.background.paper,
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden', // Let inner content scroll
-    maxWidth: '95vw',
-}));
-
-// ** Popover Header **
-const PopoverHeader = styled(Box)(({ theme }) => ({
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: theme.spacing(1.5, 2),
-    borderBottom: `1px solid ${theme.palette.divider}`,
-    flexShrink: 0,
-}));
-
-// ** Popover Footer (for View All) **
-const PopoverFooter = styled(Box)(({ theme }) => ({
-    textAlign: 'center',
-    padding: theme.spacing(0.5, 0), // Less vertical padding
-    borderTop: `1px solid ${theme.palette.divider}`,
-    flexShrink: 0,
-}));
-
-// ** Consistent List Item for Notifications/Messages **
-const PopoverListItem = styled(ListItemButton, {
-    shouldForwardProp: (prop) => prop !== 'unread',
-})(({ theme, unread }) => ({
-    alignItems: 'flex-start',
-    padding: theme.spacing(1.5, 2),
-    transition: 'background-color 0.2s ease',
-    backgroundColor: unread ? alpha(theme.palette.primary.light, 0.08) : 'transparent',
-    '&:hover': {
-        backgroundColor: alpha(theme.palette.action.hover, 0.06),
-    },
-    '& .MuiListItemIcon-root': {
-        minWidth: 'auto',
-        marginRight: theme.spacing(1.5),
-        marginTop: theme.spacing(0.5), // Align avatar better with text
-    },
-    '& .MuiListItemText-primary': {
-        fontWeight: unread ? 600 : 500,
-        fontSize: '0.9rem',
-        marginBottom: theme.spacing(0.25),
-        color: theme.palette.text.primary,
-    },
-    '& .MuiListItemText-secondary': {
-        fontSize: '0.8rem',
-        color: theme.palette.text.secondary,
-        lineHeight: 1.4,
-        display: '-webkit-box', // Multi-line clamp for snippet
-        '-webkit-line-clamp': '2',
-        '-webkit-box-orient': 'vertical',
-        overflow: 'hidden',
-    },
-    '& .item-meta': { // Class for timestamp/extra info
-        fontSize: '0.75rem',
-        color: theme.palette.text.disabled,
-        marginTop: theme.spacing(0.5),
-        textAlign: 'right',
-    }
-}));
-
-// ** Bottom Navigation **
-const StyledBottomNavigation = styled(BottomNavigation)(({ theme }) => ({
-    height: MOBILE_BOTTOM_NAV_HEIGHT,
-    backgroundColor: theme.palette.background.paper,
-    borderTop: `1px solid ${theme.palette.divider}`,
-}));
-
-const StyledBottomNavigationAction = styled(BottomNavigationAction)(({ theme }) => ({ /* ... */
-    minWidth:'auto',padding:theme.spacing(.75,1,1),color:theme.palette.text.secondary,"& .MuiBottomNavigationAction-label":{fontSize:".7rem",marginTop:"2px",transition:"font-weight .2s ease-in-out, color .2s ease-in-out","&.Mui-selected":{fontWeight:500}},"& .MuiSvgIcon-root":{fontSize:"1.4rem",transition:"color .2s ease-in-out"},"&.Mui-selected":{color:theme.palette.primary.main}
-}));
-
-// --- Navigation Data ---
-// Main items for the top section of the sidebar
-const mainNavItems = [
-    { label: 'Dashboard', path: '/dashboard', icon: <DashboardOutlinedIcon /> },
-    { label: 'Department', path: '/dept/overview', icon: <BusinessOutlinedIcon />, base: '/dept' }, // base path for active check
-    { label: 'Batch', path: `/batch?year=${new Date().getFullYear()}`, icon: <CalendarMonthOutlinedIcon />, base: '/batch' },
-];
-
-// Secondary items for the lower section of the sidebar
-const secondaryNavItems = [
-    { label: 'Settings', path: '/settings', icon: <SettingsOutlinedIcon /> },
-    { label: 'Support', path: '/support', icon: <SupportAgentOutlinedIcon /> },
-];
-
-// Admin item, shown conditionally
-const adminNavItem = { label: 'Admin Panel', path: '/admin', icon: <AdminPanelSettingsOutlinedIcon /> };
-
-// Mobile bottom navigation items
-const mobileBottomNavItems = [
-    { label: 'Dashboard', value: '/dashboard', path: '/dashboard', icon: <DashboardOutlinedIcon /> },
-    { label: 'Department', value: '/dept', path: '/dept/overview', icon: <BusinessOutlinedIcon /> },
-    { label: 'Messages', value: '/messages', path: '/messages', icon: <MailOutlineIcon /> }, // Add Messages here? Or Search?
-    // { label: 'Search', value: 'search', icon: <SearchIcon /> }, // Could trigger search modal
-    { label: 'Profile', value: '/profile', path: '/profile', icon: <AccountCircleOutlinedIcon /> },
-];
-
-// Sub-items (optional, used if needed for collapse, but avoiding for cleaner design)
-// const deptSubItems = [ { label: 'Overview', path: '/dept/overview' }, /* ... */ ];
-// const batchYears = [ /* generated dynamically */ ];
-
+// --- Navigation Data (Unchanged) ---
+const navSections = [ { title: 'Main', items: [ { label: 'Dashboard', path: '/dashboard', icon: <DashboardOutlinedIcon /> }, { label: 'Department', path: '/dept/overview', icon: <BusinessOutlinedIcon />, base: '/dept' }, { label: 'Batch', path: `/batch?year=${new Date().getFullYear()}`, icon: <CalendarMonthOutlinedIcon />, base: '/batch' } ] }, { title: 'Account', items: [ { label: 'Settings', path: '/settings', icon: <SettingsOutlinedIcon /> }, { label: 'Support', path: '/support', icon: <SupportAgentOutlinedIcon /> } ] }, ];
+const adminSection = { title: 'Admin', items: [ { label: 'Admin Panel', path: '/admin', icon: <AdminPanelSettingsOutlinedIcon /> } ] };
+const mobileBottomNavItems = [ { label: 'Dashboard', value: '/dashboard', path: '/dashboard', icon: <DashboardOutlinedIcon /> }, { label: 'Department', value: '/dept', path: '/dept/overview', icon: <BusinessOutlinedIcon /> }, { label: 'Messages', value: '/messages', path: '/messages', icon: <MailOutlineIcon /> }, { label: 'Profile', value: '/profile', path: '/profile', icon: <AccountCircleOutlinedIcon /> } ];
 
 // --- Main Component ---
 function Navbar() {
@@ -315,341 +84,112 @@ function Navbar() {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { user, userName, isAdmin, userProfile } = useAuth();
     const userId = user?.uid;
-    const searchInputRef = useRef(null);
+
+    // --- Ref for the Notifications Icon ---
+    const notificationIconRef = useRef(null); // Ref for the universal anchor point
 
     // --- State ---
     const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-    const [profileAnchorEl, setProfileAnchorEl] = useState(null);
-    const [notificationAnchorEl, setNotificationAnchorEl] = useState(null);
-    const [messagesAnchorEl, setMessagesAnchorEl] = useState(null);
-    const [searchAnchorEl, setSearchAnchorEl] = useState(null);
+    // REMOVED: anchorEl states
+    const [isNotificationPopoverOpen, setIsNotificationPopoverOpen] = useState(false); // Renamed for clarity
+    const [isMessagesPopoverOpen, setIsMessagesPopoverOpen] = useState(false); // Renamed for clarity
 
     // Data States
     const [notifications, setNotifications] = useState([]);
     const [totalUnreadCount, setTotalUnreadCount] = useState(0);
     const [loadingNotifications, setLoadingNotifications] = useState(true);
-    const [senderInfo, setSenderInfo] = useState({}); // Cache for notification senders
     const [markingRead, setMarkingRead] = useState(false);
 
-    const [messages, setMessages] = useState([]); // Placeholder - Fetch real data
-    const [unreadMessagesCount, setUnreadMessagesCount] = useState(3); // Placeholder
-    const [loadingMessages, setLoadingMessages] = useState(false); // Placeholder
+    // Placeholder States for Messages
+    const [messages, setMessages] = useState([]);
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(3);
+    const [loadingMessages, setLoadingMessages] = useState(false);
 
-    const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [searchLoading, setSearchLoading] = useState(false);
-    const [searchError, setSearchError] = useState(null);
-    const searchTimeoutRef = useRef(null);
-
-    // --- Derived State ---
+    // --- Derived State (Now just booleans) ---
     const currentPath = location.pathname;
-    const isProfileMenuOpen = Boolean(profileAnchorEl);
-    const isNotificationPopoverOpen = Boolean(notificationAnchorEl);
-    const isMessagesPopoverOpen = Boolean(messagesAnchorEl);
-    const isSearchPopoverOpen = Boolean(searchAnchorEl) && (searchLoading || searchError || (searchQuery.trim().length >= 2)); // Simplified: Open if loading, error, or query exists
+    // No longer need derived booleans, using state directly
 
     // --- Handlers ---
     const handleDrawerToggle = useCallback(() => setMobileDrawerOpen(prev => !prev), []);
-    const handleProfileMenuOpen = useCallback((event) => setProfileAnchorEl(event.currentTarget), []);
-    const handleProfileMenuClose = useCallback(() => setProfileAnchorEl(null), []);
-    const handleNotificationPopoverOpen = useCallback((event) => setNotificationAnchorEl(event.currentTarget), []);
-    const handleNotificationPopoverClose = useCallback(() => setNotificationAnchorEl(null), []);
-    const handleMessagesPopoverOpen = useCallback((event) => setMessagesAnchorEl(event.currentTarget), []);
-    const handleMessagesPopoverClose = useCallback(() => setMessagesAnchorEl(null), []);
+
+    // Updated Popover Handlers
+    const handleNotificationPopoverOpen = useCallback(() => setIsNotificationPopoverOpen(true), []);
+    const handleNotificationPopoverClose = useCallback(() => setIsNotificationPopoverOpen(false), []);
+    const handleMessagesPopoverOpen = useCallback(() => setIsMessagesPopoverOpen(true), []);
+    const handleMessagesPopoverClose = useCallback(() => setIsMessagesPopoverOpen(false), []);
 
     // Central Navigation Handler
     const handleNavigate = useCallback((path) => {
-        if (path && typeof path === 'string') {
-            navigate(path);
-        } else { console.warn('Navbar: handleNavigate invalid path:', path); return; }
-        // Close everything on navigation
-        handleProfileMenuClose();
-        handleNotificationPopoverClose();
+        if (!path || typeof path !== 'string') { console.warn('Navbar: handleNavigate invalid path:', path); return; }
+        navigate(path);
+        handleNotificationPopoverClose(); // Close popovers on navigation
         handleMessagesPopoverClose();
-        setSearchAnchorEl(null); // Close search popover
         if (mobileDrawerOpen) setMobileDrawerOpen(false);
-        // Optional: Clear search query on navigation?
-        // setSearchQuery('');
-        // setSearchResults([]);
-    }, [navigate, mobileDrawerOpen, handleProfileMenuClose, handleNotificationPopoverClose, handleMessagesPopoverClose]); // Add popover close handlers
-
-    // Search Handlers
-    const handleSearchChange = useCallback((event) => setSearchQuery(event.target.value), []);
-    const handleClearSearch = useCallback(() => { setSearchQuery(''); setSearchResults([]); setSearchError(null); setSearchLoading(false); searchInputRef.current?.focus(); }, []);
-    const handleSearchFocus = useCallback((event) => setSearchAnchorEl(event.currentTarget.parentElement), []); // Anchor to Search div
-    const handleSearchBlur = useCallback((event) => {
-        setTimeout(() => { if (!event.relatedTarget?.closest('#search-results-popover')) setSearchAnchorEl(null); }, 150);
-    }, []);
-    const handleSearchResultClick = useCallback((resultUserId) => {
-        setSearchAnchorEl(null);
-        setSearchQuery('');
-        setSearchResults([]);
-        navigate(`/profile/${resultUserId}`);
-    }, [navigate]);
+    }, [navigate, mobileDrawerOpen, handleNotificationPopoverClose, handleMessagesPopoverClose]);
 
     // Logout Handler
     const handleLogout = useCallback(async () => {
-        handleProfileMenuClose(); handleNotificationPopoverClose(); handleMessagesPopoverClose(); setSearchAnchorEl(null);
-        if (mobileDrawerOpen) setMobileDrawerOpen(false);
-        try { await auth.signOut(); handleNavigate('/login'); } // Redirect to login after logout
+        try { await auth.signOut(); handleNavigate('/login'); }
         catch (error) { console.error('Navbar: Logout Error:', error); }
-    }, [mobileDrawerOpen, handleNavigate, handleProfileMenuClose, handleNotificationPopoverClose, handleMessagesPopoverClose]); // Use handleNavigate
+    }, [handleNavigate]);
 
-    // Notification Actions (Simplified, keeping core logic)
+    // Notification Actions (Unchanged)
     const markNotificationAsRead = useCallback(async (notificationId) => { if (!userId || !notificationId) return; const nRef = doc(db, 'users', userId, 'notifications', notificationId); try { await setDoc(nRef, { read: true, readTimestamp: serverTimestamp() }, { merge: true }); } catch (e) { console.error("Error marking notification read:", e); } }, [userId]);
     const handleNotificationItemClick = useCallback((notification) => { handleNotificationPopoverClose(); if (notification?.id) { if (!notification.read) { markNotificationAsRead(notification.id); } navigate(`/notifications#${notification.id}`); } else { navigate('/notifications'); } }, [handleNotificationPopoverClose, markNotificationAsRead, navigate]);
     const handleMarkAllNotificationsRead = useCallback(async () => { if (!userId || markingRead || totalUnreadCount === 0) return; setMarkingRead(true); const ref = collection(db, 'users', userId, 'notifications'); const q = query(ref, where('read', '==', false)); try { const snap = await getDocs(q); if (snap.empty) { setMarkingRead(false); return; } const batch = writeBatch(db); const now = serverTimestamp(); snap.docs.forEach((d) => batch.set(d.ref, { read: true, readTimestamp: now }, { merge: true })); await batch.commit(); } catch (e) { console.error("Error mark all notifications read:", e); } finally { setTimeout(() => setMarkingRead(false), 300); } }, [userId, markingRead, totalUnreadCount]);
-    // Message Actions (Placeholders - implement similarly)
-    const handleMessageItemClick = useCallback((messageId) => { handleMessagesPopoverClose(); navigate(`/messages/${messageId}`); }, [navigate, handleMessagesPopoverClose]);
-    const handleMarkAllMessagesRead = useCallback(async () => { console.log("TODO: Implement mark all messages read"); }, []);
+    const handleViewAllNotificationsClick = useCallback(() => handleNavigate('/notifications'), [handleNavigate]);
+
+    // Message Actions (Placeholders - Unchanged)
+    const handleMessageItemClick = useCallback((messageId) => handleNavigate(`/messages/${messageId}`), [handleNavigate]);
+    const handleMarkAllMessagesRead = useCallback(async () => { console.log("TODO: Implement mark all messages read"); setUnreadMessagesCount(0); }, []);
     const handleViewAllMessagesClick = useCallback(() => handleNavigate('/messages'), [handleNavigate]);
 
     // --- Effects ---
 
-    // Fetch Notifications Effect (Using fixed logic from previous step)
+    // Fetch Notifications Effect (Unchanged)
     useEffect(() => {
-        if (!userId) { setNotifications([]); setTotalUnreadCount(0); setLoadingNotifications(true); return; }
+        if (!userId) { setLoadingNotifications(true); setNotifications([]); setTotalUnreadCount(0); return; }
         setLoadingNotifications(true); let isMounted = true;
         const collRef = collection(db, 'users', userId, 'notifications');
         const q = query(collRef, orderBy('timestamp', 'desc'), limit(NOTIFICATION_LIMIT));
-        const unsub = onSnapshot(q, (snap) => {
-            if (!isMounted) return;
-            setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-             if (loadingNotifications) setLoadingNotifications(false);
-        }, (err) => { console.error("Notif listener error:", err); if(isMounted) setLoadingNotifications(false); });
+        const unsubNotifications = onSnapshot(q, (snap) => { if (isMounted) { setNotifications(snap.docs.map(d => ({ id: d.id, ...d.data() }))); setLoadingNotifications(false); } }, (err) => { console.error("Notif listener error:", err); if(isMounted) setLoadingNotifications(false); });
         const countQ = query(collRef, where('read', '==', false));
         const unsubCount = onSnapshot(countQ, (snap) => { if (isMounted) setTotalUnreadCount(snap.size); }, (err) => console.error("Notif count error:", err));
-        return () => { isMounted = false; unsub(); unsubCount(); };
-    }, [userId]); // Keep loadingNotifications dependency removed to avoid potential loops
+        return () => { isMounted = false; unsubNotifications(); unsubCount(); };
+    }, [userId]);
 
-    // **TODO**: Add useEffect for fetching Messages here
+    // **TODO**: Add useEffect for fetching Messages
 
-    // Debounced Search Effect (Using fixed logic from previous step)
-    useEffect(() => {
-        if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-        const trimmedQuery = searchQuery.trim();
-        if (trimmedQuery.length < 2) { setSearchResults([]); setSearchLoading(false); setSearchError(null); return; }
-        setSearchLoading(true); setSearchError(null);
-        searchTimeoutRef.current = setTimeout(async () => {
-            try {
-                const usersRef = collection(db, 'users');
-                const nameQ = query(usersRef, where('basicInfo.fullName', '>=', trimmedQuery), where('basicInfo.fullName', '<=', trimmedQuery + '\uf8ff'), limit(SEARCH_RESULTS_LIMIT));
-                const idQ = query(usersRef, where('basicInfo.studentId', '==', trimmedQuery), limit(SEARCH_RESULTS_LIMIT));
-                const [nameSnap, idSnap] = await Promise.all([getDocs(nameQ), getDocs(idQ)]);
-                const resultsMap = new Map();
-                nameSnap.docs.forEach(d => { if (d.id !== userId) resultsMap.set(d.id, { id: d.id, ...d.data() }); });
-                idSnap.docs.forEach(d => { if (d.id !== userId) resultsMap.set(d.id, { id: d.id, ...d.data() }); });
-                setSearchResults(Array.from(resultsMap.values()).slice(0, SEARCH_RESULTS_LIMIT));
-                setSearchError(null);
-            } catch (err) { console.error("Search error:", err); setSearchError("Failed to search."); setSearchResults([]); }
-            finally { setSearchLoading(false); }
-        }, SEARCH_DEBOUNCE_MS);
-        return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
-    }, [searchQuery, userId]);
-
-
-    // --- Active State Helper ---
+    // --- Active State Helper (Unchanged) ---
     const isNavItemActive = useCallback((itemPath, itemBase) => {
         if (!itemPath) return false;
-        const baseCheckPath = itemBase || itemPath.split('?')[0]; // Use base path or path before query params
+        const baseCheckPath = itemBase || itemPath.split('?')[0];
         return currentPath === itemPath || (currentPath.startsWith(baseCheckPath) && baseCheckPath !== '/');
     }, [currentPath]);
 
     // --- Memoized Content ---
 
-    // Drawer Content
+    // Drawer Content (Unchanged)
     const drawerContent = useMemo(() => (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <LogoBox onClick={() => handleNavigate('/dashboard')}>
-                <LaunchIcon sx={{ color: 'primary.main', fontSize: '2rem' }} /> {/* Example Logo */}
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary' }}>
-                    MEmento
-                </Typography>
-            </LogoBox>
-
-            <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 1 }}>
-                {/* Main Navigation */}
-                <NavList>
-                    {mainNavItems.map((item) => {
-                        const active = isNavItemActive(item.path, item.base);
-                        return (
-                            <NavItemButton key={item.label} active={active} onClick={() => handleNavigate(item.path)}>
-                                <NavItemIcon active={active}>{item.icon}</NavItemIcon>
-                                <NavItemText primary={item.label} active={active} />
-                            </NavItemButton>
-                        );
-                    })}
-                </NavList>
-
-                <Divider sx={{ my: 1.5, mx: 1, borderStyle: 'dashed' }} />
-
-                {/* Secondary Navigation */}
-                <NavList>
-                    {secondaryNavItems.map((item) => {
-                         const active = isNavItemActive(item.path, item.base);
-                        return (
-                             <NavItemButton key={item.label} active={active} onClick={() => handleNavigate(item.path)}>
-                                <NavItemIcon active={active}>{item.icon}</NavItemIcon>
-                                <NavItemText primary={item.label} active={active} />
-                            </NavItemButton>
-                        );
-                    })}
-                    {/* Conditional Admin Link */}
-                    {isAdmin && (
-                         <NavItemButton active={isNavItemActive(adminNavItem.path)} onClick={() => handleNavigate(adminNavItem.path)}>
-                            <NavItemIcon active={isNavItemActive(adminNavItem.path)}>{adminNavItem.icon}</NavItemIcon>
-                            <NavItemText primary={adminNavItem.label} active={isNavItemActive(adminNavItem.path)} />
-                        </NavItemButton>
-                    )}
-                </NavList>
-            </Box>
-
-            {/* User Footer */}
-            <UserFooter>
-                <Avatar
-                    sx={{ width: 40, height: 40 }}
-                    alt={userName || ''}
-                    src={userProfile?.basicInfo?.profileImageUrl || undefined}
-                >
-                     {!userProfile?.basicInfo?.profileImageUrl && userName ? userName.charAt(0).toUpperCase() : <AccountCircleOutlinedIcon />}
-                </Avatar>
-                <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                    <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}>
-                        {userName || 'User'}
-                    </Typography>
-                    <Typography variant="caption" noWrap sx={{ color: 'text.secondary', display: 'block' }}>
-                        {user?.email}
-                    </Typography>
-                </Box>
-                <Tooltip title="Logout">
-                     <IconButton onClick={handleLogout} size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.1) } }}>
-                         <LogoutOutlinedIcon fontSize="small"/>
-                     </IconButton>
-                </Tooltip>
-            </UserFooter>
+            <LogoBox onClick={() => handleNavigate('/dashboard')}> <LaunchIcon sx={{ color: 'primary.main', fontSize: '2rem' }} /> <Typography variant="h6" sx={{ fontWeight: 700, color: 'text.primary', letterSpacing: '-0.5px' }}> MEmento </Typography> </LogoBox>
+            <Box sx={{ flexGrow: 1, overflowY: 'auto', p: 1 }}> {navSections.map((section, sectionIndex) => ( <React.Fragment key={section.title || sectionIndex}> <NavList> {section.items.map((item) => { const active = isNavItemActive(item.path, item.base); return ( <NavItemButton key={item.label} active={active} onClick={() => handleNavigate(item.path)}> <NavItemIcon active={active}>{item.icon}</NavItemIcon> <NavItemText primary={item.label} active={active} /> </NavItemButton> ); })} </NavList> {sectionIndex < navSections.length - 1 && <Divider sx={{ my: 1.5, mx: 1, borderStyle: 'dashed', borderColor: alpha(theme.palette.divider, 0.6) }} /> } </React.Fragment> ))} {isAdmin && ( <> <Divider sx={{ my: 1.5, mx: 1, borderStyle: 'dashed', borderColor: alpha(theme.palette.divider, 0.6) }} /> <NavList> {adminSection.items.map((item) => { const active = isNavItemActive(item.path, item.base); return ( <NavItemButton key={item.label} active={active} onClick={() => handleNavigate(item.path)}> <NavItemIcon active={active}>{item.icon}</NavItemIcon> <NavItemText primary={item.label} active={active} /> </NavItemButton> ); })} </NavList> </> )} </Box>
+            <UserFooter> <Avatar sx={{ width: 40, height: 40 }} alt={userName || ''} src={userProfile?.basicInfo?.profileImageUrl || undefined}> {!userProfile?.basicInfo?.profileImageUrl && userName ? userName.charAt(0).toUpperCase() : <AccountCircleOutlinedIcon />} </Avatar> <Box sx={{ flexGrow: 1, overflow: 'hidden', pr: 1 }}> <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, color: 'text.primary' }}> {userName || 'User'} </Typography> <Typography variant="caption" noWrap sx={{ color: 'text.secondary', display: 'block' }}> {user?.email || 'No email'} </Typography> </Box> <Tooltip title="Logout"> <IconButton onClick={handleLogout} size="small" sx={{ color: 'text.secondary', '&:hover': { color: 'error.main', bgcolor: alpha(theme.palette.error.main, 0.1) } }}> <LogoutOutlinedIcon fontSize="small"/> </IconButton> </Tooltip> </UserFooter>
         </Box>
-    ), [user, userName, userProfile, isAdmin, handleNavigate, handleLogout, isNavItemActive, currentPath]); // Include currentPath for active state
+    ), [user, userName, userProfile, isAdmin, handleNavigate, handleLogout, isNavItemActive, currentPath, theme]);
 
-
-    // Notification Popover Content
+    // Notification Popover Content (Unchanged)
     const notificationPopoverContent = useMemo(() => (
-        <>
-            <PopoverHeader>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Notifications</Typography>
-                 {totalUnreadCount > 0 && (
-                    <Button onClick={handleMarkAllNotificationsRead} color="primary" size="small" disabled={markingRead} startIcon={markingRead ? <CircularProgress size={14} color="inherit" /> : <MarkChatReadOutlinedIcon fontSize='small' />} sx={{ textTransform: 'none', fontWeight: 500, py: 0.25, px: 1, ml: 1 }} > Mark all read </Button>
-                 )}
-            </PopoverHeader>
-            <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                 {loadingNotifications && <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress size={24} /></Box>}
-                 {!loadingNotifications && notifications.length === 0 && (
-                     <Box sx={{ p: 3, textAlign: 'center' }}>
-                         <InfoOutlinedIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                         <Typography variant="body2" color="text.secondary">No notifications yet.</Typography>
-                     </Box>
-                 )}
-                 {!loadingNotifications && notifications.length > 0 && (
-                    <List disablePadding>
-                        {notifications.map((n) => (
-                            <PopoverListItem key={n.id} unread={!n.read} onClick={() => handleNotificationItemClick(n)}>
-                                {/* Add Avatar based on sender type/icon if desired */}
-                                <ListItemText
-                                    primary={n.title || 'Notification'}
-                                    secondary={n.message || '...'}
-                                    primaryTypographyProps={{ noWrap: true }}
-                                    secondaryTypographyProps={{ // Apply class for multi-line clamp
-                                         component: 'span',
-                                         className: 'MuiListItemText-secondary', // Use existing class for styling consistency
-                                    }}
-                                />
-                                 <Typography variant="caption" className="item-meta">
-                                      {n.timestamp?.toDate() ? formatDistanceToNow(n.timestamp.toDate(), { addSuffix: true }) : ''}
-                                 </Typography>
-                            </PopoverListItem>
-                        ))}
-                    </List>
-                 )}
-            </Box>
-             {notifications.length >= NOTIFICATION_LIMIT && !loadingNotifications && (
-                 <PopoverFooter>
-                    <Button onClick={() => handleNavigate('/notifications')} size="small" fullWidth sx={{ textTransform: 'none', color: 'primary.main', fontWeight: 500 }}>View All Notifications</Button>
-                 </PopoverFooter>
-             )}
-        </>
-    ), [loadingNotifications, notifications, totalUnreadCount, markingRead, handleNotificationItemClick, handleMarkAllNotificationsRead, handleNavigate]);
+        <> <PopoverHeader> <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Notifications</Typography> {totalUnreadCount > 0 && ( <Button onClick={handleMarkAllNotificationsRead} color="primary" size="small" disabled={markingRead} startIcon={markingRead ? <CircularProgress size={14} color="inherit" /> : <MarkChatReadOutlinedIcon fontSize='small' />} sx={{ textTransform: 'none', fontWeight: 500, py: 0.25, px: 1, ml: 1 }}> Mark all read </Button> )} </PopoverHeader> <Box sx={{ maxHeight: 400, overflowY: 'auto' }}> {loadingNotifications && notifications.length === 0 && ( <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress size={24} /></Box> )} {!loadingNotifications && notifications.length === 0 && ( <Box sx={{ p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}> <NotificationsNoneOutlinedIcon sx={{ fontSize: 48, color: 'text.disabled' }} /> <Typography variant="body2" color="text.secondary">You're all caught up!</Typography> </Box> )} {notifications.length > 0 && ( <List disablePadding> {notifications.map((n) => ( <PopoverListItem key={n.id} unread={!n.read} onClick={() => handleNotificationItemClick(n)}> <ListItemText primary={n.title || 'Notification'} secondary={n.message || '...'} primaryTypographyProps={{ noWrap: true }} /> <Typography variant="caption" className="item-meta"> {n.timestamp?.toDate() ? formatDistanceToNow(n.timestamp.toDate(), { addSuffix: true }) : ''} </Typography> </PopoverListItem> ))} </List> )} </Box> {notifications.length >= NOTIFICATION_LIMIT && !loadingNotifications && ( <PopoverFooter> <ViewAllButton onClick={handleViewAllNotificationsClick} size="small" fullWidth> View All Notifications </ViewAllButton> </PopoverFooter> )} </>
+    ), [loadingNotifications, notifications, totalUnreadCount, markingRead, handleNotificationItemClick, handleMarkAllNotificationsRead, handleViewAllNotificationsClick]);
 
-
-    // Message Popover Content (Placeholder data)
+    // Message Popover Content (Unchanged)
     const messagePopoverContent = useMemo(() => {
-        const placeholderMessages = [ { id: 'm1', senderName: 'Alice', snippet: 'Hey, did you see the new assignment?', timestamp: new Date(Date.now() - 60000 * 5), read: false, senderImage: undefined }, { id: 'm2', senderName: 'Bob', snippet: 'Meeting at 3 PM confirmed.', timestamp: new Date(Date.now() - 60000 * 60 * 2), read: true, senderImage: undefined }, { id: 'm3', senderName: 'Charlie', snippet: 'Can you send me the notes? Lorem ipsum dolor sit amet consectetur adipisicing elit.', timestamp: new Date(Date.now() - 60000 * 60 * 24), read: false, senderImage: undefined }];
-        const displayMessages = messages.length > 0 ? messages : placeholderMessages; // Use real data if fetched
-
+        const placeholderMessages = [ { id: 'm1', senderName: 'Alice Smith', snippet: 'Hey, just checking in about the project deadline. Are we still on track?', timestamp: new Date(Date.now() - 60000 * 5), read: false, senderImage: undefined }, { id: 'm2', senderName: 'Bob Johnson', snippet: 'Meeting confirmed for 3 PM tomorrow in Room 4B.', timestamp: new Date(Date.now() - 60000 * 60 * 2), read: false, senderImage: 'https://mui.com/static/images/avatar/1.jpg' }, { id: 'm3', senderName: 'Charlie Brown', snippet: 'Can you send over the notes from the lecture? I missed the last part. Thanks!', timestamp: new Date(Date.now() - 60000 * 60 * 24), read: true, senderImage: undefined }, { id: 'm4', senderName: 'Diana Prince', snippet: 'Your request has been approved.', timestamp: new Date(Date.now() - 60000 * 60 * 48), read: false, senderImage: 'https://mui.com/static/images/avatar/3.jpg' }, ];
+        const displayMessages = messages.length > 0 ? messages : placeholderMessages;
         return (
-            <>
-                <PopoverHeader>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Messages</Typography>
-                    {/* Optional: Mark all read button */}
-                    {unreadMessagesCount > 0 && ( <Button onClick={handleMarkAllMessagesRead} color="primary" size="small" sx={{ textTransform: 'none', fontWeight: 500 }}> Mark all read </Button> )}
-                </PopoverHeader>
-                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                    {loadingMessages && <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress size={24} /></Box>}
-                    {!loadingMessages && displayMessages.length === 0 && (
-                        <Box sx={{ p: 3, textAlign: 'center' }}>
-                            <ChatBubbleOutlineIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 1 }} />
-                            <Typography variant="body2" color="text.secondary">No messages yet.</Typography>
-                        </Box>
-                    )}
-                    {!loadingMessages && displayMessages.length > 0 && (
-                        <List disablePadding>
-                            {displayMessages.map((m) => (
-                                <PopoverListItem key={m.id} unread={!m.read} onClick={() => handleMessageItemClick(m.id)}>
-                                     <ListItemIcon>
-                                         <Avatar sx={{ width: 36, height: 36 }} alt={m.senderName} src={m.senderImage}>
-                                              {m.senderName ? m.senderName.charAt(0) : <AccountCircleOutlinedIcon />}
-                                         </Avatar>
-                                     </ListItemIcon>
-                                    <ListItemText
-                                        primary={m.senderName || 'Unknown Sender'}
-                                        secondary={m.snippet || '...'}
-                                         primaryTypographyProps={{ noWrap: true }}
-                                         secondaryTypographyProps={{ component: 'span', className: 'MuiListItemText-secondary' }} // Multi-line clamp
-                                    />
-                                     <Typography variant="caption" className="item-meta">
-                                          {m.timestamp ? formatDistanceToNow(m.timestamp, { addSuffix: true }) : ''}
-                                     </Typography>
-                                </PopoverListItem>
-                            ))}
-                        </List>
-                    )}
-                </Box>
-                {displayMessages.length >= MESSAGE_LIMIT && !loadingMessages && (
-                    <PopoverFooter>
-                        <Button onClick={handleViewAllMessagesClick} size="small" fullWidth sx={{ textTransform: 'none', color: 'primary.main', fontWeight: 500 }}>View All Messages</Button>
-                    </PopoverFooter>
-                )}
-            </>
-    )}, [loadingMessages, messages, unreadMessagesCount, handleMessageItemClick, handleMarkAllMessagesRead, handleViewAllMessagesClick]); // Add real dependencies
-
-
-    // Search Popover Content
-    const searchPopoverContent = useMemo(() => (
-        <Box sx={{ maxHeight: 300, overflowY: 'auto', p: searchResults.length > 0 ? 0.5 : 0 }}> {/* Padding only if results */}
-            {searchLoading && ( <Box sx={{ display: 'flex', justifyContent: 'center', p: 2 }}> <CircularProgress size={20} /> </Box> )}
-            {searchError && ( <Typography color="error" sx={{ p: 2, fontSize: '0.85rem', textAlign: 'center' }}> {searchError} </Typography> )}
-            {!searchLoading && !searchError && searchResults.length === 0 && searchQuery.trim().length >= 2 && ( <Typography sx={{ p: 2, color: 'text.secondary', fontSize: '0.85rem', textAlign: 'center' }}> No users found. </Typography> )}
-            {!searchLoading && !searchError && searchResults.length > 0 && (
-                <List dense disablePadding>
-                    {searchResults.map((result) => (
-                        <ListItemButton key={result.id} onClick={() => handleSearchResultClick(result.id)} sx={{ py: 0.75, px: 1.5, borderRadius: 1 }}>
-                            <ListItemIcon sx={{ minWidth: 36, mr: 1.5 }}> <Avatar sx={{ width: 28, height: 28, fontSize: '0.8rem' }} alt={result.basicInfo?.fullName || '?'} src={result.basicInfo?.profileImageUrl || undefined} > {result.basicInfo?.fullName ? result.basicInfo.fullName.charAt(0).toUpperCase() : <AccountCircleOutlinedIcon fontSize="small"/>} </Avatar> </ListItemIcon>
-                            <ListItemText primary={result.basicInfo?.fullName || 'Unknown'} secondary={result.basicInfo?.studentId || 'No ID'} primaryTypographyProps={{ fontSize: '0.9rem', noWrap: true }} secondaryTypographyProps={{ fontSize: '0.75rem', noWrap: true }} />
-                        </ListItemButton>
-                    ))}
-                </List>
-            )}
-        </Box>
-    ), [searchLoading, searchError, searchResults, searchQuery, handleSearchResultClick]);
-
+            <> <PopoverHeader> <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Messages</Typography> {unreadMessagesCount > 0 && ( <Button onClick={handleMarkAllMessagesRead} color="primary" size="small" sx={{ textTransform: 'none', fontWeight: 500, py: 0.25, px: 1, ml: 1 }} startIcon={<MarkChatReadOutlinedIcon fontSize='small' />} > Mark all read </Button> )} </PopoverHeader> <Box sx={{ maxHeight: 400, overflowY: 'auto' }}> {loadingMessages && displayMessages.length === 0 && ( <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress size={24} /></Box> )} {!loadingMessages && displayMessages.length === 0 && ( <Box sx={{ p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}> <ChatBubbleOutlineIcon sx={{ fontSize: 48, color: 'text.disabled' }} /> <Typography variant="body2" color="text.secondary">No new messages.</Typography> </Box> )} {displayMessages.length > 0 && ( <List disablePadding> {displayMessages.slice(0, MESSAGE_LIMIT).map((m) => ( <PopoverListItem key={m.id} unread={!m.read} onClick={() => handleMessageItemClick(m.id)}> <ListItemIcon> <Avatar sx={{ width: 36, height: 36 }} alt={m.senderName || '?'} src={m.senderImage}> {m.senderName ? m.senderName.split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase() : <AccountCircleOutlinedIcon />} </Avatar> </ListItemIcon> <ListItemText primary={m.senderName || 'Unknown Sender'} secondary={m.snippet || '...'} primaryTypographyProps={{ noWrap: true }} /> <Typography variant="caption" className="item-meta"> {m.timestamp ? formatDistanceToNow(m.timestamp, { addSuffix: true }) : ''} </Typography> </PopoverListItem> ))} </List> )} </Box> {(displayMessages.length > MESSAGE_LIMIT || unreadMessagesCount > 0) && !loadingMessages && ( <PopoverFooter> <ViewAllButton onClick={handleViewAllMessagesClick} size="small" fullWidth> View All Messages </ViewAllButton> </PopoverFooter> )} </>
+    )}, [loadingMessages, messages, unreadMessagesCount, handleMessageItemClick, handleMarkAllMessagesRead, handleViewAllMessagesClick]);
 
     // --- Main Render ---
     return (
@@ -658,76 +198,71 @@ function Navbar() {
             {user && (
                 <StyledAppBar position="fixed">
                     <Toolbar sx={{ minHeight: APP_BAR_HEIGHT }}>
-                        {/* Hamburger (Mobile) or Spacing (Desktop) */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: 'auto', md: SIDEBAR_WIDTH_DESKTOP }, pl: { xs: 0, md: 2.5 } }}>
-                            {isMobile ? (
-                                <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 1 }}>
-                                    <MenuIcon />
-                                </IconButton>
-                            ) : null }
-                            {/* Optionally show brand name on mobile AppBar if sidebar isn't visible */}
-                             {isMobile && (
-                                 <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>MEmento</Typography>
-                             )}
+                        {/* Left section */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: { xs: 'auto', md: SIDEBAR_WIDTH_DESKTOP }, pl: { xs: 0, md: 2.5 }, pr: { xs: 1, md: 0 } }}>
+                            {isMobile ? ( <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 1 }}> <MenuIcon /> </IconButton> ) : null }
+                            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, flexGrow: { xs: 1, md: 0 }, display: 'block' }}> stdDB </Typography>
                         </Box>
 
-                        {/* Search Bar (Pushed to the right before icons) */}
-                        <Search>
-                            <SearchIconWrapper> <SearchIcon fontSize="small" /> </SearchIconWrapper>
-                            <StyledInputBase placeholder="Search name or ID…" inputProps={{ 'aria-label': 'search' }} value={searchQuery} onChange={handleSearchChange} onFocus={handleSearchFocus} onBlur={handleSearchBlur} inputRef={searchInputRef} />
-                            {searchQuery && ( <IconButton size="small" onClick={handleClearSearch} sx={{ position: 'absolute', right: theme.spacing(1), color: 'text.secondary' }} aria-label="clear search" > <ClearIcon fontSize="small" /> </IconButton> )}
-                        </Search>
-                        {/* Search Results Popover */}
-                        <Popover
-                            id="search-results-popover" open={isSearchPopoverOpen} anchorEl={searchAnchorEl} onClose={() => setSearchAnchorEl(null)}
-                            anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-                            disableRestoreFocus disableScrollLock
-                            PaperProps={{ component: StyledPopoverPaper, sx: { width: SEARCH_POPOVER_WIDTH } }} // Apply style to Paper
-                        >
-                            {searchPopoverContent}
-                        </Popover>
+                        {/* Spacer */}
+                        <Box sx={{ flexGrow: 1 }} />
 
                         {/* Right Icons */}
-                        <Stack direction="row" spacing={1} alignItems="center" sx={{ ml: 1 }}>
-                            {/* Messages */}
+                        <Stack direction="row" spacing={{ xs: 0.5, sm: 1 }} alignItems="center" sx={{ ml: 1 }}>
                              <Tooltip title="Messages">
-                                 <IconButton id="messages-button" color="inherit" onClick={handleMessagesPopoverOpen} aria-haspopup="true" aria-controls={isMessagesPopoverOpen ? 'messages-popover' : undefined} aria-expanded={isMessagesPopoverOpen ? 'true' : undefined}>
+                                 <IconButton
+                                     id="messages-button"
+                                     color="inherit"
+                                     onClick={handleMessagesPopoverOpen} // Uses updated handler
+                                     aria-haspopup="true"
+                                     aria-controls={isMessagesPopoverOpen ? 'messages-popover' : undefined}
+                                     aria-expanded={isMessagesPopoverOpen ? 'true' : undefined}
+                                 >
                                     <Badge badgeContent={unreadMessagesCount} color="error" max={99}> <MailOutlineIcon /> </Badge>
                                 </IconButton>
                              </Tooltip>
-                            {/* Notifications */}
                              <Tooltip title="Notifications">
-                                 <IconButton id="notification-button" color="inherit" onClick={handleNotificationPopoverOpen} aria-haspopup="true" aria-controls={isNotificationPopoverOpen ? 'notification-popover' : undefined} aria-expanded={isNotificationPopoverOpen ? 'true' : undefined}>
+                                 <IconButton
+                                     ref={notificationIconRef} // Assign ref here
+                                     id="notification-button"
+                                     color="inherit"
+                                     onClick={handleNotificationPopoverOpen} // Uses updated handler
+                                     aria-haspopup="true"
+                                     aria-controls={isNotificationPopoverOpen ? 'notification-popover' : undefined}
+                                     aria-expanded={isNotificationPopoverOpen ? 'true' : undefined}
+                                 >
                                     <Badge badgeContent={totalUnreadCount} color="error" max={99}> <NotificationsNoneOutlinedIcon /> </Badge>
                                 </IconButton>
                              </Tooltip>
-                             {/* Profile */}
-                            <Tooltip title="Profile Settings">
-                                <IconButton id="profile-button" size="small" onClick={handleProfileMenuOpen} sx={{ p: 0 }} aria-haspopup="true" aria-controls={isProfileMenuOpen ? 'profile-menu' : undefined} aria-expanded={isProfileMenuOpen ? 'true' : undefined}>
-                                    <Avatar sx={{ width: 36, height: 36 }} alt={userName || ''} src={userProfile?.basicInfo?.profileImageUrl || undefined}>
-                                         {!userProfile?.basicInfo?.profileImageUrl && userName ? userName.charAt(0).toUpperCase() : <AccountCircleOutlinedIcon />}
-                                    </Avatar>
-                                </IconButton>
-                            </Tooltip>
                         </Stack>
 
-                        {/* Popovers / Menus anchored to Icons */}
-                        {/* Message Popover */}
-                         <Popover id="messages-popover" open={isMessagesPopoverOpen} anchorEl={messagesAnchorEl} onClose={handleMessagesPopoverClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} disableRestoreFocus disableScrollLock PaperProps={{ component: StyledPopoverPaper, sx: { width: POPOVER_WIDTH } }} >
+                        {/* Popovers anchored to the Notification Icon Ref */}
+                        {/* Messages Popover */}
+                         <Popover
+                             id="messages-popover"
+                             open={isMessagesPopoverOpen} // Use boolean state
+                             anchorEl={notificationIconRef.current} // Anchor to notification icon ref
+                             onClose={handleMessagesPopoverClose}
+                             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} // Keep origin relative to anchor
+                             transformOrigin={{ vertical: 'top', horizontal: 'right' }} // Keep popover origin
+                             disableRestoreFocus disableScrollLock
+                             PaperProps={{ component: StyledPopoverPaper, sx: { width: POPOVER_WIDTH } }}
+                          >
                              {messagePopoverContent}
                          </Popover>
-                         {/* Notification Popover */}
-                         <Popover id="notification-popover" open={isNotificationPopoverOpen} anchorEl={notificationAnchorEl} onClose={handleNotificationPopoverClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} disableRestoreFocus disableScrollLock PaperProps={{ component: StyledPopoverPaper, sx: { width: POPOVER_WIDTH } }} >
+                         {/* Notifications Popover */}
+                         <Popover
+                             id="notification-popover"
+                             open={isNotificationPopoverOpen} // Use boolean state
+                             anchorEl={notificationIconRef.current} // Anchor to notification icon ref
+                             onClose={handleNotificationPopoverClose}
+                             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} // Keep origin relative to anchor
+                             transformOrigin={{ vertical: 'top', horizontal: 'right' }} // Keep popover origin
+                             disableRestoreFocus disableScrollLock
+                             PaperProps={{ component: StyledPopoverPaper, sx: { width: POPOVER_WIDTH } }}
+                          >
                              {notificationPopoverContent}
                          </Popover>
-                         {/* Profile Menu */}
-                         <Menu id="profile-menu" anchorEl={profileAnchorEl} open={isProfileMenuOpen} onClose={handleProfileMenuClose} disableScrollLock anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }} transformOrigin={{ vertical: 'top', horizontal: 'right' }} slotProps={{ paper: { elevation: 0, sx: { mt: 1.5, minWidth: 200, boxShadow: theme.shadows[4], borderRadius: theme.shape.borderRadius * 1.5, border: `1px solid ${theme.palette.divider}`, }, } }} >
-                             {/* Simple Profile Menu Items */}
-                             <MenuItem onClick={() => handleNavigate('/profile')} sx={{ fontSize: '0.9rem' }}> Profile </MenuItem>
-                             <MenuItem onClick={() => handleNavigate('/settings')} sx={{ fontSize: '0.9rem' }}> Settings </MenuItem>
-                             <Divider sx={{ my: 0.5 }} />
-                             <MenuItem onClick={handleLogout} sx={{ color: 'error.main', fontSize: '0.9rem' }}> Sign Out </MenuItem>
-                         </Menu>
 
                     </Toolbar>
                 </StyledAppBar>
@@ -740,7 +275,7 @@ function Navbar() {
                     anchor="left"
                     open={isMobile ? mobileDrawerOpen : true}
                     onClose={isMobile ? handleDrawerToggle : undefined}
-                    ModalProps={isMobile ? { keepMounted: true } : {}} // Keep mounted for mobile performance
+                    ModalProps={isMobile ? { keepMounted: true } : {}}
                 >
                     {drawerContent}
                 </StyledDrawer>
@@ -748,37 +283,14 @@ function Navbar() {
 
             {/* Mobile Bottom Navigation */}
              {user && isMobile && (
-                <AppBar position="fixed" sx={{ top: 'auto', bottom: 0, zIndex: theme.zIndex.drawer }} elevation={0}>
-                     <StyledBottomNavigation
-                        value={mobileBottomNavItems.find(item => isNavItemActive(item.path, item.value))?.value || false} // Find active value based on path/base
-                        onChange={(event, newValue) => {
-                            const selectedItem = mobileBottomNavItems.find(item => item.value === newValue);
-                            if (selectedItem?.path) { handleNavigate(selectedItem.path); }
-                            // else if (newValue === 'search') { /* Open search modal? */ }
-                        }}
-                        showLabels
-                    >
-                        {mobileBottomNavItems.map((item) => (
-                            <StyledBottomNavigationAction key={item.value} label={item.label} value={item.value} icon={item.icon} />
-                        ))}
+                <AppBar position="fixed" sx={{ top: 'auto', bottom: 0, zIndex: theme.zIndex.drawer }}>
+                     <StyledBottomNavigation value={mobileBottomNavItems.find(item => isNavItemActive(item.path, item.value))?.value || false} onChange={(event, newValue) => { const selectedItem = mobileBottomNavItems.find(item => item.value === newValue); if (selectedItem?.path) { handleNavigate(selectedItem.path); } }} showLabels >
+                        {mobileBottomNavItems.map((item) => ( <StyledBottomNavigationAction key={item.value} label={item.label} value={item.value} icon={item.icon} /> ))}
                     </StyledBottomNavigation>
                  </AppBar>
             )}
 
-            {/* ====================================================================== */}
-            {/* MAIN CONTENT AREA - Rendered by the Parent Layout Component          */}
-            {/* The parent needs to apply padding-top: APP_BAR_HEIGHT                */}
-            {/* and padding-left: SIDEBAR_WIDTH_DESKTOP (on md+)                     */}
-            {/* and padding-bottom: MOBILE_BOTTOM_NAV_HEIGHT (on md down)            */}
-            {/* Example in parent:                                                   */}
-            {/* <Box component="main" sx={{                                          */}
-            {/*   flexGrow: 1,                                                        */}
-            {/*   pt: `${APP_BAR_HEIGHT}px`,                                          */}
-            {/*   pb: { xs: `${MOBILE_BOTTOM_NAV_HEIGHT}px`, md: 0 },                 */}
-            {/*   pl: { xs: 0, md: `${SIDEBAR_WIDTH_DESKTOP}px` },                    */}
-            {/*   width: { md: `calc(100% - ${SIDEBAR_WIDTH_DESKTOP}px)` }            */}
-            {/* }}> <Outlet /> </Box>                                                 */}
-            {/* ====================================================================== */}
+            {/* MAIN CONTENT AREA Placeholder */}
 
         </StyledRoot>
     );

@@ -1,10 +1,7 @@
-// src/pages/Admin.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react'; // Removed useState
 import { useNavigate } from 'react-router-dom';
-// --- CORRECTED IMPORT PATH FOR useAuth ---
-import { useAuth } from '../auth/AuthContext';
-// --- END CORRECTION ---
-import NotificationForm from '../components/NotificationForm'; // Assuming this will be updated separately
+import { useAuth } from '../auth/AuthContext'; // Correct import path
+import NotificationForm from '../components/NotificationForm';
 
 import {
     Container,
@@ -16,48 +13,31 @@ import {
     AlertTitle,
     Divider,
 } from '@mui/material';
-import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings'; // Icon for visual cue
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 
 function Admin() {
-    // Use the correctly imported useAuth hook
-    const { user, roles, authLoading } = useAuth(); // Destructure 'authLoading' as provided by context
+    // Destructure 'isAdmin' directly from the context
+    const { user, isAdmin, authLoading } = useAuth();
     const navigate = useNavigate();
-    const [isCheckingRoles, setIsCheckingRoles] = useState(true); // Separate state for role check completion
-    const [isAdmin, setIsAdmin] = useState(false);
 
     useEffect(() => {
-        // Redirect if not logged in (and auth state is determined)
+        // Redirect if auth check is complete and there's no user
         if (!authLoading && !user) {
-            console.log("Admin Page: No user found, navigating to login.");
+            console.log("Admin Page: Auth complete, no user. Navigating to login.");
             navigate('/login');
-            return; // Stop further execution in this effect run
-        }
-
-        // Once auth loading is done and user exists, check roles
-        if (!authLoading && user) {
-            console.log("Admin Page: User found, checking roles:", roles);
-            // The roles variable from useAuth now directly reflects userProfile.roles
-            // It could be undefined initially, null if profile doesn't exist, or an array.
-            if (roles === undefined && authLoading) { // Check if still waiting on initial load
-                console.log("Admin Page: Auth/Roles still loading...");
-                setIsCheckingRoles(true); // Keep checking
-            } else {
-                 // Roles *should* be available now (even if null or empty array)
-                const hasAdminRole = Array.isArray(roles) && roles.includes('admin');
-                console.log("Admin Page: Has admin role?", hasAdminRole);
-                setIsAdmin(hasAdminRole);
-                setIsCheckingRoles(false); // Role check is complete
-            }
+        } else if (!authLoading && user) {
+            // Log status once loading is done and user exists (isAdmin comes from context)
+            console.log(`Admin Page: Auth complete. User: ${user.uid}, IsAdmin from Context: ${isAdmin}`);
         } else {
-            // Still loading auth or no user yet
-            setIsCheckingRoles(true);
+            // Still loading
+            // console.log("Admin Page: Auth loading..."); // Optional log
         }
-
-    }, [user, roles, authLoading, navigate]);
+        // Dependency array uses the actual values from the context
+    }, [user, isAdmin, authLoading, navigate]);
 
     // --- Loading State ---
-    // Show loading indicator while auth is loading OR roles are being definitively checked
-    if (authLoading || isCheckingRoles) {
+    // Show loading indicator ONLY while AuthContext says it's loading
+    if (authLoading) {
         return (
             <Container maxWidth="sm" sx={{ mt: 4, textAlign: 'center' }}>
                 <CircularProgress />
@@ -66,7 +46,8 @@ function Admin() {
         );
     }
 
-    // --- Render based on Admin status ---
+    // --- Render based on Admin status (once loading is complete) ---
+    // If authLoading is false, 'isAdmin' from the context holds the correct value.
     return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
             <Paper elevation={3} sx={{ p: { xs: 2, md: 4 } }}>
@@ -78,15 +59,17 @@ function Admin() {
                 </Box>
                 <Divider sx={{ mb: 3 }} />
 
+                {/* Use 'isAdmin' directly from the context */}
                 {isAdmin ? (
                     <>
                         <Typography variant="subtitle1" color="text.secondary" sx={{ mb: 3 }}>
                             Use the form below to send notifications to users. Select the target audience and category appropriately.
                         </Typography>
-                        {/* The NotificationForm will contain the new dropdowns */}
                         <NotificationForm />
                     </>
                 ) : (
+                    // This correctly shows if context determines user is not admin OR
+                    // if loading is done but user somehow became null before navigation (edge case)
                     <Alert severity="error">
                         <AlertTitle>Access Denied</AlertTitle>
                         You do not have permission to view this page. Please ensure you are logged in with an administrator account.
