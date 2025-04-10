@@ -1,0 +1,31 @@
+/* src/components/Header.css (Example additions) */
+
+header { /* Or whatever root element your Header component uses */
+    height: 60px; /* Example - use var(--header-height) if defined */
+    background-color: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    /* position: fixed; /* Or sticky - Ensure consistency with Layout.css */
+    /* top: 0; */
+    /* width: 100%; */
+    /* z-index: 100; */
+  }
+  
+  .mobile-nav-toggle {
+    /* Style your hamburger button */
+    display: block; /* Show by default */
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    margin-right: 15px; /* Space it out */
+  }
+  
+  /* Hide hamburger on larger screens */
+  @media (min-width: 992px) { /* Same breakpoint */
+    .mobile-nav-toggle {
+      display: none;
+    }
+  }

@@ -1,0 +1,238 @@
+/* src/components/SideNav.css */
+
+/* --- Customizable Variables --- */
+:root {
+  /* --- Base --- */
+  --sidenav-width: 250px;
+  --header-height: 60px; /* Sync with Layout.css / Header.css */
+  --transition-speed: 0.25s;
+
+  /* --- Colors (Light Theme Example - CHANGE THESE TO MATCH YOUR APP) --- */
+  --nav-bg: #ffffff;                      /* Sidebar background */
+  --nav-text: #333333;                    /* Default text color */
+  --nav-text-subtle: #555555;             /* Slightly lighter text (optional) */
+  --nav-icon-color: #666666;              /* Default icon color */
+  --nav-border-color: #e0e0e0;           /* Borders/separators */
+
+  /* --- Hover State --- */
+  --nav-hover-bg: #f5f5f5;                /* Background on hover */
+  --nav-hover-text: var(--nav-text);      /* Text on hover (can be same or different) */
+  --nav-hover-icon: var(--nav-primary-color, #2979ff); /* Icon color on hover (using primary) */
+
+  /* --- Active State --- */
+  --nav-active-bg: #e3f2fd; /* Light blue background (example) */
+  --nav-active-border: var(--nav-primary-color, #2979ff); /* Left border color (using primary) */
+  --nav-active-text: var(--nav-primary-color, #2979ff); /* Text color for active item (using primary) */
+  --nav-active-icon: var(--nav-primary-color, #2979ff); /* Icon color for active item (using primary) */
+
+  /* --- Primary Color (Define your app's main color here) --- */
+  --nav-primary-color: #007bff; /* Example: Standard Bootstrap Blue */
+  /* If you set --nav-primary-color, the hover/active states will use it unless overridden */
+
+   /* --- Logout --- */
+  --nav-logout-hover-bg: #fff0f0;        /* Subtle red background on hover */
+  --nav-logout-hover-text: #d32f2f;     /* Red text color on hover */
+  --nav-logout-hover-icon: #d32f2f;     /* Red icon color on hover */
+
+  /* --- Dropdown --- */
+  --dropdown-bg: #fafafa;                /* Background for dropdown */
+}
+
+/* --- Base SideNav Styles --- */
+.side-nav {
+  position: fixed;
+  top: 0;
+  left: calc(-1 * var(--sidenav-width));
+  width: var(--sidenav-width);
+  height: 100vh;
+  background-color: var(--nav-bg);
+  padding-top: var(--header-height); /* Space if header is fixed/sticky */
+  transition: left var(--transition-speed) ease-in-out;
+  z-index: 200; /* Above overlay */
+  overflow: hidden; /* Hide overflow when closed */
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--nav-border-color); /* Subtle separator from content (on mobile too) */
+}
+
+.side-nav.open {
+  left: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Softer shadow when open */
+}
+
+/* --- Content Wrapper (for scrolling & layout) --- */
+.nav-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between; /* Push logout to bottom */
+  padding-bottom: 10px; /* Space at the very bottom */
+}
+
+/* --- Navigation Lists --- */
+.nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  width: 100%;
+}
+
+.main-nav {
+  padding-top: 10px; /* Space above first item */
+}
+
+/* --- General Link/Button Styling --- */
+.nav-list li a,
+.nav-list li .dropdown-toggle,
+.logout-button {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px; /* Standard padding */
+  margin: 2px 0; /* Small vertical space between items */
+  text-decoration: none;
+  color: var(--nav-text);
+  font-size: 0.9rem; /* Slightly smaller base font */
+  font-weight: 500; /* Medium weight */
+  transition: background-color var(--transition-speed) ease,
+              color var(--transition-speed) ease,
+              border-left-color var(--transition-speed) ease;
+  border-left: 3px solid transparent; /* Space for active indicator */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: relative; /* Needed for pseudo-elements if added later */
+  cursor: pointer;
+}
+
+/* --- Icons --- */
+.nav-icon {
+  margin-right: 15px;
+  font-size: 1.1rem;
+  color: var(--nav-icon-color);
+  flex-shrink: 0;
+  width: 20px; /* Consistent alignment */
+  text-align: center;
+  transition: color var(--transition-speed) ease;
+}
+
+/* --- Hover Effects --- */
+.nav-list li a:hover,
+.nav-list li .dropdown-toggle:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--nav-hover-text);
+  border-left-color: var(--nav-active-border); /* Use primary color border on hover too */
+}
+
+.nav-list li a:hover .nav-icon,
+.nav-list li .dropdown-toggle:hover .nav-icon {
+  color: var(--nav-hover-icon);
+}
+
+/* --- Active Link Styling --- */
+.nav-list li a.active {
+  background-color: var(--nav-active-bg);
+  color: var(--nav-active-text);
+  font-weight: 600; /* Slightly bolder */
+  border-left-color: var(--nav-active-border); /* Prominent indicator */
+}
+
+.nav-list li a.active .nav-icon {
+  color: var(--nav-active-icon);
+}
+
+/* --- Dropdown Specific Styles --- */
+.nav-item-dropdown .dropdown-toggle {
+  /* Already styled like links */
+}
+
+.chevron-icon {
+  margin-left: auto; /* Pushes to the right */
+  font-size: 0.75rem; /* Smaller chevron */
+  color: var(--nav-icon-color); /* Match default icon color */
+  transition: transform var(--transition-speed) ease;
+}
+
+.chevron-icon.open {
+   transform: rotate(90deg);
+}
+
+.dropdown-menu {
+  list-style: none;
+  padding: 5px 0; /* Padding above/below dropdown items */
+  margin: 0;
+  background-color: var(--dropdown-bg);
+  /* Optional: Add subtle border or shadow if needed */
+}
+
+/* Style nested dropdown links */
+.dropdown-menu li a {
+  padding-left: calc(20px + 20px + 15px - 3px); /* Base Padding + Icon Width + Icon Margin - Border Width */
+  font-size: 0.85rem; /* Smaller text */
+  font-weight: 400; /* Regular weight */
+  color: var(--nav-text-subtle); /* Use subtle text color */
+  border-left: none; /* No border on sub-items */
+}
+
+.dropdown-menu li a:hover {
+  background-color: var(--nav-hover-bg);
+  color: var(--nav-hover-text);
+}
+
+.dropdown-menu li a.active {
+  background-color: transparent; /* No background override */
+  color: var(--nav-active-text); /* Use primary color */
+  font-weight: 600; /* Bolder */
+}
+
+/* --- Logout Button Area --- */
+.logout-section {
+  padding: 10px 0; /* Padding around logout area */
+  margin-top: 15px; /* Space above */
+  border-top: 1px solid var(--nav-border-color); /* Separator line */
+}
+
+.logout-button {
+  background: none;
+  border: none; /* Remove default button border */
+  border-left: 3px solid transparent; /* Match link alignment */
+  color: var(--nav-text-subtle); /* Subtle color by default */
+  width: 100%;
+  text-align: left;
+}
+
+.logout-button .nav-icon {
+  color: var(--nav-icon-color); /* Match default icon color */
+}
+
+.logout-button:hover {
+  background-color: var(--nav-logout-hover-bg);
+  color: var(--nav-logout-hover-text);
+  border-left-color: var(--nav-logout-hover-text); /* Use red border on hover */
+}
+
+.logout-button:hover .nav-icon {
+  color: var(--nav-logout-hover-icon);
+}
+
+
+/* --- Desktop Styles --- */
+@media (min-width: 992px) { /* Sync breakpoint with Layout.css */
+  .side-nav {
+    position: fixed;
+    left: 0;
+    top: var(--header-height);
+    height: calc(100vh - var(--header-height));
+    padding-top: 0; /* No padding needed below fixed header */
+    transition: none;
+    z-index: 50; /* Can be lower on desktop */
+    box-shadow: none; /* Remove mobile shadow */
+    border-right: 1px solid var(--nav-border-color); /* Keep the border */
+  }
+
+  /* Ensure mobile open state doesn't affect desktop */
+   .side-nav.open {
+    left: 0;
+  }
+}

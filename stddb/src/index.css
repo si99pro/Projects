@@ -1,0 +1,35 @@
+/* index.css */
+
+/* --- Add Global Box Sizing Reset --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  /* Optional: Reset margin/padding on all elements for consistency */
+  /* margin: 0; */
+  /* padding: 0; */
+}
+
+/* Basic Reset & Body */
+body {
+  font-family: sans-serif; /* Basic system font */
+  background-color: #f4f7f6;
+  margin: 0; /* Keep body margin reset */
+  padding: 0; /* Keep body padding reset */
+  color: #333;
+  /* Add other global body styles if needed */
+  -webkit-font-smoothing: antialiased; /* Improves font rendering */
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* You could add other global styles here, e.g., for links */
+/*
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+*/

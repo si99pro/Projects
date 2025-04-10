@@ -1,0 +1,88 @@
+/* src/components/Layout.css */
+
+/* Define sidenav width variable if not already defined globally (e.g., in index.css) */
+/* Make sure this value MATCHES the one used in SideNav.css */
+:root {
+  --sidenav-width: 250px; /* Adjust if your SideNav width is different */
+}
+
+.app-layout {
+    display: flex;
+    flex-direction: column; /* Header on top */
+    min-height: 100vh;
+}
+
+/* Header Styling (positioning) */
+.app-layout > header { /* Assuming Header component renders a <header> tag */
+    position: sticky; /* Or fixed */
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 100; /* Ensure header is above overlay and potentially sidenav on mobile */
+    /* Add background, height, etc., in Header.css */
+}
+
+/* Container for SideNav and Content Area */
+.main-container {
+    display: flex;
+    flex-grow: 1; /* Allows this container to fill remaining vertical space */
+    /* If header is sticky/fixed, content needs to start below it. */
+    /* SideNav and Content Area handle their own top positioning/padding */
+    position: relative; /* For mobile overlay positioning */
+}
+
+/* --- Content Area Styling --- */
+.content-area {
+    flex-grow: 1; /* Takes remaining horizontal space */
+    /*
+       REMOVED global padding: 20px;
+       Padding should now be handled *within* each page component
+       (e.g., using MUI Container's padding in Profile.js)
+       to avoid double padding or conflicts.
+    */
+    width: 100%; /* Full width on mobile initially */
+    transition: margin-left var(--transition-speed, 0.3s) ease-in-out; /* Use variable if defined */
+    /* Ensure content starts below the header if header is sticky/fixed */
+    /* If header height is e.g., 60px: */
+    /* padding-top: 60px; */ /* Add this if needed, depends on header/sidenav setup */
+}
+
+/* Mobile Nav Overlay */
+.mobile-nav-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 190; /* Below SideNav (z-index: 200), above content */
+    /* display: block; is default, visibility controlled by Layout.js rendering */
+    /* Add fade-in/out transition if desired */
+    opacity: 1;
+    transition: opacity var(--transition-speed, 0.3s) ease;
+}
+/* Style for when overlay should be hidden (though usually just unmounted by React) */
+/* .mobile-nav-overlay:not(.open) { opacity: 0; pointer-events: none; } */
+
+
+/* --- Desktop Styles --- */
+@media (min-width: 992px) { /* Adjust breakpoint as needed */
+
+    .main-container {
+       /* No special rules needed here typically */
+    }
+
+    .content-area {
+      /* Make space for the fixed SideNav by adding left margin */
+      margin-left: var(--sidenav-width); /* Use the variable */
+      /* Adjust width to account for the margin */
+      width: calc(100% - var(--sidenav-width));
+      /* Reset mobile-specific padding-top if it was added */
+      /* padding-top: 0; */
+    }
+
+     /* Hide mobile overlay on desktop */
+    .mobile-nav-overlay {
+      display: none; /* Or opacity: 0; pointer-events: none; */
+    }
+}
