@@ -3,94 +3,95 @@ import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
 // MUI Components
+import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import Box from '@mui/material/Box';
 import CssBaseline from '@mui/material/CssBaseline';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles'; // Added useTheme
 
-// MUI Icons - Choosing simpler, less "error-focused" icons
-import SearchOffIcon from '@mui/icons-material/SearchOff'; // Icon implying something wasn't found
-// Alt: import LinkOffIcon from '@mui/icons-material/LinkOff';
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'; // Outlined version for button
+// MUI Icons
+import SearchOffIcon from '@mui/icons-material/SearchOff';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 
 // Use your app's theme or a default one
 const defaultTheme = createTheme({
   // Optional: Define specific minimal theme overrides here if needed
-  // typography: {
-  //   fontFamily: 'Inter, sans-serif', // Example of a clean font
-  // },
 });
 
+/**
+ * NotFound Page Component (404 Error)
+ * Displays a user-friendly message when a requested route does not exist.
+ */
 function NotFound() {
+  const theme = useTheme(); // Access theme for consistent spacing/palette
+
   return (
     <ThemeProvider theme={defaultTheme}>
-      {/* Wrapper for full height centering */}
+      {/* Wrapper for full height centering and theme background */}
       <Box
         sx={{
           display: 'flex',
           flexDirection: 'column',
           minHeight: '100vh',
-          bgcolor: 'background.default', // Use theme's default background
+          bgcolor: 'background.default', // Use theme background
           justifyContent: 'center',
           alignItems: 'center',
-          px: 2, // Horizontal padding
-          py: 4, // Vertical padding
-          textAlign: 'center', // Center text for all children by default
+          px: theme.spacing(2), // Use theme spacing
+          py: theme.spacing(4), // Use theme spacing
+          textAlign: 'center',
         }}
       >
-        <CssBaseline />
-        {/* Container for content max-width */}
-        <Container component="main" maxWidth="xs"> {/* Use 'xs' for a tighter minimal feel */}
+        <CssBaseline /> {/* Ensure consistent baseline */}
+        <Container component="main" maxWidth="xs"> {/* Keep 'xs' for compact feel */}
 
             {/* Subtle Icon */}
             <SearchOffIcon
               sx={{
-                fontSize: { xs: '3.5rem', sm: '4.5rem' }, // Slightly smaller icon
-                color: 'grey.500', // Neutral grey color
-                mb: 3, // More space below icon
+                fontSize: { xs: '3.5rem', sm: '4.5rem' },
+                color: 'text.disabled', // Use text.disabled for very subtle grey
+                mb: theme.spacing(3), // Use theme spacing
               }}
             />
 
-            {/* 404 Code (Clear, less emphasis) */}
+            {/* 404 Code */}
             <Typography
               component="h1"
-              variant="h3" // Reduced size from previous examples
-              gutterBottom
-              sx={{ fontWeight: 600, color: 'text.primary', mb: 1 }} // Less bold
+              variant="h3"
+              gutterBottom // Keeps standard bottom margin
+              sx={{ fontWeight: 600, color: 'text.primary', mb: theme.spacing(1) }} // Use theme spacing
             >
               404
             </Typography>
 
-            {/* Page Not Found Title (Simple) */}
+            {/* Page Not Found Title */}
             <Typography
-              variant="h6" // Smaller heading
+              variant="h6"
               component="h2"
-              sx={{ fontWeight: 400, color: 'text.primary', mb: 2 }} // Regular weight
+              sx={{ fontWeight: 'normal', color: 'text.primary', mb: theme.spacing(2) }} // Use normal weight, theme spacing
             >
               Page Not Found
             </Typography>
 
-            {/* Description (Concise) */}
-            <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: 4 }}>
+            {/* Description */}
+            <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: theme.spacing(4) }}> {/* Use theme spacing */}
               Sorry, the page you requested could not be located.
             </Typography>
 
-            {/* Back Home Button (Clean) */}
+            {/* Back Home Button */}
             <Button
               component={RouterLink}
-              to="/" // Link back to the root/home page
-              variant="outlined" // Use outlined for minimal style
+              to="/"
+              variant="outlined"
               color="primary"
               startIcon={<HomeOutlinedIcon />}
               sx={{
-                 mt: 1, // Reduced margin top
+                 mt: theme.spacing(1), // Use theme spacing
                  py: 1,
                  px: 3,
-                 borderRadius: '8px', // Slightly rounded
-                 textTransform: 'none', // Keep text case
-               }}
+                 borderRadius: theme.shape.borderRadius, // Use theme border radius
+                 textTransform: 'none',
+              }}
             >
               Go Back Home
             </Button>

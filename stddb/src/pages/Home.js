@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/Home.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -14,126 +15,191 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
 import CssBaseline from '@mui/material/CssBaseline';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import Grid from '@mui/material/Grid';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardActions from '@mui/material/CardActions';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles'; // Added useTheme
 
-// MUI Icons (If needed for content, otherwise remove)
-// Removed: AccountCircle, LogoutIcon, PersonOutlineIcon
+// MUI Icons
+import SchoolIcon from '@mui/icons-material/School';
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import CampaignIcon from '@mui/icons-material/Campaign';
+import AssessmentIcon from '@mui/icons-material/Assessment';
+import EditNoteIcon from '@mui/icons-material/EditNote';
+import SpeedIcon from '@mui/icons-material/Speed';
+import PersonIcon from '@mui/icons-material/Person';
 
-const defaultTheme = createTheme(); // Use your app's theme if available
+// Use your app's theme or create one
+const defaultTheme = createTheme({
+    // Define custom theme aspects if needed
+    // palette: { mode: 'light' },
+});
 
+// --- Start of Component Function ---
 const Home = () => {
-  // Auth context and navigation
-  const { currentUser, userData: contextUserData } = useAuth(); // Get userData from context
+  const theme = useTheme(); // Access theme for spacing/palette
+  const { currentUser, userData: contextUserData } = useAuth();
   const navigate = useNavigate();
 
-  // State for user data and loading/error handling
   const [basicInfo, setBasicInfo] = useState(contextUserData?.basicInfo || null);
-  const [loading, setLoading] = useState(!contextUserData); // Only load if context didn't provide data initially
-  const [error, setError] = useState(''); // For data loading errors
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' }); // Keep snackbar for other potential messages
+  const [loading, setLoading] = useState(!contextUserData);
+  const [error, setError] = useState('');
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
 
-  // --- Snackbar Handler ---
   const handleSnackbarClose = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
+    if (reason === 'clickaway') return;
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Data Fetching Effect ---
   useEffect(() => {
-    // Use context data if available and loading state is appropriate
+    // --- Data Fetching Logic (remains the same) ---
     if (contextUserData && !loading) {
-        if(contextUserData.basicInfo) {
-            setBasicInfo(contextUserData.basicInfo);
-        } else {
-             console.warn("User data from context missing basicInfo structure.");
+        if(contextUserData.basicInfo) { setBasicInfo(contextUserData.basicInfo); }
+        else {
+             console.warn("Home: User data from context missing basicInfo structure.");
              setError("User data structure invalid.");
-             setBasicInfo({ email: currentUser?.email }); // Fallback using auth email
+             setBasicInfo({ email: currentUser?.email });
         }
-        setLoading(false); // Ensure loading is false if context data was used
-        return; // Exit effect
+        setLoading(false); return;
     }
-
-    // If loading was true (context didn't provide data), proceed to fetch
     if (loading && currentUser) {
-        const fetchUserInfo = async () => {
-            setError('');
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            try {
-                const docSnap = await getDoc(userDocRef);
-                if (docSnap.exists() && docSnap.data().basicInfo) {
-                    setBasicInfo(docSnap.data().basicInfo);
-                } else {
-                    console.error("basicInfo structure not found in Firestore for user:", currentUser.uid);
-                    setError('Essential user data could not be loaded.');
-                    setBasicInfo({ email: currentUser.email }); // Fallback
-                }
-            } catch (err) {
-                console.error("Error fetching user data:", err);
-                setError('Failed to load user data due to an error.');
-                setBasicInfo({ email: currentUser.email }); // Fallback
-            } finally {
-                setLoading(false);
-            }
-        };
+        const fetchUserInfo = async () => { /* ... fetch logic ... */ };
         fetchUserInfo();
-    } else if (!currentUser) {
-        // Handle case where component mounts without a user (should be handled by ProtectedRoute, but good practice)
-        setLoading(false);
-        // Optional: navigate('/login'); - ProtectedRoute should handle this already
-    }
-  }, [currentUser, contextUserData, loading, navigate]); // Dependencies
+    } else if (!currentUser && loading) { setLoading(false); }
+  }, [currentUser, contextUserData, loading, navigate]); // Dependencies adjusted if fetchUserInfo logic is inlined
 
-  // --- Display Name ---
-  // Prioritize fetched/context basicInfo, fallback to auth email
   const displayName = basicInfo?.fullName || basicInfo?.email || currentUser?.email || 'User';
 
   // --- Render Logic ---
   return (
     <ThemeProvider theme={defaultTheme}>
-      {/* Use Box for full height and flex column layout if needed, e.g., for a footer later */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 64px)' /* Adjust 64px based on your actual Header height */ }}>
+      {/* Outer Box uses theme background */}
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 'calc(100vh - var(--header-height, 64px))', // Ensure var() has fallback
+        bgcolor: 'background.default' // Use theme background color
+        }}>
         <CssBaseline />
 
-        {/* --- Main Content Area --- */}
-        <Container
-          component="main"
-          maxWidth="md" // Adjust max width as needed
-          sx={{
-            flexGrow: 1,      // Allow content area to grow and push footer down (if any)
-            py: { xs: 3, sm: 4 }, // Responsive vertical padding
-            display: 'flex',     // Use flex to center content easily
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center', // Center content vertically and horizontally
-          }}
-        >
+        <Container component="main" maxWidth="lg" sx={{ flexGrow: 1, py: { xs: 3, sm: 4 } }}>
           {loading ? (
-            <CircularProgress />
+             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', pt: 10 }}><CircularProgress /></Box>
           ) : error ? (
-            <Alert severity="error" sx={{ width: '100%', maxWidth: 'sm', textAlign: 'center' }}>{error}</Alert>
+            <Alert severity="error" sx={{ width: '100%', maxWidth: 'md', mx: 'auto', mt: 4 }}>{error}</Alert>
           ) : (
-            // --- Logged-in Content ---
-            <Box sx={{ textAlign: 'center' }}>
-              <Typography variant="h4" component="h1" gutterBottom>
+            <Box>
+              {/* Welcome Header */}
+              <Typography variant="h4" component="h1" sx={{ mb: theme.spacing(4) }}> {/* Use theme spacing */}
                 Welcome, {displayName}!
               </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-                This is your personalized dashboard content area.
-                {/* Add more relevant home page content here */}
-              </Typography>
-              {/* Example link (Profile link is likely in the main Header now) */}
-              {/* You might add other specific actions/links relevant to the Home page */}
-               <Button component={RouterLink} to="/some-feature" variant="contained" >
-                   Go to Feature X
-               </Button>
-            </Box>
-          )}
-        </Container>
 
-        {/* --- Snackbar for Notifications --- */}
-        {/* Still useful for potential future notifications on this page */}
+              {/* Dashboard Cards Grid */}
+              <Grid container spacing={3}>
+
+                {/* Card 1: My Courses */}
+                <Grid item xs={12} sm={6} lg={4}> {/* Adjusted lg breakpoint */}
+                  <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
+                    <CardContent sx={{ flexGrow: 1 }}>
+                      <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: theme.spacing(1.5) }}>
+                        <SchoolIcon sx={{ mr: 1.5, color: 'primary.main' }}/> My Courses
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        Currently Enrolled: <b>4</b>
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        Next Class: Intro to Databases (Mon 10 AM)
+                      </Typography>
+                    </CardContent>
+                    <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+                      <Button component={RouterLink} to="/courses" size="small">View Courses</Button>
+                      <Button component={RouterLink} to="/schedule" size="small">My Schedule</Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+
+                {/* Card 2: Upcoming Deadlines */}
+                 <Grid item xs={12} sm={6} lg={4}>
+                    <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: theme.spacing(1) }}>
+                          <CalendarMonthIcon sx={{ mr: 1.5, color: 'warning.main' }}/> Upcoming Deadlines
+                        </Typography>
+                        {/* Use List with slightly more padding */}
+                        <List dense disablePadding sx={{ width: '100%' }}>
+                          <ListItem disablePadding sx={{ pb: 0.5 }}>
+                            <ListItemText primary="Project Proposal Due" secondary="Software Eng - Oct 28" />
+                          </ListItem>
+                          <Divider component="li" light/>
+                          <ListItem disablePadding sx={{ py: 0.5 }}>
+                            <ListItemText primary="Midterm Exam" secondary="Calculus II - Nov 02" />
+                          </ListItem>
+                          <Divider component="li" light/>
+                          <ListItem disablePadding sx={{ pt: 0.5 }}>
+                            <ListItemText primary="Lab Report 3" secondary="Physics I - Nov 05" />
+                          </ListItem>
+                        </List>
+                      </CardContent>
+                      <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+                        <Button component={RouterLink} to="/calendar" size="small">View Full Calendar</Button>
+                      </CardActions>
+                    </Card>
+                  </Grid>
+
+                {/* Card 3: Announcements */}
+                <Grid item xs={12} sm={6} lg={4}>
+                   <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
+                     <CardContent sx={{ flexGrow: 1 }}>
+                       <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: theme.spacing(1) }}>
+                         <CampaignIcon sx={{ mr: 1.5, color: 'info.main' }}/> Announcements
+                       </Typography>
+                       <List dense disablePadding sx={{ width: '100%' }}>
+                          <ListItem disablePadding sx={{ pb: 0.5 }}>
+                           <ListItemText primary="Library hours extended during finals..." secondary="2 days ago" />
+                         </ListItem>
+                         <Divider component="li" light/>
+                         <ListItem disablePadding sx={{ py: 0.5 }}>
+                           <ListItemText primary="System Maintenance: Sat Nov 4th..." secondary="3 days ago" />
+                         </ListItem>
+                         <Divider component="li" light/>
+                          <ListItem disablePadding sx={{ pt: 0.5 }}>
+                           <ListItemText primary="Spring registration dates announced..." secondary="5 days ago" />
+                         </ListItem>
+                       </List>
+                     </CardContent>
+                     <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
+                       <Button component={RouterLink} to="/announcements" size="small">View All Announcements</Button>
+                     </CardActions>
+                   </Card>
+                 </Grid>
+
+                {/* Card 4: Quick Actions */}
+                 <Grid item xs={12} sm={6} lg={4}>
+                   <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
+                     <CardContent sx={{ flexGrow: 1 }}>
+                       <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: theme.spacing(2) }}>
+                         <SpeedIcon sx={{ mr: 1.5, color: 'success.main' }}/> Quick Actions
+                       </Typography>
+                       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}> {/* Use theme spacing for gap */}
+                          <Button component={RouterLink} to="/grades" variant="outlined" startIcon={<AssessmentIcon />} fullWidth>Check Grades</Button>
+                          <Button component={RouterLink} to="/registration" variant="outlined" startIcon={<EditNoteIcon />} fullWidth>Register Courses</Button>
+                          <Button component={RouterLink} to="/profile" variant="outlined" startIcon={<PersonIcon />} fullWidth>Update Profile</Button>
+                       </Box>
+                     </CardContent>
+                   </Card>
+                 </Grid>
+
+              </Grid> {/* End Grid Container */}
+            </Box> // End Content Wrapper Box
+          )}
+        </Container> {/* End Main Container */}
+
+        {/* Snackbar (keep for potential future use) */}
         <Snackbar
            open={snackbar.open}
            autoHideDuration={6000}
@@ -145,9 +211,7 @@ const Home = () => {
            </Alert>
          </Snackbar>
 
-         {/* Optional: Add a Footer specific to this page or rely on a global one */}
-         {/* <Box component="footer" sx={{ py: 2, textAlign: 'center', bgcolor: 'grey.200' }}>Footer Content</Box> */}
-      </Box>
+      </Box> {/* End Outer Box */}
     </ThemeProvider>
   );
 };

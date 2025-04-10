@@ -1,84 +1,171 @@
 /* src/components/Layout.css */
 
-/* Define sidenav width variable if not already defined globally (e.g., in index.css) */
-/* Make sure this value MATCHES the one used in SideNav.css */
+/* --- CSS Variables --- */
+/* Ensure these are defined, potentially globally in index.css or App.css */
 :root {
-  --sidenav-width: 250px; /* Adjust if your SideNav width is different */
+  --header-height: 60px;
+  --left-sidebar-width: 250px;
+  --right-sidebar-width: 300px;
+  --sidebar-border-color: #e0e0e0;
+  --nav-bg: #ffffff;
+  --transition-speed: 0.25s;
+  --content-padding-desktop: 24px;
+  --content-padding-mobile: 16px;
+  --overlay-bg: rgba(0, 0, 0, 0.4); /* Overlay background color */
 }
 
+/* --- Overall App Layout --- */
 .app-layout {
-    display: flex;
-    flex-direction: column; /* Header on top */
-    min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Use vh for full viewport height */
+  /* Or height: 100% if html/body are set to height: 100% */
+  overflow: hidden; /* Critical: Prevents scroll on the outermost container */
+  background-color: #f8f9fa; /* Optional: Set a base background */
 }
 
-/* Header Styling (positioning) */
-.app-layout > header { /* Assuming Header component renders a <header> tag */
-    position: sticky; /* Or fixed */
-    top: 0;
-    left: 0;
-    width: 100%;
-    z-index: 100; /* Ensure header is above overlay and potentially sidenav on mobile */
-    /* Add background, height, etc., in Header.css */
+/* --- Header --- */
+/* Targeting direct child 'header' assuming Header component renders <header> or <AppBar component="header"> */
+.app-layout > header {
+  position: sticky; /* Or fixed */
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1100; /* Ensure header is definitively above mobile sidebar/overlay */
+  height: var(--header-height);
+  flex-shrink: 0; /* Prevent header from shrinking if content overflows weirdly */
+  /* Header background/border/etc. should be styled in Header.css or via AppBar props */
 }
 
-/* Container for SideNav and Content Area */
-.main-container {
-    display: flex;
-    flex-grow: 1; /* Allows this container to fill remaining vertical space */
-    /* If header is sticky/fixed, content needs to start below it. */
-    /* SideNav and Content Area handle their own top positioning/padding */
-    position: relative; /* For mobile overlay positioning */
+/* --- Main Body Container (Holds the 3 columns below header) --- */
+.main-body-container {
+  display: flex;
+  flex-grow: 1; /* Takes up remaining vertical space */
+  /* Height is implicitly determined now by flex-grow */
+  overflow: hidden; /* Critical: Prevents scroll on this container */
+  position: relative; /* Needed if mobile overlay is positioned relative to this */
 }
 
-/* --- Content Area Styling --- */
-.content-area {
-    flex-grow: 1; /* Takes remaining horizontal space */
-    /*
-       REMOVED global padding: 20px;
-       Padding should now be handled *within* each page component
-       (e.g., using MUI Container's padding in Profile.js)
-       to avoid double padding or conflicts.
-    */
-    width: 100%; /* Full width on mobile initially */
-    transition: margin-left var(--transition-speed, 0.3s) ease-in-out; /* Use variable if defined */
-    /* Ensure content starts below the header if header is sticky/fixed */
-    /* If header height is e.g., 60px: */
-    /* padding-top: 60px; */ /* Add this if needed, depends on header/sidenav setup */
+/* --- Left Sidebar (SideNav) --- */
+/* Targets direct child assuming SideNav renders <nav class="side-nav"> or similar */
+.main-body-container > .side-nav {
+  width: var(--left-sidebar-width);
+  flex-shrink: 0; /* Prevent shrinking */
+  height: 100%;   /* Fill container height */
+  overflow-y: auto; /* Allow internal vertical scroll */
+  overflow-x: hidden; /* Hide horizontal overflow */
+  background-color: var(--nav-bg);
+  border-right: 1px solid var(--sidebar-border-color);
+  position: static; /* Desktop position handled by flexbox */
+  z-index: auto; /* Reset z-index for desktop */
+  transition: transform var(--transition-speed) ease, width var(--transition-speed) ease;
+  transform: translateX(0); /* Default desktop state */
+  /* Prevent overscroll effect (pull-down/bounce) originating from this sidebar */
+  overscroll-behavior-y: contain;
 }
 
-/* Mobile Nav Overlay */
-.mobile-nav-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 190; /* Below SideNav (z-index: 200), above content */
-    /* display: block; is default, visibility controlled by Layout.js rendering */
-    /* Add fade-in/out transition if desired */
-    opacity: 1;
-    transition: opacity var(--transition-speed, 0.3s) ease;
+/* --- Main Content Area --- */
+/* Targets direct child assuming Layout renders <Box component="main" className="main-content-area"> */
+.main-body-container > .main-content-area {
+  flex-grow: 1; /* Takes up remaining horizontal space */
+  height: 100%;   /* Fill container height */
+  overflow-y: auto; /* Allow internal vertical scroll */
+  padding: var(--content-padding-desktop);
+  /* Background should ideally be set by the page content or globally */
+  /* background-color: #f8f9fa; */
+  transition: margin-left var(--transition-speed) ease-in-out; /* Mobile animation support */
+  /* Prevent overscroll effect (pull-down/bounce) originating from main content */
+  /* NOTE: Remove this if you WANT the bounce/glow effect in the content area */
+  overscroll-behavior-y: contain;
 }
-/* Style for when overlay should be hidden (though usually just unmounted by React) */
-/* .mobile-nav-overlay:not(.open) { opacity: 0; pointer-events: none; } */
+
+/* --- Right Sidebar --- */
+/* Targets direct child assuming RightSidebar renders <aside class="right-sidebar"> or similar */
+.main-body-container > .right-sidebar {
+  width: var(--right-sidebar-width);
+  flex-shrink: 0; /* Prevent shrinking */
+  height: 100%;   /* Fill container height */
+  overflow-y: auto; /* Allow internal vertical scroll */
+  overflow-x: hidden; /* Hide horizontal overflow */
+  background-color: var(--nav-bg);
+  border-left: 1px solid var(--sidebar-border-color);
+  position: static; /* Desktop position handled by flexbox */
+  transition: transform var(--transition-speed) ease, width var(--transition-speed) ease;
+  /* Prevent overscroll effect (pull-down/bounce) originating from this sidebar */
+  overscroll-behavior-y: contain;
+}
+
+/* --- Mobile Navigation Overlay --- */
+/* Targets direct child assuming Layout renders <Box className="mobile-nav-overlay"> */
+.app-layout > .mobile-nav-overlay {
+  position: fixed; /* Fixed position to overlay everything */
+  top: var(--header-height); /* Start below the header */
+  left: 0;
+  width: 100%;
+  height: calc(100vh - var(--header-height)); /* Fill remaining viewport height */
+  background-color: var(--overlay-bg);
+  opacity: 1; /* Controlled by conditional rendering, visible when rendered */
+  transition: opacity var(--transition-speed) ease;
+  z-index: 900; /* Below mobile sidebar (950+), above main content */
+  /* display/pointer-events handled by conditional rendering */
+}
 
 
-/* --- Desktop Styles --- */
-@media (min-width: 992px) { /* Adjust breakpoint as needed */
+/* =============================================== */
+/* --- Mobile & Responsive Adjustments --- */
+/* =============================================== */
 
-    .content-area {
-      /* Make space for the fixed SideNav by adding left margin */
-      margin-left: var(--sidenav-width); /* Use the variable */
-      /* Adjust width to account for the margin */
-      width: calc(100% - var(--sidenav-width));
-      /* Reset mobile-specific padding-top if it was added */
-      /* padding-top: 0; */
-    }
+/* Tablet/Smaller Desktops - Hide Right Sidebar */
+@media (max-width: 1199px) {
+  .main-body-container > .right-sidebar {
+    display: none;
+  }
+}
 
-     /* Hide mobile overlay on desktop */
-    .mobile-nav-overlay {
-      display: none; /* Or opacity: 0; pointer-events: none; */
-    }
+
+/* Mobile Styles - Left Sidebar becomes Fixed Overlay */
+@media (max-width: 991px) { /* Adjust breakpoint as needed */
+
+  .main-content-area {
+    /* Remove potential desktop margin and ensure full width */
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: var(--content-padding-mobile); /* Use mobile padding */
+     /* overscroll-behavior-y: contain; inherited */
+  }
+
+  .main-body-container > .side-nav {
+    /* --- Mobile Positioning & Style --- */
+    position: fixed;         /* Fixed overlay */
+    top: var(--header-height); /* Below header */
+    left: 0;                 /* Align left */
+    height: calc(100vh - var(--header-height)); /* Full height below header */
+    width: var(--left-sidebar-width); /* Keep defined width */
+    border-right: 1px solid var(--sidebar-border-color); /* Keep border */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Softer shadow for mobile */
+    z-index: 950; /* Above overlay (900) and content */
+
+    /* --- Off-Screen By Default --- */
+    transform: translateX(-100%);
+
+    /* --- Smooth Transition --- */
+    transition: transform var(--transition-speed) ease;
+    /* overscroll-behavior-y: contain; inherited */
+  }
+
+  /* --- Mobile Sidebar Open State --- */
+  .main-body-container > .side-nav.open {
+    transform: translateX(0); /* Slide into view */
+  }
+
+   /* --- Ensure Overlay has Correct z-index on Mobile --- */
+   /* Selector may vary slightly if overlay isn't direct child */
+   .app-layout > .mobile-nav-overlay {
+     z-index: 900; /* Ensure it's below sidebar */
+   }
+
+   /* --- Hide Right Sidebar --- */
+   .main-body-container > .right-sidebar {
+       display: none;
+   }
 }

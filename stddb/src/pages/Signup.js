@@ -1,5 +1,6 @@
+/* eslint-disable no-unused-vars */
 // src/pages/Signup.js
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext'; // Assuming this path is correct
 
@@ -19,9 +20,10 @@ import InputAdornment from '@mui/material/InputAdornment';
 import OutlinedInput from '@mui/material/OutlinedInput';
 import InputLabel from '@mui/material/InputLabel';
 import FormControl from '@mui/material/FormControl';
+import FormHelperText from '@mui/material/FormHelperText'; // Import for validation text
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles'; // Added useTheme
 
 // MUI Icons
 import Visibility from '@mui/icons-material/Visibility';
@@ -31,179 +33,200 @@ import PersonAddIcon from '@mui/icons-material/PersonAdd';
 // Shared Component
 import Copyright from '../components/Copyright'; // Assuming this path is correct
 
-// ---> ADD THIS IMPORT <---
-import { getRandomMaterialColor } from '../utils/colors'; // Adjust path if needed
+// Utility (Make sure the path is correct for your project)
+import { getRandomMaterialColor } from '../utils/colors';
 
-const defaultTheme = createTheme();
+// Use your app's theme or create a default one
+const defaultTheme = createTheme({
+    // palette: { mode: 'light' }
+});
 
 // --- Constants ---
 const sessionOptions = ["2024-2025", "2023-2024", "2022-2023", "2021-2022", "2020-2021", "2019-2020", "2018-2019"];
 const MIN_PASSWORD_LENGTH = 6;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Signup Page Component
+ * Handles new user registration.
+ */
 const Signup = () => {
-  // --- State and Hooks ---
-  const [formData, setFormData] = useState({ fullName: '', email: '', studentId: '', session: '', password: '' });
-  const [errors, setErrors] = useState({});
-  const [submitError, setSubmitError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const theme = useTheme(); // Access theme for spacing/palette
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  // --- State ---
+  const [formData, setFormData] = useState({ fullName: '', email: '', studentId: '', session: '', password: '' });
+  const [touched, setTouched] = useState({ fullName: false, email: false, studentId: false, session: false, password: false });
+  const [submitError, setSubmitError] = useState(''); // For general submit errors (e.g., network)
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  // --- Memoized Validation ---
+  const isFullNameValid = useMemo(() => formData.fullName.trim() !== '', [formData.fullName]);
+  const isEmailValid = useMemo(() => EMAIL_REGEX.test(formData.email), [formData.email]);
+  const isStudentIdValid = useMemo(() => formData.studentId.trim() !== '', [formData.studentId]);
+  const isSessionValid = useMemo(() => !!formData.session, [formData.session]);
+  const isPasswordValid = useMemo(() => formData.password.length >= MIN_PASSWORD_LENGTH, [formData.password]);
+
+  // --- Derived Error States (based on touched + validation) ---
+  const fullNameError = touched.fullName && !isFullNameValid;
+  const emailError = touched.email && !isEmailValid;
+  const studentIdError = touched.studentId && !isStudentIdValid;
+  const sessionError = touched.session && !isSessionValid;
+  const passwordError = touched.password && !isPasswordValid;
+
+  // Check if the overall form is valid (used for enabling submit)
+  const isFormValid = isFullNameValid && isEmailValid && isStudentIdValid && isSessionValid && isPasswordValid;
+
   // --- Handlers ---
-  const handleChange = (event) => {
+  const handleChange = useCallback((event) => {
     const { name, value } = event.target;
     setFormData(prevData => ({ ...prevData, [name]: value }));
-    // Clear specific field error on change
-    if (errors[name]) setErrors(prev => { const newState = {...prev}; delete newState[name]; return newState; });
-    // Clear general submit error on any change
+    setTouched(prevTouched => ({ ...prevTouched, [name]: true })); // Mark as touched on change
     if (submitError) setSubmitError('');
-  };
+  }, [submitError]);
 
-  const handleClickShowPassword = () => setShowPassword((show) => !show);
-  const handleMouseDownPassword = (event) => event.preventDefault();
+  const handleBlur = useCallback((event) => {
+    const { name } = event.target;
+    setTouched(prevTouched => ({ ...prevTouched, [name]: true })); // Mark as touched on blur
+  }, []);
 
-  // --- Validation Memo ---
-  const validationStatus = useMemo(() => {
-    const isFullNameValid = formData.fullName.trim() !== '';
-    const isEmailFormatValid = EMAIL_REGEX.test(formData.email);
-    const isStudentIdValid = formData.studentId.trim() !== '';
-    const isSessionValid = !!formData.session; // Checks if session is selected (not empty string)
-    const isPasswordLengthValid = formData.password.length >= MIN_PASSWORD_LENGTH;
-    const allFieldsValid = isFullNameValid && isEmailFormatValid && isStudentIdValid && isSessionValid && isPasswordLengthValid;
-    return { allFieldsValid };
-  }, [formData]);
+  const handleClickShowPassword = useCallback(() => setShowPassword((show) => !show), []);
+  const handleMouseDownPassword = useCallback((event) => event.preventDefault(), []);
 
-  const isButtonDisabled = loading || !validationStatus.allFieldsValid;
-
-  // --- handleSubmit (UPDATED) ---
-  const handleSubmit = async (event) => {
+  const handleSubmit = useCallback(async (event) => {
     event.preventDefault();
-    setSubmitError('');
-    setErrors({}); // Reset errors on new submission
+    // Mark all fields as touched on submit attempt to show all errors
+    setTouched({ fullName: true, email: true, studentId: true, session: true, password: true });
+    setSubmitError(''); // Clear previous general errors
 
-    // --- Frontend Validation ---
-    let tempErrors = {};
-    let isValid = true;
-    if (!formData.fullName.trim()) { tempErrors.fullName = "Full Name is required."; isValid = false; }
-    if (!formData.email.trim()) { tempErrors.email = "Email is required."; isValid = false; }
-    else if (!EMAIL_REGEX.test(formData.email)) { tempErrors.email = "Please enter a valid email format."; isValid = false; }
-    if (!formData.studentId.trim()) { tempErrors.studentId = "Student ID is required."; isValid = false; }
-    if (!formData.session) { tempErrors.session = "Please select your session."; isValid = false; }
-    if (!formData.password) { tempErrors.password = "Password is required."; isValid = false; }
-    else if (formData.password.length < MIN_PASSWORD_LENGTH) { tempErrors.password = `Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`; isValid = false; }
-
-    if (!isValid) {
-      setErrors(tempErrors);
-      return; // Stop submission if frontend validation fails
+    if (!isFormValid) {
+      setSubmitError('Please correct the errors highlighted below.'); // Generic prompt
+      return; // Stop if form isn't valid based on computed states
     }
-    // --- End Frontend Validation ---
 
-    setLoading(true); // Start loading indicator
+    setLoading(true);
 
     try {
-      // ---> 1. Generate the random color <---
       const profileBgColor = getRandomMaterialColor();
-
-      // ---> 2. Create the additional data object INCLUDING the color <---
       const additionalData = {
-          fullName: formData.fullName.trim(), // Trim whitespace
+          fullName: formData.fullName.trim(),
           studentId: formData.studentId.trim(),
           session: formData.session,
-          profileBgColor: profileBgColor // Add the generated color
+          profileBgColor: profileBgColor
       };
 
-      console.log("Attempting signup with data:", { email: formData.email, additionalData }); // Log before calling signup
-
-      // ---> 3. Pass the enhanced additionalData to your context signup function <---
       await signup(formData.email, formData.password, additionalData);
 
       console.log("Signup successful, navigating to verify email.");
-      // Navigate after successful signup and data save in AuthContext
-      navigate('/verify-email', { state: { email: formData.email } }); // Pass email for the verify page
+      navigate('/verify-email', { state: { email: formData.email } });
 
     } catch (err) {
       console.error("Signup Failed:", err);
-      // Handle specific Firebase errors
+      let specificFieldError = false;
+      // Handle specific Firebase errors by setting a general submit error
+      // (Field-level errors are now handled by derived state + helperText)
       if (err.code === 'auth/email-already-in-use') {
-        setErrors(prev => ({ ...prev, email: 'This email address is already registered.' }));
+        setSubmitError('This email address is already registered. Please log in or use a different email.');
+         setTouched(prev => ({ ...prev, email: true })); // Ensure email field shows error state visually
+         specificFieldError = true;
       } else if (err.code === 'auth/invalid-email') {
-        setErrors(prev => ({ ...prev, email: 'The email address is not valid.' }));
+        setSubmitError('The email address format is invalid.');
+         setTouched(prev => ({ ...prev, email: true }));
+         specificFieldError = true;
       } else if (err.code === 'auth/weak-password') {
-        setErrors(prev => ({ ...prev, password: 'Password is too weak. Please choose a stronger one.' }));
+        setSubmitError('Password is too weak. Please choose a stronger one (at least 6 characters).');
+        setTouched(prev => ({ ...prev, password: true }));
+         specificFieldError = true;
       } else {
-        // Generic error for other issues
-        setSubmitError('Failed to create account. Please check your details and try again.');
+        setSubmitError('Failed to create account. An unexpected error occurred.');
       }
     } finally {
-      // ---> Use finally to ensure loading is always set to false <---
-      setLoading(false); // Stop loading indicator regardless of success or failure
+      setLoading(false);
     }
-  };
-  // --- End handleSubmit ---
+  }, [formData, isFormValid, signup, navigate]); // Add all dependencies used
 
-  // --- Render Logic (No changes needed below) ---
+  // --- Render Logic ---
   return (
     <ThemeProvider theme={defaultTheme}>
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'grey.100' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: 'background.default' }}>
         <CssBaseline />
         <Container component="main" maxWidth="xs" sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', flexGrow: 1, py: { xs: 3, sm: 4 } }}>
-          <Paper elevation={4} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', p: { xs: 3, sm: 4 }, borderRadius: 2, width: '100%' }}>
-            {/* ... rest of the JSX remains the same ... */}
+          <Paper
+             elevation={3}
+             sx={{
+                 display: 'flex', flexDirection: 'column', alignItems: 'center',
+                 p: theme.spacing(4),
+                 borderRadius: theme.shape.borderRadius * 1.5,
+                 width: '100%',
+                 transition: theme.transitions.create('box-shadow'),
+                  '&:hover': { boxShadow: theme.shadows[6] }
+             }}
+          >
             <Typography component="h1" variant="h5" sx={{ mb: 1, display: 'flex', alignItems: 'center' }}>
               <PersonAddIcon sx={{ mr: 1, color: 'primary.main' }} /> Create Your Account
             </Typography>
-            <Typography component="p" color="text.secondary" sx={{ mb: 3, textAlign: 'center' }}>
+            <Typography component="p" color="text.secondary" sx={{ mb: theme.spacing(3), textAlign: 'center' }}>
               Fill in the details below to get started.
             </Typography>
 
-            {submitError && ( <Alert severity="error" sx={{ width: '100%', mb: 2 }}> {submitError} </Alert> )}
+            {/* Display GENERAL submit errors here */}
+            {submitError && ( <Alert severity="error" variant="outlined" sx={{ width: '100%', mb: 2 }}> {submitError} </Alert> )}
 
             <Box component="form" noValidate onSubmit={handleSubmit} sx={{ width: '100%', mt: 1 }}>
 
               {/* Full Name */}
               <TextField
                 margin="normal" autoComplete="name" name="fullName" required fullWidth id="fullName" label="Full Name" autoFocus
-                value={formData.fullName} onChange={handleChange} disabled={loading}
-                error={!!errors.fullName} helperText={errors.fullName} // Display helper text for error
+                value={formData.fullName} onChange={handleChange} onBlur={handleBlur} disabled={loading}
+                error={fullNameError} // Use derived error state
+                helperText={fullNameError ? "Full Name is required." : " "} // Conditional helper text
+                aria-invalid={fullNameError}
               />
               {/* Email Address */}
               <TextField
                 margin="normal" required fullWidth id="email" label="Email Address" name="email" type="email" autoComplete="email"
-                value={formData.email} onChange={handleChange} disabled={loading}
-                error={!!errors.email} helperText={errors.email} // Display helper text
+                value={formData.email} onChange={handleChange} onBlur={handleBlur} disabled={loading}
+                error={emailError}
+                helperText={emailError ? "Please enter a valid email format." : " "}
+                aria-invalid={emailError}
               />
 
-              {/* Student ID and Session Flex Container */}
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mt: 2, mb: 1 }} >
+              {/* Student ID and Session Row */}
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: theme.spacing(2), mt: 2, mb: 1 }} >
                  {/* Student ID */}
                  <TextField
                     required fullWidth id="studentId" label="Student ID" name="studentId" autoComplete="off"
-                    value={formData.studentId} onChange={handleChange} disabled={loading}
-                    error={!!errors.studentId} helperText={errors.studentId} // Display helper text
+                    value={formData.studentId} onChange={handleChange} onBlur={handleBlur} disabled={loading}
+                    error={studentIdError}
+                    helperText={studentIdError ? "Student ID is required." : " "}
+                    aria-invalid={studentIdError}
                     sx={{ flex: { sm: 1 } }}
                  />
                  {/* Session Dropdown */}
-                 <FormControl fullWidth required error={!!errors.session} disabled={loading} sx={{ flex: { sm: 1 } }} >
+                 <FormControl fullWidth required error={sessionError} disabled={loading} sx={{ flex: { sm: 1 } }} >
                    <InputLabel id="session-select-label">Session</InputLabel>
                    <Select
                       labelId="session-select-label" id="session" name="session" value={formData.session}
-                      label="Session" onChange={handleChange}
+                      label="Session" onChange={handleChange} onBlur={handleBlur} // Add onBlur
                    >
+                     {/* Add a placeholder/disabled option */}
+                     <MenuItem value="" disabled><em>Select Session</em></MenuItem>
                      {sessionOptions.map((option) => ( <MenuItem key={option} value={option}> {option} </MenuItem> ))}
                    </Select>
-                   {/* Display helper text for session error below the FormControl */}
-                   {errors.session && <Typography variant="caption" color="error" sx={{ pl: '14px', pt: '3px' }}>{errors.session}</Typography>}
+                   <FormHelperText error={sessionError}>
+                       {sessionError ? "Please select your session." : " "}
+                   </FormHelperText>
                  </FormControl>
               </Box>
 
               {/* Password */}
-              <FormControl margin="normal" variant="outlined" fullWidth required disabled={loading} error={!!errors.password} >
+              <FormControl margin="normal" variant="outlined" fullWidth required disabled={loading} error={passwordError} >
                 <InputLabel htmlFor="password">Password</InputLabel>
                 <OutlinedInput
                   id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password}
-                  onChange={handleChange} autoComplete="new-password" label="Password"
+                  onChange={handleChange} onBlur={handleBlur} autoComplete="new-password" label="Password"
                   endAdornment={
                     <InputAdornment position="end">
                       <IconButton aria-label="toggle password visibility" onClick={handleClickShowPassword} onMouseDown={handleMouseDownPassword} edge="end" disabled={loading}>
@@ -211,25 +234,27 @@ const Signup = () => {
                       </IconButton>
                     </InputAdornment>
                   }
+                  aria-invalid={passwordError}
                 />
-                 {/* Display helper text for password error below the FormControl */}
-                 {errors.password && <Typography variant="caption" color="error" sx={{ pl: '14px', pt: '3px' }}>{errors.password}</Typography>}
+                <FormHelperText error={passwordError}>
+                    {passwordError ? `Password must be at least ${MIN_PASSWORD_LENGTH} characters.` : " "}
+                </FormHelperText>
               </FormControl>
 
               {/* Submit Button */}
               <LoadingButton
                 type="submit" fullWidth variant="contained" loading={loading}
-                disabled={isButtonDisabled} // Use calculated disabled state
-                sx={{ mt: 3, mb: 2, py: 1.2 }} size="large"
+                disabled={loading || !isFormValid} // Disable if loading OR form is invalid based on computed value
+                sx={{ mt: theme.spacing(3), mb: theme.spacing(2), py: 1.2 }} size="large"
               >
                 Sign Up
               </LoadingButton>
 
               {/* Link to Login */}
-              <Grid container justifyContent="flex-end">
+              <Grid container justifyContent="center">
                 <Grid item>
                   <Typography variant="body2" component="span" sx={{ mr: 0.5 }}> Already have an account? </Typography>
-                  <Link component={RouterLink} to="/login" variant="body2"> Sign in </Link>
+                  <Link component={RouterLink} to="/login" variant="body2" fontWeight="medium"> Sign in </Link>
                 </Grid>
               </Grid>
             </Box> {/* End Form */}

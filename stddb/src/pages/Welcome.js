@@ -1,83 +1,110 @@
-/* eslint-disable no-unused-vars */
+// src/pages/Welcome.js
 import React from 'react';
 import { Link as RouterLink } from 'react-router-dom';
+
+// MUI Components
+import Box from '@mui/material/Box';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import SchoolIcon from '@mui/icons-material/School'; // Optional: Added an icon for visual appeal
+import CssBaseline from '@mui/material/CssBaseline'; // Ensure baseline styles
+import { ThemeProvider, createTheme, useTheme } from '@mui/material/styles'; // Import ThemeProvider & useTheme
 
+// MUI Icons
+import SchoolIcon from '@mui/icons-material/School';
+
+// Use your app's theme or create a default one
+const defaultTheme = createTheme({
+    // palette: { mode: 'light' }
+});
+
+/**
+ * Welcome Page Component
+ * The initial landing page for unauthenticated users, prompting login or signup.
+ */
 function Welcome() {
+  const theme = useTheme(); // Access theme for spacing/palette
+
   return (
-    // Use Container to constrain max width, but allow it to be slightly wider ('sm')
-    // Add sx for vertical centering and padding
-    <Container
-      component="main"
-      maxWidth="sm" // Changed from 'xs' to 'sm' for better spacing on larger screens
-      sx={{
-        display: 'flex', // Enable flexbox
-        flexDirection: 'column', // Stack children vertically
-        justifyContent: 'center', // Center vertically
-        alignItems: 'center', // Center horizontally
-        minHeight: 'calc(100vh - 64px)', // Take up viewport height (adjust 64px if you have an AppBar of different height, or use '90vh' for approx)
-        textAlign: 'center', // Center text for all children by default
-        py: 4, // Add some vertical padding
-      }}
-    >
-      {/* Optional: Icon for visual enhancement */}
-      <SchoolIcon sx={{ fontSize: 60, mb: 2, color: 'primary.main' }} />
-
-      {/* Main Heading - Increased size slightly */}
-      <Typography
-        component="h1"
-        variant="h3" // Changed from h4 to h3 for more impact
-        gutterBottom // Adds bottom margin
-        fontWeight="medium" // Slightly bolder
+    <ThemeProvider theme={defaultTheme}>
+      {/* Apply CssBaseline for consistent base styling */}
+      <CssBaseline />
+      {/* Use Box for full height control if needed, Container handles centering */}
+      <Box
+        sx={{
+          display: 'flex', // Use Flexbox on the outer box too
+          minHeight: '100vh', // Ensure it takes at least full viewport height
+          alignItems: 'center', // Center the container vertically
+          justifyContent: 'center', // Center the container horizontally
+          bgcolor: 'background.default', // Use theme background
+        }}
       >
-        Welcome to stddb!
-      </Typography>
-
-      {/* Subheading - Adjusted variant for better hierarchy */}
-      <Typography
-        variant="h6" // Kept h6, but could use subtitle1
-        color="text.secondary" // Good for secondary text
-        paragraph // Adds bottom margin
-        sx={{ mb: 4 }} // Increase bottom margin before buttons
-      >
-        Your simple student database management system.
-      </Typography>
-
-      {/* Button Stack - Made responsive */}
-      <Stack
-        // Direction changes based on screen size: 'column' on extra-small, 'row' otherwise
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2} // Spacing between buttons (works for row and column)
-        justifyContent="center" // Center buttons horizontally when in a row
-        sx={{ width: { xs: '100%', sm: 'auto' } }} // Stack takes full width on xs, auto on sm+
-      >
-        <Button
-          component={RouterLink}
-          to="/login"
-          variant="contained" // Primary action
-          color="primary"
-          size="large" // Slightly larger buttons
-          sx={{ width: { xs: '100%', sm: 'auto' } }} // Button takes full width on xs
+        <Container
+          component="main"
+          maxWidth="sm"
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center', // Center items inside container
+            textAlign: 'center',
+            py: theme.spacing(4), // Use theme spacing for vertical padding
+          }}
         >
-          Login
-        </Button>
-        <Button
-          component={RouterLink}
-          to="/signup"
-          variant="outlined" // Secondary action
-          color="primary"
-          size="large" // Slightly larger buttons
-          sx={{ width: { xs: '100%', sm: 'auto' } }} // Button takes full width on xs
-        >
-          Sign Up
-        </Button>
-      </Stack>
-    </Container>
+          {/* Icon */}
+          <SchoolIcon sx={{ fontSize: 64, mb: theme.spacing(2), color: 'primary.main' }} />
+
+          {/* Main Heading */}
+          <Typography
+            component="h1"
+            variant="h3" // Keep h3 for impact
+            gutterBottom
+            sx={{ fontWeight: 'medium' }} // Use sx for fontWeight shorthand
+          >
+            Welcome to stdDB!
+          </Typography>
+
+          {/* Subheading */}
+          <Typography
+            variant="subtitle1" // Use subtitle1 for a slightly smaller, standard subheading
+            color="text.secondary"
+            paragraph // Adds bottom margin automatically
+            sx={{ mb: theme.spacing(4) }} // Use theme spacing for bottom margin
+          >
+            Your simple student database management system.
+          </Typography>
+
+          {/* Button Stack */}
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={theme.spacing(2)} // Use theme spacing
+            justifyContent="center"
+            sx={{ width: { xs: '100%', sm: 'auto' } }}
+          >
+            <Button
+              component={RouterLink}
+              to="/login"
+              variant="contained"
+              color="primary"
+              size="large"
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
+              Login
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/signup"
+              variant="outlined"
+              color="primary"
+              size="large"
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
+              Sign Up
+            </Button>
+          </Stack>
+        </Container>
+      </Box>
+    </ThemeProvider>
   );
 }
 

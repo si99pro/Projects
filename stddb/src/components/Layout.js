@@ -1,65 +1,69 @@
 // src/components/Layout.js
-import React, { useState, useCallback } from 'react'; // Import useCallback
+import React, { useState, useCallback } from 'react';
 import Header from './Header';
-import SideNav from './SideNav';
+import LeftSidebar from './SideNav'; // Renamed import for clarity
+import RightSidebar from './RightSidebar';
+import Box from '@mui/material/Box'; // Using MUI Box for layout
+
 import './Layout.css';
 
+/**
+ * Main application layout component.
+ * Orchestrates the Header, Left Sidebar, Right Sidebar, and main content area.
+ * Manages the state for the mobile navigation toggle.
+ *
+ * @param {object} props - Component props.
+ * @param {React.ReactNode} props.children - The main content to be rendered within the layout.
+ */
 const Layout = ({ children }) => {
-  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  // State for the LEFT sidebar's mobile visibility
+  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
 
-  // Memoize toggleMobileNav using useCallback.
-  // It doesn't depend on any external state in this simple form,
-  // but using useCallback is consistent.
-  const toggleMobileNav = useCallback(() => {
-    // Functional update form is slightly safer for state toggles
-    setIsMobileNavOpen(prevIsOpen => !prevIsOpen);
-  }, []); // No dependencies, function reference will never change
+  // Memoized callback to toggle the left sidebar
+  const toggleLeftSidebar = useCallback(() => {
+    setIsLeftSidebarOpen(prevIsOpen => !prevIsOpen);
+  }, []); // Empty dependency array as setter handles previous state
 
-  // Memoize closeMobileNav using useCallback.
-  // This function *does* depend on isMobileNavOpen to decide if it needs to act.
-  // However, the function reference itself only needs to change if setIsMobileNavOpen changes (which it never does).
-  // We'll include isMobileNavOpen as a dependency to be technically correct if the logic *inside* depended on its value,
-  // but for setting state, it's often okay to leave the dependency array empty if using the functional update form.
-  // Let's use the functional update form here too for safety and keep the dependency array empty.
-  const closeMobileNav = useCallback(() => {
-    // Functional update form ensures we use the latest state
-    setIsMobileNavOpen(prevIsOpen => {
-      // Only update state if it was previously true
-      if (prevIsOpen) {
-        return false;
-      }
-      // Otherwise, return the current state (no change)
-      return prevIsOpen;
-    });
-  }, []); // No dependencies needed when using functional update form correctly
-
-  /*
-  // Alternative closeMobileNav with dependency (less common for simple setters):
-  const closeMobileNav = useCallback(() => {
-    if (isMobileNavOpen) {
-      setIsMobileNavOpen(false);
-    }
-  }, [isMobileNavOpen]); // Dependency: function changes if isMobileNavOpen changes
-  */
+  // Memoized callback to explicitly close the left sidebar (e.g., on nav item click)
+  const closeLeftSidebar = useCallback(() => {
+    setIsLeftSidebarOpen(prevIsOpen => (prevIsOpen ? false : prevIsOpen));
+    // Alternative: setIsLeftSidebarOpen(false); // Simpler if always closing
+  }, []); // Empty dependency array
 
 
   return (
-    <div className="app-layout">
-      {/* Pass the memoized toggle function */}
-      <Header onToggleMobileNav={toggleMobileNav} />
+    // Use Box for the root layout element
+    <Box component="div" className="app-layout">
+      <Header onToggleMobileNav={toggleLeftSidebar} />
 
-      <div className="main-container">
-        {/* Pass the memoized close function */}
-        <SideNav isOpen={isMobileNavOpen} onNavItemClicked={closeMobileNav} />
+      {/* Use Box for the main body container */}
+      <Box component="div" className="main-body-container">
 
-        <main className="content-area">
+        {/* Left Sidebar (using the SideNav component) */}
+        <LeftSidebar isOpen={isLeftSidebarOpen} onNavItemClicked={closeLeftSidebar} />
+
+        {/* Main Content Area */}
+        {/* Using 'main' semantic tag, wrapped in Box for consistency if needed */}
+        <Box component="main" className="main-content-area">
           {children}
-        </main>
-      </div>
+        </Box>
 
-      {/* Overlay click uses the same memoized close function */}
-      {isMobileNavOpen && <div className="mobile-nav-overlay" onClick={closeMobileNav}></div>}
-    </div>
+        {/* Right Sidebar */}
+        <RightSidebar />
+
+      </Box> {/* End main-body-container */}
+
+      {/* Mobile Navigation Overlay */}
+      {/* Conditionally rendered for performance and simplicity */}
+      {isLeftSidebarOpen && (
+        <Box
+          component="div"
+          className="mobile-nav-overlay"
+          onClick={closeLeftSidebar} // Close sidebar when overlay is clicked
+          aria-hidden="true" // Hide from accessibility tree as it's decorative/functional
+        />
+      )}
+    </Box> // End app-layout
   );
 };
 

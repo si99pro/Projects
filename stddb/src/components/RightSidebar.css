@@ -1,0 +1,113 @@
+/* src/components/RightSidebar.css */
+
+/* --- Variables (sync with Layout.css if needed) --- */
+:root {
+  --right-sidebar-width: 300px; /* Default expanded width */
+  --right-sidebar-collapsed-width: 50px; /* Width when collapsed */
+  --transition-speed: 0.25s;
+  --right-sidebar-bg: #ffffff; /* Background */
+}
+
+/* --- Base Sidebar Styling --- */
+.right-sidebar {
+  height: 100%; /* Inherit height from Layout.css */
+  width: var(--right-sidebar-width); /* Default width */
+  overflow: hidden; /* Prevent content spill during transition */
+  display: flex;
+  flex-direction: column; /* Stack header, content, input */
+  background-color: var(--right-sidebar-bg);
+  transition: width var(--transition-speed) ease-in-out; /* Animate width */
+  flex-shrink: 0; /* Prevent shrinking by flex container */
+  /* overscroll-behavior: contain; /* Inherited from Layout.css is fine */
+}
+
+/* --- Collapsed State Styling --- */
+.right-sidebar.collapsed {
+  width: var(--right-sidebar-collapsed-width);
+}
+
+/* --- Sidebar Header --- */
+.sidebar-header {
+  display: flex;
+  justify-content: space-between; /* Push title and button apart */
+  align-items: center;
+  padding: 8px 8px 8px 16px; /* Adjust padding */
+  height: var(--header-height); /* Match app header height maybe? Or use fixed value like 48px */
+  box-sizing: border-box;
+  flex-shrink: 0; /* Prevent header from shrinking */
+}
+
+/* --- Sidebar Title (only visible when expanded) --- */
+.sidebar-title {
+  white-space: nowrap; /* Prevent wrapping */
+  overflow: hidden; /* Hide text when collapsing */
+  margin-right: 8px; /* Space before button */
+  font-weight: 500;
+  color: var(--header-text-color, #333); /* Use app text color */
+}
+/* Hide title smoothly when collapsing */
+.right-sidebar.collapsed .sidebar-title {
+   opacity: 0;
+   width: 0; /* Helps prevent layout shifts */
+   transition: opacity 0.1s ease-out, width 0.1s ease-out;
+}
+
+/* --- Wrapper for Content (Chat Body + Input) --- */
+/* This helps manage the flex layout and scrolling */
+.sidebar-content-wrapper {
+    flex-grow: 1; /* Takes up remaining space */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden; /* Hide overflow */
+    /* Fade in/out content on collapse/expand */
+    opacity: 1;
+    transition: opacity 0.1s ease-in var(--transition-speed); /* Delay fade-in */
+}
+.right-sidebar.collapsed .sidebar-content-wrapper {
+    opacity: 0;
+    pointer-events: none; /* Prevent interaction when collapsed */
+    transition: opacity 0.1s ease-out; /* Fade out quickly */
+}
+
+/* --- Chat Body (Scrollable Message List) --- */
+.chat-body {
+    flex-grow: 1; /* Takes up available space above input */
+    overflow-y: auto; /* Enable scrolling */
+    overflow-x: hidden;
+    padding: 0 8px 0 16px; /* Padding for list items */
+     overscroll-behavior-y: contain; /* Prevent pull-down */
+}
+
+/* Individual Chat Message */
+.chat-message .MuiListItemText-secondary {
+    /* Allow text wrapping for messages */
+    white-space: normal;
+}
+.chat-message .MuiListItemText-primary {
+    /* Style user name */
+    margin-bottom: 2px; /* Small space below name */
+}
+
+/* --- Chat Input Area --- */
+.chat-input-area {
+    flex-shrink: 0; /* Prevent input area from shrinking */
+    /* Background color can be slightly different */
+    /* background-color: #f9f9f9; */
+}
+/* Remove default TextField padding/margin issues */
+.chat-input-area .MuiTextField-root {
+    padding: 8px; /* Add padding inside the wrapper box instead */
+}
+.chat-input-area .MuiOutlinedInput-root {
+    border-radius: 16px; /* Rounded input */
+}
+.chat-input-area fieldset {
+   border: none; /* Remove default border */
+}
+.chat-input-area .MuiOutlinedInput-input {
+    padding: 8px 14px; /* Adjust input padding */
+}
+
+/* --- Responsive Adjustments (if needed) --- */
+/* The layout is already handled by Layout.css hiding this whole component */
+/* Add specific mobile styles for the chat itself if necessary */
