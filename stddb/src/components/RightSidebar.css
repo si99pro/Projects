@@ -1,113 +1,304 @@
 /* src/components/RightSidebar.css */
 
-/* --- Variables (sync with Layout.css if needed) --- */
+/* --- CSS Variables --- */
 :root {
-  --right-sidebar-width: 300px; /* Default expanded width */
-  --right-sidebar-collapsed-width: 50px; /* Width when collapsed */
+  /* Sizing & Positioning */
+  --right-sidebar-width: 320px;
+  --right-sidebar-collapsed-size: 56px; /* Standard FAB size */
+  --fab-position-bottom: 24px;
+  --fab-position-right: 24px;
+  --header-height: 48px;
+  --input-area-padding: 8px 12px; /* Vertical Horizontal */
+  --avatar-size: 32px; /* Corresponds to sx prop */
+
+  /* Colors & Appearance */
+  /* Using MUI CSS variables where possible for theme consistency */
+  --right-sidebar-bg: var(--mui-palette-background-paper, #ffffff);
+  --sidebar-border-color: var(--mui-palette-divider, rgba(0, 0, 0, 0.12));
+  --fab-bg-color: var(--mui-palette-primary-main, #1976d2);
+  --fab-hover-bg-color: var(--mui-palette-primary-dark, #1565c0);
+  --fab-icon-color: var(--mui-palette-primary-contrastText, #ffffff);
+  --header-text-color: var(--mui-palette-text-primary, rgba(0, 0, 0, 0.87));
+  --header-icon-color: var(--mui-palette-action-active, rgba(0, 0, 0, 0.54));
+  --message-action-color: var(--mui-palette-action-active, rgba(0, 0, 0, 0.54));
+  --message-hover-bg: var(--mui-palette-action-hover, rgba(0, 0, 0, 0.04));
+  --input-bg-color: rgba(0, 0, 0, 0.05); /* Default light mode input bg */
+
+  /* Effects */
   --transition-speed: 0.25s;
-  --right-sidebar-bg: #ffffff; /* Background */
+  --fab-shadow: 0 3px 6px rgba(0,0,0,0.16), 0 3px 6px rgba(0,0,0,0.23);
+  --fab-hover-shadow: 0 6px 12px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.25);
+  --panel-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
 }
 
-/* --- Base Sidebar Styling --- */
+/* Dark Mode Specific Variable Overrides */
+body[data-mui-color-scheme="dark"] {
+    --input-bg-color: rgba(255, 255, 255, 0.08); /* Dark mode input bg */
+    /* MUI variables (--mui-palette-...) should adapt automatically */
+}
+
+
+/* --- Base Sidebar, Expanded, Collapsed, FAB Button --- */
+/* Using classes applied in the component */
 .right-sidebar {
-  height: 100%; /* Inherit height from Layout.css */
-  width: var(--right-sidebar-width); /* Default width */
-  overflow: hidden; /* Prevent content spill during transition */
+  overflow: hidden;
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column; /* Stack header, content, input */
+  flex-direction: column;
+  position: relative;
+  transition: width var(--transition-speed) ease-in-out,
+              height var(--transition-speed) ease-in-out,
+              border-radius var(--transition-speed) ease-in-out,
+              box-shadow var(--transition-speed) ease-in-out,
+              background-color var(--transition-speed) ease-in-out,
+              bottom var(--transition-speed) ease-in-out,
+              right var(--transition-speed) ease-in-out,
+              opacity var(--transition-speed) ease-in-out;
+  background-color: transparent; /* Start transparent for transition */
+  opacity: 1;
+  z-index: 1000; /* Ensure it's above some content */
+}
+
+.right-sidebar.expanded {
+  position: static; /* Take space in layout */
+  width: var(--right-sidebar-width);
+  height: 100%;
   background-color: var(--right-sidebar-bg);
-  transition: width var(--transition-speed) ease-in-out; /* Animate width */
-  flex-shrink: 0; /* Prevent shrinking by flex container */
-  /* overscroll-behavior: contain; /* Inherited from Layout.css is fine */
+  border-left: 1px solid var(--sidebar-border-color);
+  border-radius: 0;
+  box-shadow: var(--panel-shadow);
+  cursor: default;
+  z-index: auto; /* Reset z-index */
 }
 
-/* --- Collapsed State Styling --- */
 .right-sidebar.collapsed {
-  width: var(--right-sidebar-collapsed-width);
+  position: fixed; /* Float */
+  width: var(--right-sidebar-collapsed-size);
+  height: var(--right-sidebar-collapsed-size);
+  justify-content: center;
+  align-items: center;
+  background-color: var(--fab-bg-color);
+  border: none;
+  border-radius: 50%; /* Circular FAB */
+  box-shadow: var(--fab-shadow);
+  bottom: var(--fab-position-bottom);
+  right: var(--fab-position-right);
+  z-index: 1250; /* High z-index for FAB */
+  cursor: pointer;
+  transform: scale(1);
+  transition: width var(--transition-speed) ease-in-out,
+              height var(--transition-speed) ease-in-out,
+              border-radius var(--transition-speed) ease-in-out,
+              box-shadow var(--transition-speed) ease-in-out,
+              background-color var(--transition-speed) ease-in-out,
+              bottom var(--transition-speed) ease-in-out,
+              right var(--transition-speed) ease-in-out,
+              transform 0.15s ease-out; /* Faster transform */
 }
 
-/* --- Sidebar Header --- */
+.right-sidebar.collapsed:hover {
+  background-color: var(--fab-hover-bg-color);
+  box-shadow: var(--fab-hover-shadow);
+  transform: scale(1.05); /* Slight grow on hover */
+}
+
+/* Handle hiding via sx prop */
+.right-sidebar[style*="display: none"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-toggle-button.MuiIconButton-root {
+  padding: 0; /* Remove default padding */
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: var(--fab-icon-color);
+  background-color: transparent; /* Important for hover effect */
+  border-radius: 50%; /* Match container */
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-toggle-button.MuiIconButton-root:hover {
+  /* Subtle inner hover effect on FAB */
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.right-sidebar.collapsed .sidebar-toggle-button.MuiIconButton-root .MuiSvgIcon-root {
+  font-size: 1.6rem; /* Adjust icon size in FAB */
+}
+
+
+/* --- Internal Content Container, Header, Divider --- */
+.sidebar-content-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Important */
+  height: 100%;
+}
+
 .sidebar-header {
   display: flex;
-  justify-content: space-between; /* Push title and button apart */
   align-items: center;
-  padding: 8px 8px 8px 16px; /* Adjust padding */
-  height: var(--header-height); /* Match app header height maybe? Or use fixed value like 48px */
+  padding: 0 8px 0 16px; /* Left padding more */
+  height: var(--header-height);
   box-sizing: border-box;
-  flex-shrink: 0; /* Prevent header from shrinking */
+  flex-shrink: 0;
+  overflow: hidden;
 }
 
-/* --- Sidebar Title (only visible when expanded) --- */
 .sidebar-title {
-  white-space: nowrap; /* Prevent wrapping */
-  overflow: hidden; /* Hide text when collapsing */
-  margin-right: 8px; /* Space before button */
-  font-weight: 500;
-  color: var(--header-text-color, #333); /* Use app text color */
-}
-/* Hide title smoothly when collapsing */
-.right-sidebar.collapsed .sidebar-title {
-   opacity: 0;
-   width: 0; /* Helps prevent layout shifts */
-   transition: opacity 0.1s ease-out, width 0.1s ease-out;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500; /* Or adjust as needed */
+  color: var(--header-text-color);
+  flex-grow: 1;
+  margin-right: 8px; /* Space before close button */
 }
 
-/* --- Wrapper for Content (Chat Body + Input) --- */
-/* This helps manage the flex layout and scrolling */
+.sidebar-internal-close-button.MuiIconButton-root {
+  color: var(--header-icon-color);
+  flex-shrink: 0;
+}
+
+.sidebar-internal-close-button.MuiIconButton-root:hover {
+  background-color: var(--message-hover-bg); /* Reuse hover color */
+}
+
+.sidebar-divider {
+  flex-shrink: 0;
+  border-color: var(--sidebar-border-color); /* Use variable */
+}
+
+
+/* --- Scrollable Content Wrapper, Chat Body --- */
 .sidebar-content-wrapper {
-    flex-grow: 1; /* Takes up remaining space */
-    display: flex;
-    flex-direction: column;
-    overflow: hidden; /* Hide overflow */
-    /* Fade in/out content on collapse/expand */
-    opacity: 1;
-    transition: opacity 0.1s ease-in var(--transition-speed); /* Delay fade-in */
-}
-.right-sidebar.collapsed .sidebar-content-wrapper {
-    opacity: 0;
-    pointer-events: none; /* Prevent interaction when collapsed */
-    transition: opacity 0.1s ease-out; /* Fade out quickly */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Container manages overflow */
+  background-color: var(--right-sidebar-bg); /* Ensure wrapper has bg */
 }
 
-/* --- Chat Body (Scrollable Message List) --- */
 .chat-body {
-    flex-grow: 1; /* Takes up available space above input */
-    overflow-y: auto; /* Enable scrolling */
-    overflow-x: hidden;
-    padding: 0 8px 0 16px; /* Padding for list items */
-     overscroll-behavior-y: contain; /* Prevent pull-down */
+  flex-grow: 1; /* Take available space */
+  overflow-y: auto; /* Enable vertical scroll */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  padding: 0; /* List handles padding */
+  overscroll-behavior-y: contain; /* Prevent scroll chaining */
+  padding-bottom: 8px; /* Space at the bottom */
 }
 
-/* Individual Chat Message */
-.chat-message .MuiListItemText-secondary {
-    /* Allow text wrapping for messages */
-    white-space: normal;
+/* Custom Scrollbar */
+.chat-body::-webkit-scrollbar {
+  width: 6px;
 }
-.chat-message .MuiListItemText-primary {
-    /* Style user name */
-    margin-bottom: 2px; /* Small space below name */
+
+.chat-body::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2); /* Subtle scrollbar */
+  border-radius: 3px;
 }
+
+.chat-body::-webkit-scrollbar-track {
+  background: transparent; /* Track is invisible */
+}
+
+
+/* --- NEW: Message Row Styling --- */
+.chat-message-row {
+    /* Base styling applied via sx */
+    /* Class is primarily used as hover target for actions */
+    transition: background-color 0.15s ease-in-out; /* Smooth background transition on hover */
+}
+
+/* --- REMOVED: Message Bubble Styling --- */
+/* .message-bubble { ... } */
+/* .message-bubble-user { ... } */
+/* .message-bubble-other { ... } */
+
+
+/* --- NEW: Minimal Reply Context --- */
+.reply-context-minimal {
+  /* Styles primarily handled via sx */
+  border-left: 3px solid var(--mui-palette-divider, rgba(0, 0, 0, 0.12));
+  padding-left: 6px; /* Space after border */
+  margin-left: 2px; /* Small indent */
+  opacity: 0.9; /* Slightly less prominent */
+}
+
+/* --- REMOVED: Reaction Chip Styling (was inside Bubble) --- */
+/* .message-bubble .MuiChip-root { ... } */
+
+/* --- Message Action Icons --- */
+
+/* Hover Action Container (Desktop Only) */
+/* Styling primarily handled via sx: position, opacity, pointerEvents, bg, shadow, etc. */
+/* This class is the target for the row hover */
+.message-actions-on-hover .MuiIconButton-root {
+    /* Base style for icons inside hover bar */
+    color: var(--message-action-color); /* Use theme action color */
+}
+.message-actions-on-hover .MuiIconButton-root:hover {
+    background-color: var(--message-hover-bg); /* Use theme hover color */
+}
+
+/* Mobile More Options Button - Position handled via sx */
+
 
 /* --- Chat Input Area --- */
 .chat-input-area {
-    flex-shrink: 0; /* Prevent input area from shrinking */
-    /* Background color can be slightly different */
-    /* background-color: #f9f9f9; */
-}
-/* Remove default TextField padding/margin issues */
-.chat-input-area .MuiTextField-root {
-    padding: 8px; /* Add padding inside the wrapper box instead */
-}
-.chat-input-area .MuiOutlinedInput-root {
-    border-radius: 16px; /* Rounded input */
-}
-.chat-input-area fieldset {
-   border: none; /* Remove default border */
-}
-.chat-input-area .MuiOutlinedInput-input {
-    padding: 8px 14px; /* Adjust input padding */
+  flex-shrink: 0; /* Prevent shrinking */
+  border-top: 1px solid var(--sidebar-border-color);
+  padding: var(--input-area-padding);
+  background-color: var(--right-sidebar-bg); /* Match sidebar bg */
 }
 
-/* --- Responsive Adjustments (if needed) --- */
-/* The layout is already handled by Layout.css hiding this whole component */
-/* Add specific mobile styles for the chat itself if necessary */
+/* Input Field Specifics (mainly via sx in component) */
+
+
+/* Adjust padding inside the input field itself */
+.chat-input-area .MuiTextField-root .MuiOutlinedInput-input {
+  padding: 8.5px 14px; /* Default MUI small padding */
+  line-height: 1.43; /* Match Typography */
+}
+
+/* Adjust padding for multiline input specifically */
+.chat-input-area .MuiTextField-root .MuiInputBase-inputMultiline {
+  padding: 8.5px 0px 8.5px 14px; /* Remove right padding handled by root */
+}
+
+
+/* --- MOBILE Specific Overrides --- */
+/* Using MUI breakpoint helper 'md' (<= 959.95px) */
+@media (max-width: 959.95px) {
+    .chat-popover-paper {
+        /* Style the mobile popover paper */
+        border: 1px solid var(--sidebar-border-color);
+        border-radius: 8px; /* Slightly rounded */
+    }
+    .chat-popover-paper .sidebar-header {
+        /* Adjust header padding if needed */
+        padding-right: 8px;
+    }
+    .chat-popover-paper .chat-input-area {
+        /* Adjust input padding for smaller screen */
+        padding: 6px 8px;
+    }
+
+    /* Hover actions are explicitly hidden via sx in the component for mobile */
+    /* .message-actions-on-hover { display: none !important; } */
+
+    /* Ensure message row has enough padding on right for mobile dots */
+    .chat-message-row .MuiBox-root:has(> .MuiTypography-root) { /* Target the content box */
+       padding-right: 30px; /* Space for absolutely positioned dots */
+    }
+}
+
+/* Optional: Refine dark mode scrollbar */
+body[data-mui-color-scheme="dark"] .chat-body::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}

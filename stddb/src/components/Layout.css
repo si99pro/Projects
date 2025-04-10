@@ -5,62 +5,61 @@
 :root {
   --header-height: 60px;
   --left-sidebar-width: 250px;
-  --right-sidebar-width: 300px;
+  /* --right-sidebar-width is now primarily used by RightSidebar.css */
+  /* --right-sidebar-width: 300px; */
   --sidebar-border-color: #e0e0e0;
   --nav-bg: #ffffff;
   --transition-speed: 0.25s;
-  --content-padding-desktop: 24px;
+  /* --- MODIFIED VALUE --- */
+  --content-padding-desktop: 0px; /* Set desktop padding to 0 */
+  /* --- END MODIFICATION --- */
   --content-padding-mobile: 16px;
-  --overlay-bg: rgba(0, 0, 0, 0.4); /* Overlay background color */
+  --overlay-bg: rgba(0, 0, 0, 0.4);
 }
 
 /* --- Overall App Layout --- */
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Use vh for full viewport height */
-  /* Or height: 100% if html/body are set to height: 100% */
-  overflow: hidden; /* Critical: Prevents scroll on the outermost container */
-  background-color: #f8f9fa; /* Optional: Set a base background */
+  height: 100vh;
+  overflow: hidden;
+  background-color: #f8f9fa; /* Base background */
 }
 
 /* --- Header --- */
-/* Targeting direct child 'header' assuming Header component renders <header> or <AppBar component="header"> */
 .app-layout > header {
-  position: sticky; /* Or fixed */
+  position: sticky;
   top: 0;
   left: 0;
   width: 100%;
-  z-index: 1100; /* Ensure header is definitively above mobile sidebar/overlay */
+  z-index: 1100;
   height: var(--header-height);
-  flex-shrink: 0; /* Prevent header from shrinking if content overflows weirdly */
-  /* Header background/border/etc. should be styled in Header.css or via AppBar props */
+  flex-shrink: 0;
+  /* Background/border styled in Header.css or AppBar */
 }
 
-/* --- Main Body Container (Holds the 3 columns below header) --- */
+/* --- Main Body Container (Holds the columns below header) --- */
 .main-body-container {
   display: flex;
-  flex-grow: 1; /* Takes up remaining vertical space */
-  /* Height is implicitly determined now by flex-grow */
-  overflow: hidden; /* Critical: Prevents scroll on this container */
-  position: relative; /* Needed if mobile overlay is positioned relative to this */
+  flex-grow: 1;
+  overflow: hidden;
+  position: relative;
 }
 
 /* --- Left Sidebar (SideNav) --- */
-/* Targets direct child assuming SideNav renders <nav class="side-nav"> or similar */
+/* Targets direct child assuming SideNav renders <nav class="side-nav"> */
 .main-body-container > .side-nav {
   width: var(--left-sidebar-width);
-  flex-shrink: 0; /* Prevent shrinking */
-  height: 100%;   /* Fill container height */
-  overflow-y: auto; /* Allow internal vertical scroll */
-  overflow-x: hidden; /* Hide horizontal overflow */
+  flex-shrink: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   background-color: var(--nav-bg);
   border-right: 1px solid var(--sidebar-border-color);
   position: static; /* Desktop position handled by flexbox */
-  z-index: auto; /* Reset z-index for desktop */
+  z-index: auto;
   transition: transform var(--transition-speed) ease, width var(--transition-speed) ease;
-  transform: translateX(0); /* Default desktop state */
-  /* Prevent overscroll effect (pull-down/bounce) originating from this sidebar */
+  transform: translateX(0);
   overscroll-behavior-y: contain;
 }
 
@@ -68,43 +67,34 @@
 /* Targets direct child assuming Layout renders <Box component="main" className="main-content-area"> */
 .main-body-container > .main-content-area {
   flex-grow: 1; /* Takes up remaining horizontal space */
-  height: 100%;   /* Fill container height */
+  height: 100%;
   overflow-y: auto; /* Allow internal vertical scroll */
-  padding: var(--content-padding-desktop);
-  /* Background should ideally be set by the page content or globally */
-  /* background-color: #f8f9fa; */
+  /* --- USES UPDATED VARIABLE --- */
+  padding: var(--content-padding-desktop); /* Will now apply 0px padding on desktop */
+  /* --- END UPDATE --- */
+  /* Background set by page or globally */
   transition: margin-left var(--transition-speed) ease-in-out; /* Mobile animation support */
-  /* Prevent overscroll effect (pull-down/bounce) originating from main content */
-  /* NOTE: Remove this if you WANT the bounce/glow effect in the content area */
   overscroll-behavior-y: contain;
 }
 
 /* --- Right Sidebar --- */
-/* Targets direct child assuming RightSidebar renders <aside class="right-sidebar"> or similar */
+/* Targets direct child assuming RightSidebar renders <aside class="right-sidebar"> */
+/* This rule now only ensures it doesn't shrink WHEN it's part of the flex layout (expanded state) */
 .main-body-container > .right-sidebar {
-  width: var(--right-sidebar-width);
-  flex-shrink: 0; /* Prevent shrinking */
-  height: 100%;   /* Fill container height */
-  overflow-y: auto; /* Allow internal vertical scroll */
-  overflow-x: hidden; /* Hide horizontal overflow */
-  background-color: var(--nav-bg);
-  border-left: 1px solid var(--sidebar-border-color);
-  position: static; /* Desktop position handled by flexbox */
-  transition: transform var(--transition-speed) ease, width var(--transition-speed) ease;
-  /* Prevent overscroll effect (pull-down/bounce) originating from this sidebar */
-  overscroll-behavior-y: contain;
+  flex-shrink: 0; /* Keep this */
+  /* REMOVED: Explicit width, height, position, border, background, transition etc. */
+  /* These are now fully controlled by RightSidebar.css based on .expanded/.collapsed classes */
 }
 
 /* --- Mobile Navigation Overlay --- */
-/* Targets direct child assuming Layout renders <Box className="mobile-nav-overlay"> */
 .app-layout > .mobile-nav-overlay {
-  position: fixed; /* Fixed position to overlay everything */
-  top: var(--header-height); /* Start below the header */
+  position: fixed;
+  top: var(--header-height);
   left: 0;
   width: 100%;
-  height: calc(100vh - var(--header-height)); /* Fill remaining viewport height */
+  height: calc(100vh - var(--header-height));
   background-color: var(--overlay-bg);
-  opacity: 1; /* Controlled by conditional rendering, visible when rendered */
+  opacity: 1; /* Controlled by conditional rendering */
   transition: opacity var(--transition-speed) ease;
   z-index: 900; /* Below mobile sidebar (950+), above main content */
   /* display/pointer-events handled by conditional rendering */
@@ -115,10 +105,11 @@
 /* --- Mobile & Responsive Adjustments --- */
 /* =============================================== */
 
-/* Tablet/Smaller Desktops - Hide Right Sidebar */
+/* Tablet/Smaller Desktops - Hide Right Sidebar (Expanded or Collapsed) */
+/* This rule hides the element regardless of its internal state/positioning */
 @media (max-width: 1199px) {
   .main-body-container > .right-sidebar {
-    display: none;
+    display: none !important; /* Use !important if absolutely necessary */
   }
 }
 
@@ -127,45 +118,41 @@
 @media (max-width: 991px) { /* Adjust breakpoint as needed */
 
   .main-content-area {
-    /* Remove potential desktop margin and ensure full width */
     margin-left: 0 !important;
     width: 100% !important;
-    padding: var(--content-padding-mobile); /* Use mobile padding */
+    /* --- USES MOBILE VARIABLE --- */
+    padding: var(--content-padding-mobile); /* Applies 16px padding on mobile */
+    /* --- END UPDATE --- */
      /* overscroll-behavior-y: contain; inherited */
   }
 
   .main-body-container > .side-nav {
-    /* --- Mobile Positioning & Style --- */
-    position: fixed;         /* Fixed overlay */
-    top: var(--header-height); /* Below header */
-    left: 0;                 /* Align left */
-    height: calc(100vh - var(--header-height)); /* Full height below header */
-    width: var(--left-sidebar-width); /* Keep defined width */
-    border-right: 1px solid var(--sidebar-border-color); /* Keep border */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Softer shadow for mobile */
-    z-index: 950; /* Above overlay (900) and content */
-
-    /* --- Off-Screen By Default --- */
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    height: calc(100vh - var(--header-height));
+    width: var(--left-sidebar-width);
+    border-right: 1px solid var(--sidebar-border-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 950;
     transform: translateX(-100%);
-
-    /* --- Smooth Transition --- */
     transition: transform var(--transition-speed) ease;
     /* overscroll-behavior-y: contain; inherited */
+     background-color: var(--nav-bg);
+     overflow-y: auto;
   }
 
-  /* --- Mobile Sidebar Open State --- */
+  /* Mobile Sidebar Open State */
   .main-body-container > .side-nav.open {
-    transform: translateX(0); /* Slide into view */
+    transform: translateX(0);
   }
 
-   /* --- Ensure Overlay has Correct z-index on Mobile --- */
-   /* Selector may vary slightly if overlay isn't direct child */
+   /* Ensure Overlay has Correct z-index on Mobile */
    .app-layout > .mobile-nav-overlay {
-     z-index: 900; /* Ensure it's below sidebar */
+     z-index: 900;
+     /* Position/Size already set */
    }
 
-   /* --- Hide Right Sidebar --- */
-   .main-body-container > .right-sidebar {
-       display: none;
-   }
+   /* Right Sidebar is already hidden by the max-width: 1199px rule */
+
 }

@@ -1,16 +1,16 @@
 // src/components/Layout.js
 import React, { useState, useCallback } from 'react';
 import Header from './Header';
-import LeftSidebar from './SideNav'; // Renamed import for clarity
+import LeftSidebar from './SideNav'; // Assuming SideNav is the Left Sidebar component
 import RightSidebar from './RightSidebar';
-import Box from '@mui/material/Box'; // Using MUI Box for layout
+import Box from '@mui/material/Box';
 
 import './Layout.css';
 
 /**
  * Main application layout component.
  * Orchestrates the Header, Left Sidebar, Right Sidebar, and main content area.
- * Manages the state for the mobile navigation toggle.
+ * Manages the state for the mobile navigation toggle for the Left Sidebar.
  *
  * @param {object} props - Component props.
  * @param {React.ReactNode} props.children - The main content to be rendered within the layout.
@@ -22,45 +22,46 @@ const Layout = ({ children }) => {
   // Memoized callback to toggle the left sidebar
   const toggleLeftSidebar = useCallback(() => {
     setIsLeftSidebarOpen(prevIsOpen => !prevIsOpen);
-  }, []); // Empty dependency array as setter handles previous state
+  }, []);
 
   // Memoized callback to explicitly close the left sidebar (e.g., on nav item click)
   const closeLeftSidebar = useCallback(() => {
+    // Ensure state is set to false only if it was true
     setIsLeftSidebarOpen(prevIsOpen => (prevIsOpen ? false : prevIsOpen));
-    // Alternative: setIsLeftSidebarOpen(false); // Simpler if always closing
-  }, []); // Empty dependency array
+  }, []);
 
 
   return (
-    // Use Box for the root layout element
     <Box component="div" className="app-layout">
+      {/* Pass toggle function for the *left* sidebar */}
       <Header onToggleMobileNav={toggleLeftSidebar} />
 
-      {/* Use Box for the main body container */}
+      {/* Main body container using flexbox (styles in Layout.css) */}
       <Box component="div" className="main-body-container">
 
-        {/* Left Sidebar (using the SideNav component) */}
+        {/* Left Sidebar */}
+        {/* Receives state to control its mobile visibility and close callback */}
         <LeftSidebar isOpen={isLeftSidebarOpen} onNavItemClicked={closeLeftSidebar} />
 
         {/* Main Content Area */}
-        {/* Using 'main' semantic tag, wrapped in Box for consistency if needed */}
         <Box component="main" className="main-content-area">
           {children}
         </Box>
 
         {/* Right Sidebar */}
-        <RightSidebar />
+        {/* Pass isLeftSidebarOpen so RightSidebar can hide its FAB state on mobile if needed */}
+        <RightSidebar isOtherSidebarOpen={isLeftSidebarOpen} />
 
       </Box> {/* End main-body-container */}
 
-      {/* Mobile Navigation Overlay */}
-      {/* Conditionally rendered for performance and simplicity */}
+      {/* Mobile Navigation Overlay for LEFT sidebar */}
+      {/* Conditionally rendered when left sidebar is open */}
       {isLeftSidebarOpen && (
         <Box
           component="div"
-          className="mobile-nav-overlay"
-          onClick={closeLeftSidebar} // Close sidebar when overlay is clicked
-          aria-hidden="true" // Hide from accessibility tree as it's decorative/functional
+          className="mobile-nav-overlay left-overlay" // Added specific class if needed
+          onClick={closeLeftSidebar}
+          aria-hidden="true"
         />
       )}
     </Box> // End app-layout
