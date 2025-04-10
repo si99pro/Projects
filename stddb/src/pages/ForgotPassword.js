@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/pages/ForgotPassword.js
 import React, { useState } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';

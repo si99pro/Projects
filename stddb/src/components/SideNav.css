@@ -143,9 +143,6 @@
 }
 
 /* --- Dropdown Specific Styles --- */
-.nav-item-dropdown .dropdown-toggle {
-  /* Already styled like links */
-}
 
 .chevron-icon {
   margin-left: auto; /* Pushes to the right */

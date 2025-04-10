@@ -68,10 +68,6 @@
 /* --- Desktop Styles --- */
 @media (min-width: 992px) { /* Adjust breakpoint as needed */
 
-    .main-container {
-       /* No special rules needed here typically */
-    }
-
     .content-area {
       /* Make space for the fixed SideNav by adding left margin */
       margin-left: var(--sidenav-width); /* Use the variable */

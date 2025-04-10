@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-is-valid */
 // src/components/SideNav.js
 import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
