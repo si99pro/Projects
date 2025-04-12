@@ -96,7 +96,7 @@ const Login = () => {
 
     try {
       await login(formData.email, formData.password);
-      navigate('/home'); // Or wherever logged-in users should go
+      navigate('/'); // Or wherever logged-in users should go
     } catch (err) {
       console.error("Login Failed:", err);
       setLoading(false);

@@ -1,70 +1,112 @@
 // src/components/Layout.js
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import PullToRefresh from 'react-simple-pull-to-refresh';
+
+// Import Components
 import Header from './Header';
-import LeftSidebar from './SideNav'; // Assuming SideNav is the Left Sidebar component
+import SideNav from './SideNav';
 import RightSidebar from './RightSidebar';
-import Box from '@mui/material/Box';
 
+// Import Layout-specific CSS
 import './Layout.css';
+// Import CSS for pull-to-refresh custom styling
+import './PullToRefresh.css';
 
-/**
- * Main application layout component.
- * Orchestrates the Header, Left Sidebar, Right Sidebar, and main content area.
- * Manages the state for the mobile navigation toggle for the Left Sidebar.
- *
- * @param {object} props - Component props.
- * @param {React.ReactNode} props.children - The main content to be rendered within the layout.
- */
-const Layout = ({ children }) => {
-  // State for the LEFT sidebar's mobile visibility
-  const [isLeftSidebarOpen, setIsLeftSidebarOpen] = useState(false);
+const Layout = () => {
+  const location = useLocation();
+  const headerRef = useRef(null);
+  const [isMobileNavOpen, setMobileNavOpen] = useState(false);
 
-  // Memoized callback to toggle the left sidebar
-  const toggleLeftSidebar = useCallback(() => {
-    setIsLeftSidebarOpen(prevIsOpen => !prevIsOpen);
+  const handleToggleMobileNav = useCallback(() => {
+    setMobileNavOpen(prev => {
+        const newState = !prev;
+        // Add/remove body class based on the NEW state
+        document.body.classList.toggle('mobile-nav-active', newState);
+        return newState;
+    });
+  }, []); // No dependency needed if only toggling based on prev
+
+  const closeMobileNav = useCallback(() => {
+    setMobileNavOpen(false);
+    document.body.classList.remove('mobile-nav-active');
   }, []);
 
-  // Memoized callback to explicitly close the left sidebar (e.g., on nav item click)
-  const closeLeftSidebar = useCallback(() => {
-    // Ensure state is set to false only if it was true
-    setIsLeftSidebarOpen(prevIsOpen => (prevIsOpen ? false : prevIsOpen));
+  // Effect to set the --header-height CSS variable
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const headerElement = headerRef.current;
+      const defaultHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height').trim(), 10) || 55;
+      const headerHeight = headerElement?.offsetHeight || defaultHeight;
+      document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+    };
+
+    let resizeObserver;
+    const headerEl = headerRef.current;
+    if (headerEl && typeof ResizeObserver !== 'undefined') {
+        updateHeaderHeight();
+        resizeObserver = new ResizeObserver(updateHeaderHeight);
+        resizeObserver.observe(headerEl);
+    } else {
+       const timerId = setTimeout(updateHeaderHeight, 0);
+       window.addEventListener('resize', updateHeaderHeight);
+       return () => {
+         clearTimeout(timerId);
+         window.removeEventListener('resize', updateHeaderHeight);
+       }
+    }
+    return () => {
+      if (resizeObserver && headerEl) {
+         resizeObserver.unobserve(headerEl);
+      }
+    };
   }, []);
 
+  // Clean up body class on unmount
+  useEffect(() => {
+      return () => document.body.classList.remove('mobile-nav-active');
+  }, []);
+
+
+  // --- Pull-to-Refresh Handler ---
+  const handleRefresh = async () => {
+    console.log('Refresh triggered for:', location.pathname);
+    await new Promise(resolve => setTimeout(resolve, 300)); // Short visual delay
+    // --- !!! IMPLEMENT YOUR REFRESH LOGIC HERE !!! ---
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
+    console.log('Refresh finished.');
+  };
 
   return (
-    <Box component="div" className="app-layout">
-      {/* Pass toggle function for the *left* sidebar */}
-      <Header onToggleMobileNav={toggleLeftSidebar} />
+    <div className="app-layout-wrapper">
+      {isMobileNavOpen && <div className="mobile-nav-overlay" onClick={closeMobileNav}></div>}
 
-      {/* Main body container using flexbox (styles in Layout.css) */}
-      <Box component="div" className="main-body-container">
+      <Header ref={headerRef} onToggleMobileNav={handleToggleMobileNav} />
 
-        {/* Left Sidebar */}
-        {/* Receives state to control its mobile visibility and close callback */}
-        <LeftSidebar isOpen={isLeftSidebarOpen} onNavItemClicked={closeLeftSidebar} />
+      <div className="main-grid-container">
+        <aside className="left-sidebar-wrapper">
+             <SideNav isOpen={isMobileNavOpen} closeNav={closeMobileNav} />
+        </aside>
 
-        {/* Main Content Area */}
-        <Box component="main" className="main-content-area">
-          {children}
-        </Box>
+        {/* PullToRefresh now wraps the main element */}
+        {/* The Library should handle body scroll detection */}
+        <PullToRefresh
+            onRefresh={handleRefresh}
+            pullingContent={<div className="ptr-pulling"><span className="ptr-icon">⬇️</span> Pull down</div>}
+            refreshingContent={<div className="ptr-refreshing"><span className="ptr-spinner">🔄</span> Refreshing...</div>}
+            resistance={2.5} // Adjust as needed for body scroll feel
+        >
+            {/* Main content area - NO fixed height or internal overflow */}
+            <main className="main-content-area" id="main-content">
+                <Outlet /> {/* Page content determines height */}
+            </main>
+        </PullToRefresh>
 
-        {/* Right Sidebar */}
-        {/* Pass isLeftSidebarOpen so RightSidebar can hide its FAB state on mobile if needed */}
-        <RightSidebar isOtherSidebarOpen={isLeftSidebarOpen} />
-
-      </Box> {/* End main-body-container */}
-
-      {/* Mobile Navigation Overlay for LEFT sidebar */}
-      {/* Conditionally rendered when left sidebar is open */}
-      {isLeftSidebarOpen && (
-        <Box
-          component="div"
-          className="mobile-nav-overlay left-overlay" // Added specific class if needed
-          onClick={closeLeftSidebar}
-          aria-hidden="true"
-        />
-      )}
-    </Box> // End app-layout
+        <aside className="right-sidebar-wrapper">
+            <RightSidebar />
+        </aside>
+      </div>
+    </div>
   );
 };
 

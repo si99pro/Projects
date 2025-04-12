@@ -1,0 +1,49 @@
+/* src/components/PullToRefresh.css */
+
+/* Style the container provided to pullingContent/refreshingContent */
+.ptr-pulling,
+.ptr-refreshing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0; /* Reduced padding */
+  font-size: 0.85rem; /* Smaller font */
+  color: var(--color-text-secondary);
+  background-color: transparent; /* Let main content area background show */
+  /* position: absolute; NO - let it be part of the flow */
+  width: 100%;
+  text-align: center;
+}
+
+.ptr-icon,
+.ptr-spinner {
+  margin-right: 8px;
+  font-size: 1.1em; /* Icon slightly larger than text */
+  display: inline-block; /* Needed for spinner animation */
+}
+
+/* Simple rotation animation for the spinner */
+@keyframes ptr-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ptr-spinner {
+  animation: ptr-spin 1s linear infinite;
+}
+
+
+/* --- Optional: Styling the react-simple-pull-to-refresh container --- */
+/* This library often wraps content; inspect to confirm selectors */
+/* Ensure the wrapper allows child to scroll */
+.main-content-area > div[style*="overflow: hidden"] { /* Target PTR wrapper */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Target the inner track div that contains the content + indicators */
+.main-content-area > div[style*="overflow: hidden"] > div[style*="transform"] {
+   flex-grow: 1; /* Let track take up space */
+   /* The library likely handles scrolling internally on this element */
+}

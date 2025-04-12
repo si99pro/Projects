@@ -1,158 +1,105 @@
 /* src/components/Layout.css */
 
-/* --- CSS Variables --- */
-/* Ensure these are defined, potentially globally in index.css or App.css */
-:root {
-  --header-height: 60px;
-  --left-sidebar-width: 250px;
-  /* --right-sidebar-width is now primarily used by RightSidebar.css */
-  /* --right-sidebar-width: 300px; */
-  --sidebar-border-color: #e0e0e0;
-  --nav-bg: #ffffff;
-  --transition-speed: 0.25s;
-  /* --- MODIFIED VALUE --- */
-  --content-padding-desktop: 0px; /* Set desktop padding to 0 */
-  /* --- END MODIFICATION --- */
-  --content-padding-mobile: 16px;
-  --overlay-bg: rgba(0, 0, 0, 0.4);
-}
-
-/* --- Overall App Layout --- */
-.app-layout {
+.app-layout-wrapper {
+  position: relative;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  overflow: hidden;
-  background-color: #f8f9fa; /* Base background */
 }
 
-/* --- Header --- */
-.app-layout > header {
-  position: sticky;
-  top: 0;
-  left: 0;
+/* --- Main Grid Container --- */
+.main-grid-container {
+  display: grid;
+  grid-template-columns: var(--sidebar-left-width) 1fr var(--sidebar-right-width);
+  gap: var(--layout-gap);
+
+  /* Use margin-top for space below sticky header */
+  margin-top: var(--layout-gap); /* Pushes the grid down */
+  /* Apply only Left/Right/Bottom padding to the grid container itself */
+  padding: 0 var(--layout-padding-x) var(--spacing-md); /* Top=0, L/R=var, Bot=var */
+
+  max-width: var(--layout-max-width);
+  margin-left: auto; /* Horizontal centering */
+  margin-right: auto; /* Horizontal centering */
   width: 100%;
-  z-index: 1100;
-  height: var(--header-height);
-  flex-shrink: 0;
-  /* Background/border styled in Header.css or AppBar */
+  box-sizing: border-box;
+  align-items: start; /* Align grid items to the top */
+  flex-grow: 1; /* Allow grid to fill vertical space */
 }
 
-/* --- Main Body Container (Holds the columns below header) --- */
-.main-body-container {
-  display: flex;
-  flex-grow: 1;
-  overflow: hidden;
-  position: relative;
+/* --- Main Content Area (Middle Column) --- */
+/* Styles for the <main> element rendered by Layout.js */
+.main-content-area {
+  min-width: 0; /* Prevent grid blowout from wide content */
+  /* No fixed height or internal overflow - Body handles scrolling */
+
+  /* --- Padding Removed --- */
+  padding: 0; /* <<< Padding removed as requested >>> */
+  /* Content inside (like pages) will need its own padding */
+
+  /* Add margin at the bottom to ensure space below content before page end */
+  margin-bottom: var(--layout-gap);
 }
 
-/* --- Left Sidebar (SideNav) --- */
-/* Targets direct child assuming SideNav renders <nav class="side-nav"> */
-.main-body-container > .side-nav {
-  width: var(--left-sidebar-width);
-  flex-shrink: 0;
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  background-color: var(--nav-bg);
-  border-right: 1px solid var(--sidebar-border-color);
-  position: static; /* Desktop position handled by flexbox */
-  z-index: auto;
-  transition: transform var(--transition-speed) ease, width var(--transition-speed) ease;
-  transform: translateX(0);
-  overscroll-behavior-y: contain;
-}
 
-/* --- Main Content Area --- */
-/* Targets direct child assuming Layout renders <Box component="main" className="main-content-area"> */
-.main-body-container > .main-content-area {
-  flex-grow: 1; /* Takes up remaining horizontal space */
-  height: 100%;
-  overflow-y: auto; /* Allow internal vertical scroll */
-  /* --- USES UPDATED VARIABLE --- */
-  padding: var(--content-padding-desktop); /* Will now apply 0px padding on desktop */
-  /* --- END UPDATE --- */
-  /* Background set by page or globally */
-  transition: margin-left var(--transition-speed) ease-in-out; /* Mobile animation support */
-  overscroll-behavior-y: contain;
-}
-
-/* --- Right Sidebar --- */
-/* Targets direct child assuming RightSidebar renders <aside class="right-sidebar"> */
-/* This rule now only ensures it doesn't shrink WHEN it's part of the flex layout (expanded state) */
-.main-body-container > .right-sidebar {
-  flex-shrink: 0; /* Keep this */
-  /* REMOVED: Explicit width, height, position, border, background, transition etc. */
-  /* These are now fully controlled by RightSidebar.css based on .expanded/.collapsed classes */
+/* --- Sidebar Wrappers --- */
+/* These elements in Layout.js just define the grid columns */
+.left-sidebar-wrapper,
+.right-sidebar-wrapper {
+   /* Typically no styles needed here */
 }
 
 /* --- Mobile Navigation Overlay --- */
-.app-layout > .mobile-nav-overlay {
+/* Dark overlay shown when mobile nav is open */
+.mobile-nav-overlay {
   position: fixed;
-  top: var(--header-height);
+  top: 0;
   left: 0;
   width: 100%;
-  height: calc(100vh - var(--header-height));
-  background-color: var(--overlay-bg);
-  opacity: 1; /* Controlled by conditional rendering */
-  transition: opacity var(--transition-speed) ease;
-  z-index: 900; /* Below mobile sidebar (950+), above main content */
-  /* display/pointer-events handled by conditional rendering */
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1199; /* Below mobile nav (1200), above content */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+  display: none; /* Hidden by default */
 }
 
+/* --- Responsive Adjustments --- */
 
-/* =============================================== */
-/* --- Mobile & Responsive Adjustments --- */
-/* =============================================== */
-
-/* Tablet/Smaller Desktops - Hide Right Sidebar (Expanded or Collapsed) */
-/* This rule hides the element regardless of its internal state/positioning */
-@media (max-width: 1199px) {
-  .main-body-container > .right-sidebar {
-    display: none !important; /* Use !important if absolutely necessary */
+/* Tablet: Hide right sidebar */
+@media (max-width: 992px) {
+  .main-grid-container {
+    grid-template-columns: var(--sidebar-left-width) 1fr; /* Switch to 2 columns */
+    /* Desktop margin-top and padding rules still apply unless overridden */
+    /* Example: Adjust side padding if needed */
+    /* padding-left: var(--spacing-md); */
+    /* padding-right: var(--spacing-md); */
   }
+  /* .main-content-area padding remains 0 */
 }
 
-
-/* Mobile Styles - Left Sidebar becomes Fixed Overlay */
-@media (max-width: 991px) { /* Adjust breakpoint as needed */
-
-  .main-content-area {
-    margin-left: 0 !important;
-    width: 100% !important;
-    /* --- USES MOBILE VARIABLE --- */
-    padding: var(--content-padding-mobile); /* Applies 16px padding on mobile */
-    /* --- END UPDATE --- */
-     /* overscroll-behavior-y: contain; inherited */
+/* Mobile: Single column, different spacing */
+@media (max-width: 768px) {
+  .main-grid-container {
+    grid-template-columns: 1fr; /* Single column */
+    gap: 0; /* No gap needed */
+    /* Adjust mobile margin/padding for the grid container */
+    margin-top: var(--spacing-md); /* Less space below header */
+    padding: 0 var(--spacing-md) var(--spacing-md); /* T=0, L/R=sp-md, B=sp-md */
   }
 
-  .main-body-container > .side-nav {
-    position: fixed;
-    top: var(--header-height);
-    left: 0;
-    height: calc(100vh - var(--header-height));
-    width: var(--left-sidebar-width);
-    border-right: 1px solid var(--sidebar-border-color);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    z-index: 950;
-    transform: translateX(-100%);
-    transition: transform var(--transition-speed) ease;
-    /* overscroll-behavior-y: contain; inherited */
-     background-color: var(--nav-bg);
-     overflow-y: auto;
-  }
-
-  /* Mobile Sidebar Open State */
-  .main-body-container > .side-nav.open {
-    transform: translateX(0);
-  }
-
-   /* Ensure Overlay has Correct z-index on Mobile */
-   .app-layout > .mobile-nav-overlay {
-     z-index: 900;
-     /* Position/Size already set */
+   /* Main content area padding remains 0 on mobile */
+   .main-content-area {
+      padding: 0; /* Confirm padding is 0 */
+      margin-bottom: var(--spacing-md); /* Adjust bottom margin */
    }
 
-   /* Right Sidebar is already hidden by the max-width: 1199px rule */
-
+   /* Show overlay when mobile nav is active */
+   /* Uses :has pseudo-class for cleaner targeting */
+  .app-layout-wrapper:has(.side-nav.mobile-visible) > .mobile-nav-overlay {
+     display: block; /* Allow transition */
+     opacity: 1;
+     visibility: visible;
+  }
 }

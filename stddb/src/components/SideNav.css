@@ -1,144 +1,168 @@
 /* src/components/SideNav.css */
+/* Styles for the component rendered by SideNav.js */
 
-/* --- Customizable Variables (can be global or defined here) --- */
-:root {
-  --nav-bg: #ffffff;
-  --nav-border-color: #e0e0e0;
-  --nav-item-hover-bg: rgba(0, 0, 0, 0.04); /* Standard MUI hover */
-  --nav-item-selected-bg: #e3f2fd;         /* Example light blue */
-  --nav-primary-text: #1976d2;             /* Example MUI primary blue */
-  --nav-primary-icon: #1976d2;             /* Example MUI primary blue */
-  --nav-text-primary: rgba(0, 0, 0, 0.87);
-  --nav-text-secondary: rgba(0, 0, 0, 0.6);
-  --nav-icon-primary: rgba(0, 0, 0, 0.54);
-  --nav-logout-hover-bg: #fff0f0;
-  --nav-logout-hover-text: #d32f2f;
-  --nav-logout-hover-icon: #d32f2f;
-  --transition-speed: 0.2s; /* Slightly faster transition */
+/* --- Sticky Sidebar Container --- */
+/* Targets the root <Box component="aside" className="sticky-sidebar"> */
+.sticky-sidebar {
+  position: sticky;
+  top: var(--header-height); /* Stick container right below header */
+  height: calc(100vh - var(--header-height)); /* Available height below header */
+  width: var(--sidebar-left-width); /* Width defined globally */
+  overflow-y: auto; /* Enable internal scrolling if content exceeds height */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  flex-shrink: 0; /* Prevent shrinking in parent grid */
+
+  padding-bottom: var(--layout-gap); /* Space at the very bottom */
+  box-sizing: border-box; /* Include padding in size calculations */
+
+  /* Container itself is transparent, cards provide background */
+  background-color: transparent;
+
+  /* --- Scrollbar Styling --- */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--color-scrollbar-thumb) transparent; /* Firefox: Thumb / Track */
 }
 
-/* --- Base SideNav Styling --- */
-/* The class applied by Layout.js controls mobile visibility/positioning */
-.side-nav {
-  background-color: var(--nav-bg);
-  display: flex; /* Needed for direct child flexbox */
-  flex-direction: column; /* Stack content wrapper */
-  height: 100%; /* Fill container height set by Layout.css */
-  width: var(--left-sidebar-width); /* Define width */
-  overflow: hidden; /* Hide overflow */
-  /* Desktop border handled by Layout.css */
-  /* Mobile positioning/shadow/border handled by Layout.css */
+/* WebKit scrollbar styles */
+.sticky-sidebar::-webkit-scrollbar { width: 8px; }
+.sticky-sidebar::-webkit-scrollbar-track { background: transparent; }
+.sticky-sidebar::-webkit-scrollbar-thumb {
+    background-color: var(--color-scrollbar-thumb);
+    border-radius: 4px;
+    border: 2px solid transparent; /* Use with background-clip for padding effect */
+    background-clip: content-box;
+ }
+.sticky-sidebar::-webkit-scrollbar-thumb:hover {
+     background-color: var(--color-scrollbar-thumb-hover);
 }
 
-/* --- Content Wrapper --- */
-/* Provides padding and flex layout for list + logout */
-.nav-content-wrapper {
-  padding: 8px 0; /* Vertical padding */
-  flex-grow: 1; /* Take available space */
-  display: flex;
-  flex-direction: column; /* Stack list and logout */
-  overflow-y: auto; /* Allow scrolling of content */
-  overflow-x: hidden;
-  overscroll-behavior-y: contain; /* Prevent pull-down */
+
+/* --- General Card Styling --- */
+/* Targets Paper elements with class="sidebar-card" inside .sticky-sidebar */
+.sticky-sidebar .sidebar-card {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--spacing-md); /* Consistent space between cards */
+  overflow: hidden; /* Important for containing elements like profile background */
+  padding: 0; /* Reset padding, internal elements/buttons control it */
+  color: var(--color-text-primary);
+}
+/* Optional: Adjustments for the first card if needed */
+.sticky-sidebar .sidebar-card:first-child {
+  /* border-top: none; */ /* Example: remove top border */
+  /* border-top-left-radius: 0; */
+  /* border-top-right-radius: 0; */
+}
+/* Remove margin from the last card */
+.sticky-sidebar .sidebar-card:last-child {
+  margin-bottom: 0;
 }
 
-/* --- Main Navigation List --- */
+/* --- Profile Card Specifics --- */
+.sticky-sidebar .profile-card .profile-bg {
+  height: 60px;
+  background-size: cover;
+  background-position: center;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-bg-search); /* Fallback background */
+}
+.sticky-sidebar .profile-card .profile-avatar {
+  width: 72px !important; /* May need !important to override MUI */
+  height: 72px !important;
+  margin: -36px auto 10px auto; /* Overlap background */
+  border: 3px solid var(--color-bg-card); /* Match card background */
+  display: block;
+  background-color: var(--color-bg-search); /* Fallback */
+  color: var(--color-text-secondary); /* Fallback icon/initials color */
+  font-size: 1.5rem; /* Size for initials/icon */
+}
+.sticky-sidebar .profile-card .profile-info {
+  text-align: center;
+  padding: 0 16px 12px 16px; /* Spacing below avatar */
+}
+.sticky-sidebar .profile-card .profile-name-link {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+.sticky-sidebar .profile-card .profile-name-link:hover {
+  text-decoration: underline;
+  color: var(--color-text-link);
+}
+.sticky-sidebar .profile-card .profile-headline {
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+  min-height: calc(1.4 * 0.8rem * 2); /* Reserve ~2 lines height */
+}
+.sticky-sidebar .profile-card .profile-stats {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border); /* Separator */
+  margin-top: 12px; /* Space above separator */
+}
+.sticky-sidebar .profile-card .stat-item {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+}
+.sticky-sidebar .profile-card .stat-item:last-child { margin-bottom: 0; }
+.sticky-sidebar .profile-card .stat-label { font-size: 0.8rem; color: var(--color-text-secondary); }
+.sticky-sidebar .profile-card .stat-value { font-size: 0.8rem; font-weight: 600; color: var(--color-text-link); }
 
-/* --- Styling MUI List Items --- */
-.main-nav-list .MuiListItemButton-root,
-.logout-section .MuiListItemButton-root {
-  padding-left: 20px; /* Consistent left padding */
-  padding-right: 20px;
-  color: var(--nav-text-primary);
-  transition: background-color var(--transition-speed) ease;
-  border-left: 3px solid transparent; /* Reset border */
-  margin-left: 8px;  /* Indent from edge slightly */
-  margin-right: 8px;
-  border-radius: 6px; /* Add subtle rounding */
+/* --- Premium Promo Card --- */
+.sticky-sidebar .premium-promo-card { padding: 16px; }
+.sticky-sidebar .premium-promo-card .premium-button {
+  color: var(--color-premium-text, var(--color-text-link)); /* Use premium color or fallback */
+  border-color: var(--color-premium-border, var(--color-text-link)); /* Use premium border or fallback */
+  text-transform: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  justify-content: flex-start;
+  width: 100%;
+  text-align: left;
+  line-height: 1.4;
+  /* Icon background handled inline via sx prop */
+}
+.sticky-sidebar .premium-promo-card .premium-button:hover {
+  background-color: var(--color-premium-hover-bg, var(--color-bg-hover)); /* Use premium hover or fallback */
+  border-color: var(--color-premium-border, var(--color-text-link));
 }
 
-/* --- List Item Icons --- */
-.main-nav-list .MuiListItemIcon-root,
-.logout-section .MuiListItemIcon-root {
-  min-width: auto; /* Allow icon to determine width */
-  margin-right: 16px;
-  color: var(--nav-icon-primary); /* Default icon color */
-  transition: color var(--transition-speed) ease;
-  /* Ensure react-icons inherit color */
-  & > svg {
-    color: inherit;
-    vertical-align: middle; /* Align icons better */
+/* --- Saved Items / Groups Buttons --- */
+.sticky-sidebar .saved-items-card,
+.sticky-sidebar .groups-card {
+  padding: 0; /* Let button fill card */
+}
+.sticky-sidebar .saved-items-button,
+.sticky-sidebar .groups-button {
+  color: var(--color-text-primary);
+  text-transform: none;
+  font-weight: 600;
+  font-size: 0.875rem;
+  justify-content: flex-start;
+  padding: 12px 16px; /* Button padding */
+  border-radius: 0; /* Remove button's own radius */
+  width: 100%;
+  text-align: left;
+}
+.sticky-sidebar .saved-items-button .MuiButton-startIcon,
+.sticky-sidebar .groups-button .MuiButton-startIcon {
+  color: var(--color-icon); /* Theme icon color */
+  margin-right: 12px; /* Space between icon and text */
+}
+.sticky-sidebar .saved-items-button:hover,
+.sticky-sidebar .groups-button:hover {
+  background-color: var(--color-bg-hover); /* Theme hover color */
+}
+
+/* --- Responsive Adjustments --- */
+/* Hide this desktop sidebar component on smaller screens */
+@media (max-width: 768px) {
+  .sticky-sidebar {
+    display: none;
   }
 }
-
-/* --- List Item Text --- */
-.main-nav-list .MuiListItemText-primary,
-.logout-section .MuiListItemText-primary {
-  font-size: 0.9rem;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* --- Hover State --- */
-.main-nav-list .MuiListItemButton-root:hover,
-.logout-section .MuiListItemButton-root:hover {
-  background-color: var(--nav-item-hover-bg);
-  color: var(--nav-text-primary); /* Keep text color on hover */
-}
-.main-nav-list .MuiListItemButton-root:hover .MuiListItemIcon-root,
-.logout-section .MuiListItemButton-root:hover .MuiListItemIcon-root {
-   color: var(--nav-primary-icon); /* Highlight icon color on hover */
-}
-
-/* --- Active State (MUI uses Mui-selected) --- */
-/* Style the NavLink itself via style prop for specificity if needed */
-/* This targets the MUI button wrapper */
-.main-nav-list .MuiListItemButton-root.Mui-selected {
-  background-color: var(--nav-item-selected-bg);
-  color: var(--nav-primary-text);
-  font-weight: 600; /* Slightly bolder */
-}
-.main-nav-list .MuiListItemButton-root.Mui-selected .MuiListItemIcon-root {
-  color: var(--nav-primary-icon); /* Use primary color for icon */
-}
-/* Optional: Add back the border if desired for active state */
-/* .main-nav-list .MuiListItemButton-root.Mui-selected {
-   border-left: 3px solid var(--nav-primary-text);
-} */
-
-
-/* --- Nested Dropdown Items --- */
-/* Target items within the Collapse component */
-.MuiCollapse-root .MuiListItemButton-root {
-  padding-left: calc(20px + 24px + 16px); /* Indent further: Base Padding + Icon Width + Icon Margin */
-  /* Style nested items differently if needed */
-}
-.MuiCollapse-root .MuiListItemText-primary {
-  font-size: 0.85rem;
-  font-weight: 400;
-}
-
-
-/* --- Logout Button Specific Styling --- */
-.logout-section {
-  padding: 0 8px 8px 8px; /* Padding only around the section */
-  margin-top: auto; /* Pushes to bottom if parent is flex */
-}
-.logout-button.MuiListItemButton-root:hover {
-  background-color: var(--nav-logout-hover-bg);
-  color: var(--nav-logout-hover-text);
-}
-.logout-button.MuiListItemButton-root:hover .MuiListItemIcon-root {
-  color: var(--nav-logout-hover-icon);
-}
-
-/* --- Desktop Styles --- */
-/* SideNav.css no longer defines desktop positioning (handled by Layout.css Flexbox) */
-/* Remove any @media (min-width: ...) { position: fixed; ... } rules */
-
-/* --- Mobile Styles --- */
-/* SideNav.css no longer defines mobile positioning (handled by Layout.css Fixed/Transform) */
-/* Remove any @media (max-width: ...) { position: fixed; ... } rules */
-/* The '.open' class selector logic is now handled by Layout.css targeting '.side-nav.open' */

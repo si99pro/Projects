@@ -1,0 +1,154 @@
+/* src/index.css */
+
+/* --- Define Theme Variables --- */
+:root {
+  /* ... (All variable definitions remain the same) ... */
+  --color-bg-primary: #f3f2ef;
+  --color-bg-card: #ffffff;
+  --color-bg-header: #ffffff;
+  --color-bg-sidenav: #ffffff;
+  --color-bg-rightsidebar: #ffffff;
+  --color-bg-hover: rgba(0, 0, 0, 0.05);
+  --color-bg-active: rgba(0, 0, 0, 0.08);
+  --color-bg-search: #eef3f8;
+  /* REMOVED scrollbar variables */
+  /* --color-scrollbar-track: transparent; */
+  /* --color-scrollbar-thumb: #c1c1c1; */
+  /* --color-scrollbar-thumb-hover: #a8a8a8; */
+
+  --color-text-primary: #191919;
+  --color-text-secondary: #5e5e5e;
+  --color-text-link: #0a66c2;
+  --color-text-placeholder: #5e5e5e;
+  --color-text-inverted: #ffffff;
+
+  --color-border: #e0e0e0;
+  --color-border-input: #b0b0b0;
+  --color-icon: #5e5e5e;
+  --color-icon-hover: #191919;
+  --color-icon-active-indicator: var(--color-text-primary);
+
+  --header-height: 55px;
+  --sidebar-left-width: 240px;
+  --sidebar-right-width: 320px;
+  --layout-max-width: 1200px;
+  --layout-gap: 20px;
+  --layout-padding-y: 15px;
+  --layout-padding-x: 20px;
+  --border-radius: 6px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+
+  --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  --base-font-size: 1rem;
+  --base-line-height: 1.5;
+
+  --transition-duration: 0.2s;
+  --transition-timing: ease-in-out;
+  --transition-colors: background-color var(--transition-duration) var(--transition-timing),
+                      color var(--transition-duration) var(--transition-timing),
+                      border-color var(--transition-duration) var(--transition-timing),
+                      box-shadow var(--transition-duration) var(--transition-timing);
+}
+
+/* --- Apply Dark Theme Variables --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* ... (Dark theme variable overrides remain the same) ... */
+    --color-bg-primary: #1a1a1a;
+    --color-bg-card: #2a2a2a;
+    --color-bg-header: #2a2a2a;
+    --color-bg-sidenav: #2a2a2a;
+    --color-bg-rightsidebar: #2a2a2a;
+    --color-bg-hover: rgba(255, 255, 255, 0.08);
+    --color-bg-active: rgba(255, 255, 255, 0.12);
+    --color-bg-search: #444;
+    /* REMOVED scrollbar variables */
+    /* --color-scrollbar-track: transparent; */
+    /* --color-scrollbar-thumb: #555; */
+    /* --color-scrollbar-thumb-hover: #777; */
+
+    --color-text-primary: #e0e0e0;
+    --color-text-secondary: #b0b0b0;
+    --color-text-link: #70b5f9;
+    --color-text-placeholder: #aaaaaa;
+    --color-text-inverted: #191919;
+
+    --color-border: #444;
+    --color-border-input: #666;
+    --color-icon: #cccccc;
+    --color-icon-hover: #ffffff;
+    --color-icon-active-indicator: var(--color-icon-hover);
+  }
+}
+
+/* --- HTML Element Styling --- */
+html {
+  /* Optional: Keep gutter stable if you want space reserved */
+  /* scrollbar-gutter: stable both-edges; */
+  font-size: var(--base-font-size);
+  line-height: var(--base-line-height);
+  /* --- REMOVED Firefox Scrollbar Styling --- */
+  /* scrollbar-width: thin; */
+  /* scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track); */
+}
+
+/* --- REMOVED WebKit Scrollbar Styling --- */
+/*
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--color-scrollbar-track); }
+::-webkit-scrollbar-thumb { background-color: var(--color-scrollbar-thumb); border-radius: 4px; border: 2px solid var(--color-scrollbar-track); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--color-scrollbar-thumb-hover); }
+::-webkit-scrollbar-corner { background: var(--color-scrollbar-track); }
+*/
+
+/* --- REMOVED .not-scrollable class rules --- */
+/*
+.not-scrollable::-webkit-scrollbar-thumb { background-color: transparent; border: none; }
+.not-scrollable { scrollbar-color: transparent var(--color-scrollbar-track); }
+*/
+
+/* --- Basic Reset & Body Styles --- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-family-base);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto; /* Body remains scrollable */
+  overscroll-behavior-y: contain;
+}
+
+/* --- Transitions --- */
+body, button, input, select, textarea, a,
+.MuiPaper-root, .MuiAppBar-root, .MuiDrawer-paper, .MuiCard-root,
+.MuiButtonBase-root, .MuiIconButton-root,
+.MuiTypography-root, .MuiSvgIcon-root,
+.MuiListItemText-primary, .MuiListItemText-secondary,
+.side-nav, .right-sidebar
+ {
+   transition: var(--transition-colors);
+}
+
+/* --- Link Styles --- */
+a { color: var(--color-text-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* --- Base element adjustments --- */
+img, picture, video, canvas, svg { display: block; max-width: 100%; height: auto; }
+
+/* --- Class to disable body scroll (applied via JS) --- */
+body.mobile-nav-active { overflow: hidden; }

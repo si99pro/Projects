@@ -1,213 +1,175 @@
 // src/components/Header.js
-import React, { useState, useCallback } from 'react'; // Added useState, useCallback for menu placeholders
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext'; // Import useAuth hook
+import React, { useState, useCallback, forwardRef } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 // MUI Components & Icons
-import Box from '@mui/material/Box'; // Use Box for semantic structure if preferred over divs
-import AppBar from '@mui/material/AppBar'; // Use AppBar for semantic correctness and elevation control
-import Toolbar from '@mui/material/Toolbar'; // Standard container for AppBar content
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
-import MenuIcon from '@mui/icons-material/Menu';
+import InputBase from '@mui/material/InputBase';
 import Avatar from '@mui/material/Avatar';
-import Button from '@mui/material/Button';
-import SettingsIcon from '@mui/icons-material/Settings';
 import Badge from '@mui/material/Badge';
-import MailOutlineIcon from '@mui/icons-material/MailOutline';
-import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import Tooltip from '@mui/material/Tooltip';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
+import Divider from '@mui/material/Divider';
+import Button from '@mui/material/Button';
+import { useTheme } from '@mui/material/styles';
+
+// MUI Icons
+import SearchIcon from '@mui/icons-material/Search';
+import MenuIcon from '@mui/icons-material/Menu';
 import PersonIcon from '@mui/icons-material/Person';
-import Tooltip from '@mui/material/Tooltip'; // For icon hints
-import Menu from '@mui/material/Menu';         // Placeholder for popover menus
-import MenuItem from '@mui/material/MenuItem';   // Placeholder for popover menus
+import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
 
-import './Header.css'; // Import the CSS
-
-/**
- * Application Header component.
- * Displays branding, navigation toggle, actions, and user information.
- *
- * @param {object} props - Component props.
- * @param {Function} props.onToggleMobileNav - Callback function to toggle the mobile sidebar.
- */
-const Header = ({ onToggleMobileNav }) => {
-  // --- State for Menu Placeholders ---
-  // Example for user menu, repeat similar pattern for notifications/messages if needed
+const Header = forwardRef(({ onToggleMobileNav }, ref) => {
+  const theme = useTheme();
   const [anchorElUser, setAnchorElUser] = useState(null);
-  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
-  const handleCloseUserMenu = () => setAnchorElUser(null);
-  // Add similar state/handlers for message/notification menus
-
-  // --- Get User Data from Auth Context ---
-  const { contextUserData } = useAuth();
+  const { contextUserData, logout } = useAuth();
   const basicInfo = contextUserData?.basicInfo;
 
-  // --- Demo Data (replace with real data) ---
-  const messageCount = 3;
   const notificationCount = 5;
 
-  // --- Helper Functions ---
+  const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
+  const handleCloseUserMenu = () => setAnchorElUser(null);
+
+  const handleLogout = async () => {
+    handleCloseUserMenu();
+    try {
+      if (typeof logout === 'function') { await logout(); }
+      else { console.warn("AuthContext does not provide a logout function."); }
+    } catch (error) { console.error("Logout failed:", error); }
+  };
+
   const getInitials = useCallback((name) => {
-    if (!name) return '';
-    return name
-        .split(' ')
-        .map(n => n[0])
-        .filter(char => char)
-        .join('')
-        .toUpperCase();
-  }, []); // Memoize helper function
+    if (!name || typeof name !== 'string') return '';
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return '';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  }, []);
+
+  const navItems = [
+    { label: 'Dashboard', link: '/' },
+    { label: 'Students', link: '/students' },
+    { label: 'Courses', link: '/courses' },
+  ];
 
   return (
-    // Use MUI AppBar for semantic correctness and easier elevation/styling
     <AppBar
-      component="header" // Render as <header> tag
-      position="sticky"    // Consistent with previous CSS
-      color="inherit"      // Use inherit to allow custom background via CSS/sx
-      elevation={0}        // Remove default shadow, use border instead
-      className="app-header" // Apply custom class
-      sx={{ // Use sx for styles directly tied to MUI structure
-        bgcolor: 'var(--header-bg, #ffffff)', // Apply background from variable
-        borderBottom: '1px solid var(--header-border-color, #e0e0e0)', // Apply border
-        height: 'var(--header-height, 60px)', // Apply height
-        // Keep overscroll behavior if specifically needed for the header only
-         overscrollBehaviorY: 'contain',
+      ref={ref}
+      component="header"
+      position="sticky"
+      elevation={0}
+      className="app-header"
+      sx={{
+        bgcolor: 'var(--color-bg-header)',
+        borderBottom: `1px solid var(--color-border)`,
+        height: 'var(--header-height)',
+        zIndex: theme.zIndex.appBar,
       }}
     >
-      <Toolbar disableGutters sx={{ // disableGutters to use custom padding
-         minHeight: 'var(--header-height, 60px)!important', // Ensure toolbar respects height
-         px: 'var(--content-padding-x, 24px)' // Apply horizontal padding
-         }}>
-
-        {/* Left Section */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-          {/* Hamburger Button */}
+      <Toolbar
+        disableGutters // Keep this to remove default MUI padding
+        sx={{
+          minHeight: 'var(--header-height) !important',
+          height: 'var(--header-height)',
+          // --- RE-ADD HORIZONTAL PADDING ---
+          px: 'var(--layout-padding-x)', // <<< ADD THIS BACK >>>
+          // ---------------------------------
+          maxWidth: 'var(--layout-max-width)',
+          width: '100%',
+          mx: 'auto', // Centers the toolbar content area
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}
+      >
+        {/* === Left Section === */}
+        {/* REMOVE pl from here if it exists, Toolbar handles padding now */}
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 /* , pl: '...' REMOVED */ }}>
           <Tooltip title="Toggle Navigation">
             <IconButton
-              className="mobile-nav-toggle" // Keep class if needed by external CSS/tests
               onClick={onToggleMobileNav}
               aria-label="Toggle navigation"
-              sx={{
-                mr: 1, // Keep margin for spacing
-                display: { xs: 'inline-flex', md: 'none' }, // Standard responsive toggle
-                color: 'var(--header-link-color, #5f6368)' // Use CSS variable
-              }}
+              edge="start"
+              sx={{ mr: 1, display: { xs: 'inline-flex', md: 'none' }, color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}
             >
               <MenuIcon />
             </IconButton>
           </Tooltip>
-
-          {/* Logo/Title */}
-          <Link to="/" className="header-logo-link">
-            <span className="header-title">stdDB</span>
-          </Link>
+          <Typography variant="h6" component={Link} to="/" sx={{ fontWeight: 'bold', color: 'var(--color-text-primary)', textDecoration: 'none', mr: { xs: 1, md: 3 }, '&:hover': { textDecoration: 'none' } }} >
+            stdDB
+          </Typography>
+          <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }} aria-label="Main navigation">
+            {navItems.map((item) => (
+              <Button key={item.label} component={NavLink} to={item.link} end={item.link === '/'} size="small" sx={{ color: 'var(--color-text-secondary)', fontWeight: 500, textTransform: 'none', px: 1.5, '&:hover': { color: 'var(--color-text-primary)', bgcolor: 'var(--color-bg-hover)' }, '&.active': { color: 'var(--color-text-primary)', fontWeight: 600, bgcolor: 'var(--color-bg-active)' } }} >
+                {item.label}
+              </Button>
+            ))}
+          </Box>
         </Box>
 
-        {/* Spacer to push right content */}
-        <Box sx={{ flexGrow: 1 }} />
-
-        {/* Right Section */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0, gap: 1 }}> {/* Use gap for spacing */}
-
-          {/* Optional Action Button */}
-          <Button variant="outlined" size="small" sx={{ display: { xs: 'none', sm: 'inline-flex' } }} className="header-action-button">
-            Action
-          </Button>
-
-          {/* Optional Desktop Nav */}
-          {/* Consider moving this to sidebar for cleaner header if many links */}
-          <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, gap: 2.5 }} aria-label="Header navigation" className="header-nav-links">
-            <Link to="/dashboard">Dashboard</Link>
-            <Link to="/docs">Docs</Link>
+        {/* === Right Section === */}
+        {/* REMOVE pr from here if it exists, Toolbar handles padding now */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } /* , pr: '...' REMOVED */ }}>
+          <Box sx={{ position: 'relative', bgcolor: 'var(--color-bg-search)', borderRadius: 'var(--border-radius)', display: { xs: 'none', sm: 'flex' }, alignItems: 'center', height: '36px' }}>
+            <Box sx={{ pl: 1.5, height: '100%', position: 'absolute', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <SearchIcon sx={{ color: 'var(--color-icon)', fontSize: '1.2rem' }} />
+            </Box>
+            <InputBase placeholder="Search..." inputProps={{ 'aria-label': 'search' }} sx={{ color: 'var(--color-text-primary)', pl: 5, pr: 1.5, width: { sm: '200px', md: '280px' }, height: '100%', fontSize: '0.9rem', '& ::placeholder': { color: 'var(--color-text-placeholder)', opacity: 1 } }} />
           </Box>
-
-          {/* Messages Icon */}
-          <Tooltip title={`${messageCount} new messages`}>
-            <IconButton
-              aria-label={`Show ${messageCount} new messages`}
-              // onClick={handleOpenMessagesMenu} // Add handler
-              sx={{ color: 'var(--header-link-color, #5f6368)' }}
-              className="header-icon-button"
-            >
-              <Badge badgeContent={messageCount} color="error" overlap="circular">
-                <MailOutlineIcon />
-              </Badge>
+          <Tooltip title="Search"><IconButton sx={{ display: { xs: 'inline-flex', sm: 'none' }, color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}><SearchIcon /></IconButton></Tooltip>
+          <Tooltip title="Notifications">
+            <IconButton sx={{ color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}>
+              <Badge badgeContent={notificationCount} color="error" overlap="circular"><NotificationsNoneIcon /></Badge>
             </IconButton>
           </Tooltip>
-
-          {/* Notifications Icon */}
-          <Tooltip title={`${notificationCount} new notifications`}>
-            <IconButton
-              aria-label={`Show ${notificationCount} new notifications`}
-              // onClick={handleOpenNotificationsMenu} // Add handler
-              sx={{ color: 'var(--header-link-color, #5f6368)' }}
-               className="header-icon-button"
-            >
-              <Badge badgeContent={notificationCount} color="error" overlap="circular">
-                <NotificationsNoneIcon />
-              </Badge>
-            </IconButton>
-          </Tooltip>
-
-          {/* Settings Icon */}
-          <Tooltip title="Settings">
-            <IconButton
-              aria-label="Settings"
-              // onClick={handleOpenSettingsMenu} // Add handler
-              sx={{ color: 'var(--header-link-color, #5f6368)' }}
-               className="header-icon-button"
-            >
-              <SettingsIcon />
-            </IconButton>
-          </Tooltip>
-
-          {/* User Avatar & Menu Placeholder */}
           <Tooltip title="Account settings">
-            <IconButton
-              onClick={handleOpenUserMenu} // Placeholder for opening menu
-              sx={{ p: 0, ml: 0.5 }} // Remove padding, adjust margin slightly
-              aria-label="Open account menu"
-              aria-controls={Boolean(anchorElUser) ? 'account-menu' : undefined}
-              aria-haspopup="true"
-            >
-              <Avatar
-                sx={{
-                  width: 32,
-                  height: 32,
-                  bgcolor: basicInfo?.profileBgColor || 'primary.main',
-                  fontSize: '0.875rem'
-                }}
-                src={basicInfo?.profileImageUrl || undefined}
-                alt={basicInfo?.fullName || 'User Profile'}
-                className="header-avatar" // Add class for styling hover/focus
-              >
-                {!basicInfo?.profileImageUrl && basicInfo?.fullName
-                  ? getInitials(basicInfo.fullName)
-                  : !basicInfo?.profileImageUrl ? <PersonIcon sx={{ fontSize: '1.2rem' }}/> : null
-                }
+            <IconButton onClick={handleOpenUserMenu} size="small" aria-label="Open account menu" aria-controls={Boolean(anchorElUser) ? 'account-menu' : undefined} aria-haspopup="true" sx={{ p: 0.5, '&:hover': { bgcolor: 'var(--color-bg-hover)' } }} >
+              <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem', color: 'var(--color-text-inverted)' }} src={basicInfo?.profileImageUrl || undefined} alt={basicInfo?.fullName || 'User'} >
+                {!basicInfo?.profileImageUrl && basicInfo?.fullName ? getInitials(basicInfo.fullName) : !basicInfo?.profileImageUrl ? <PersonIcon sx={{ fontSize: '1.2rem' }} /> : null}
               </Avatar>
             </IconButton>
           </Tooltip>
-          {/* Placeholder User Menu (Anchored to Avatar IconButton) */}
           <Menu
-             id="account-menu"
-             anchorEl={anchorElUser}
-             open={Boolean(anchorElUser)}
-             onClose={handleCloseUserMenu}
-             onClick={handleCloseUserMenu} // Close menu on item click
-             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-             sx={{ mt: 1 }} // Add margin top
-             MenuListProps={{ 'aria-labelledby': 'account-menu-button' }} // Accessibility
+            id="account-menu"
+            anchorEl={anchorElUser}
+            open={Boolean(anchorElUser)}
+            onClose={handleCloseUserMenu}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+            MenuListProps={{ 'aria-labelledby': 'account-menu-button' }}
+            slotProps={{
+              paper: {
+                elevation: 0,
+                sx: {
+                  mt: 1.5, minWidth: 220, overflow: 'visible', bgcolor: 'var(--color-bg-card)', color: 'var(--color-text-primary)', border: `1px solid var(--color-border)`, filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
+                  '&::before': { content: '""', display: 'block', position: 'absolute', top: 0, right: 14, width: 10, height: 10, bgcolor: 'var(--color-bg-card)', transform: 'translateY(-50%) rotate(45deg)', zIndex: 0, borderTop: 'inherit', borderLeft: 'inherit'}, // Arrow
+                  '& .MuiMenuItem-root': { fontSize: '0.9rem', padding: theme.spacing(1, 2), '&:hover': { bgcolor: 'var(--color-bg-hover)' }, '& a': { textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', width: '100%' } },
+                  '& .MuiSvgIcon-root': { fontSize: '1.1rem', color: 'var(--color-icon)', mr: 1.5 }
+                }
+              }
+            }}
           >
-            <MenuItem component={Link} to="/profile">Profile</MenuItem>
-            <MenuItem component={Link} to="/settings/account">My account</MenuItem>
-            <MenuItem /* onClick={handleLogout} */ >Logout</MenuItem>
+             <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid var(--color-border)` }}>
+                <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, lineHeight: 1.3 }}>{basicInfo?.fullName || 'User Name'}</Typography>
+                <Typography variant="body2" noWrap sx={{ color: 'var(--color-text-secondary)', lineHeight: 1.3 }}>{basicInfo?.email || 'user@example.com'}</Typography>
+             </Box>
+            <MenuItem onClick={handleCloseUserMenu} component={Link} to="/profile"><PersonIcon/>Profile</MenuItem>
+            <MenuItem onClick={handleCloseUserMenu} component={Link} to="/settings"><SettingsIcon/>Settings</MenuItem>
+            <Divider sx={{ my: 0.5, borderColor: 'var(--color-border)' }} />
+            <MenuItem onClick={handleLogout}><LogoutIcon/>Sign Out</MenuItem>
           </Menu>
-
-        </Box> {/* End Right Section */}
-
+        </Box>
       </Toolbar>
     </AppBar>
   );
-};
+});
 
 export default Header;
