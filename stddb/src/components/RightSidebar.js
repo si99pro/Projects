@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 // src/components/RightSidebar.js
 import React from 'react';
 import Box from '@mui/material/Box';
