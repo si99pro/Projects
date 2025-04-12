@@ -1,7 +1,8 @@
+/* eslint-disable no-unused-vars */
 // src/components/Layout.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import PullToRefresh from 'react-simple-pull-to-refresh';
+// import PullToRefresh from 'react-simple-pull-to-refresh'; // <-- DELETED
 
 // Import Components
 import Header from './Header';
@@ -10,8 +11,7 @@ import RightSidebar from './RightSidebar';
 
 // Import Layout-specific CSS
 import './Layout.css';
-// Import CSS for pull-to-refresh custom styling
-import './PullToRefresh.css';
+// import './PullToRefresh.css'; // <-- DELETED
 
 const Layout = () => {
   const location = useLocation();
@@ -21,11 +21,10 @@ const Layout = () => {
   const handleToggleMobileNav = useCallback(() => {
     setMobileNavOpen(prev => {
         const newState = !prev;
-        // Add/remove body class based on the NEW state
         document.body.classList.toggle('mobile-nav-active', newState);
         return newState;
     });
-  }, []); // No dependency needed if only toggling based on prev
+  }, []);
 
   const closeMobileNav = useCallback(() => {
     setMobileNavOpen(false);
@@ -68,14 +67,8 @@ const Layout = () => {
   }, []);
 
 
-  // --- Pull-to-Refresh Handler ---
-  const handleRefresh = async () => {
-    console.log('Refresh triggered for:', location.pathname);
-    await new Promise(resolve => setTimeout(resolve, 300)); // Short visual delay
-    // --- !!! IMPLEMENT YOUR REFRESH LOGIC HERE !!! ---
-    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate network delay
-    console.log('Refresh finished.');
-  };
+  // --- Pull-to-Refresh Handler --- // <-- DELETED Block Below
+  // const handleRefresh = async () => { ... }; // <-- DELETED
 
   return (
     <div className="app-layout-wrapper">
@@ -88,19 +81,12 @@ const Layout = () => {
              <SideNav isOpen={isMobileNavOpen} closeNav={closeMobileNav} />
         </aside>
 
-        {/* PullToRefresh now wraps the main element */}
-        {/* The Library should handle body scroll detection */}
-        <PullToRefresh
-            onRefresh={handleRefresh}
-            pullingContent={<div className="ptr-pulling"><span className="ptr-icon">⬇️</span> Pull down</div>}
-            refreshingContent={<div className="ptr-refreshing"><span className="ptr-spinner">🔄</span> Refreshing...</div>}
-            resistance={2.5} // Adjust as needed for body scroll feel
-        >
-            {/* Main content area - NO fixed height or internal overflow */}
+        {/* PullToRefresh wrapper removed */}
+        {/* <PullToRefresh ... > */} {/* <-- DELETED */}
             <main className="main-content-area" id="main-content">
                 <Outlet /> {/* Page content determines height */}
             </main>
-        </PullToRefresh>
+        {/* </PullToRefresh> */} {/* <-- DELETED */}
 
         <aside className="right-sidebar-wrapper">
             <RightSidebar />

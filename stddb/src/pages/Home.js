@@ -123,7 +123,23 @@ const Home = () => {
               </Card>
             </Grid>
 
-             {/* Card 2: Upcoming Deadlines */}
+            {/* Card 2 (Previously Card 4): Quick Actions - MOVED HERE */}
+            <Grid item xs={12} sm={6} lg={4}>
+               <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
+                 <CardContent sx={{ flexGrow: 1 }}>
+                   <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                     <SpeedIcon sx={{ mr: 1.5, color: 'success.main' }}/> Quick Actions
+                   </Typography>
+                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                      <Button component={RouterLink} to="/grades" variant="outlined" startIcon={<AssessmentIcon />} fullWidth>Check Grades</Button>
+                      <Button component={RouterLink} to="/registration" variant="outlined" startIcon={<EditNoteIcon />} fullWidth>Register Courses</Button>
+                      <Button component={RouterLink} to="/profile" variant="outlined" startIcon={<PersonIcon />} fullWidth>Update Profile</Button>
+                   </Box>
+                 </CardContent>
+               </Card>
+            </Grid>
+
+             {/* Card 3 (Previously Card 2): Upcoming Deadlines */}
              <Grid item xs={12} sm={6} lg={4}>
                 <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
                   <CardContent sx={{ flexGrow: 1 }}>
@@ -144,7 +160,7 @@ const Home = () => {
                 </Card>
               </Grid>
 
-            {/* Card 3: Announcements */}
+            {/* Card 4 (Previously Card 3): Announcements */}
             <Grid item xs={12} sm={6} lg={4}>
                <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
                  <CardContent sx={{ flexGrow: 1 }}>
@@ -162,22 +178,6 @@ const Home = () => {
                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2 }}>
                    <Button component={RouterLink} to="/announcements" size="small">View All Announcements</Button>
                  </CardActions>
-               </Card>
-             </Grid>
-
-            {/* Card 4: Quick Actions */}
-             <Grid item xs={12} sm={6} lg={4}>
-               <Card variant="outlined" sx={{ height: '100%', display: 'flex', flexDirection: 'column', '&:hover': { boxShadow: 3 } }}>
-                 <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                     <SpeedIcon sx={{ mr: 1.5, color: 'success.main' }}/> Quick Actions
-                   </Typography>
-                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                      <Button component={RouterLink} to="/grades" variant="outlined" startIcon={<AssessmentIcon />} fullWidth>Check Grades</Button>
-                      <Button component={RouterLink} to="/registration" variant="outlined" startIcon={<EditNoteIcon />} fullWidth>Register Courses</Button>
-                      <Button component={RouterLink} to="/profile" variant="outlined" startIcon={<PersonIcon />} fullWidth>Update Profile</Button>
-                   </Box>
-                 </CardContent>
                </Card>
              </Grid>
 
