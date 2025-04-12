@@ -13,7 +13,7 @@ import NotFound from './pages/NotFound';
 // Example public pages (uncomment if needed)
 // import Welcome from './pages/Welcome';
 // import VerifyEmail from './pages/VerifyEmail';
-// import ForgotPassword from './pages/ForgotPassword';
+import ForgotPassword from './pages/ForgotPassword'; // <--- CHANGE: Uncommented this line
 // Example protected pages (uncomment if needed)
 // import Courses from './pages/Courses';
 // import Schedule from './pages/Schedule';
@@ -47,7 +47,7 @@ function App() {
           {/* Add other public routes like /welcome, /verify-email, /forgot-password here if needed */}
           {/* <Route path="/welcome" element={<Welcome />} /> */}
           {/* <Route path="/verify-email" element={<VerifyEmail />} /> */}
-          {/* <Route path="/forgot-password" element={<ForgotPassword />} /> */}
+          <Route path="/forgot-password" element={<ForgotPassword />} /> {/* <--- CHANGE: Uncommented this line */}
 
 
           {/* === Protected Routes (Using Layout) === */}
