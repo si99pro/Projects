@@ -48,16 +48,6 @@
   padding: 0; /* Reset padding, internal elements/buttons control it */
   color: var(--color-text-primary);
 }
-/* Optional: Adjustments for the first card if needed */
-.sticky-sidebar .sidebar-card:first-child {
-  /* border-top: none; */ /* Example: remove top border */
-  /* border-top-left-radius: 0; */
-  /* border-top-right-radius: 0; */
-}
-/* Remove margin from the last card */
-.sticky-sidebar .sidebar-card:last-child {
-  margin-bottom: 0;
-}
 
 /* --- Profile Card Specifics --- */
 .sticky-sidebar .profile-card .profile-bg {

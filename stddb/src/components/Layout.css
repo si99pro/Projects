@@ -43,11 +43,6 @@
 
 
 /* --- Sidebar Wrappers --- */
-/* These elements in Layout.js just define the grid columns */
-.left-sidebar-wrapper,
-.right-sidebar-wrapper {
-   /* Typically no styles needed here */
-}
 
 /* --- Mobile Navigation Overlay --- */
 /* Dark overlay shown when mobile nav is open */
