@@ -60,86 +60,179 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
     { label: 'Courses', link: '/courses' },
   ];
 
+  // --- Define a very subtle shadow value ---
+  // Adjust the color alpha (last value in rgba) and blur (third px value)
+  const subtleShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
+  // Alternative slightly stronger: '0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04)'
+
   return (
     <AppBar
       ref={ref}
       component="header"
-      // --- CHANGE POSITION TO FIXED ---
-      position="fixed" // <<< CHANGED from "sticky"
-      // --- ENSURE IT'S AT THE TOP AND FULL WIDTH ---
+      position="fixed"
+      // Remove elevation prop, we are defining boxShadow directly
+      // elevation={0} // REMOVED
       sx={{
-        top: 0,          // <<< ADDED
-        left: 0,         // <<< ADDED
-        right: 0,        // <<< ADDED (or width: '100%')
+        // Apply the subtle shadow
+        boxShadow: subtleShadow, // <<< APPLY SUBTLE SHADOW
+        top: 0,
+        left: 0,
+        right: 0,
         bgcolor: 'var(--color-bg-header)',
-        borderBottom: `1px solid var(--color-border)`,
-        height: 'var(--header-height)', // Keep dynamic height calculation
-        zIndex: theme.zIndex.drawer + 1, // Ensure it's above sidebars/drawers
-        // --- REMOVE ELEVATION IF YOU WANT FLAT DESIGN ---
-        elevation: 0, // Optional: Keep if you want a flat look
+        // Remove border if shadow provides enough separation, or keep it if preferred
+        // borderBottom: `1px solid var(--color-border)`, // Optional: keep or remove
+        height: 'var(--header-height)',
+        zIndex: theme.zIndex.drawer + 1,
       }}
       className="app-header"
     >
-      {/* Toolbar styles remain largely the same */}
+      {/* Toolbar setup */}
       <Toolbar
         disableGutters
         sx={{
           minHeight: 'var(--header-height) !important',
           height: 'var(--header-height)',
-          px: 'var(--layout-padding-x)', // Horizontal padding for content
-          maxWidth: 'var(--layout-max-width)', // Max width for content
-          width: '100%',                   // Ensure toolbar uses available width
-          mx: 'auto',                      // Center content within the AppBar
+          px: 'var(--layout-padding-x)',
+          maxWidth: 'var(--layout-max-width)',
+          width: '100%',
+          mx: 'auto',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
-        {/* === Left Section === */}
+        {/* === Left Section: Logo, Mobile Toggle, Desktop Nav === */}
         <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+          {/* Mobile Nav Toggle */}
           <Tooltip title="Toggle Navigation">
             <IconButton
               onClick={onToggleMobileNav}
               aria-label="Toggle navigation"
               edge="start"
-              sx={{ mr: 1, display: { xs: 'inline-flex', md: 'none' }, color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}
+              sx={{
+                mr: 1,
+                display: { xs: 'inline-flex', md: 'none' },
+                color: 'var(--color-icon)',
+                '&:hover': { bgcolor: 'var(--color-bg-hover)' }
+              }}
             >
               <MenuIcon />
             </IconButton>
           </Tooltip>
-          <Typography variant="h6" component={Link} to="/" sx={{ fontWeight: 'bold', color: 'var(--color-text-primary)', textDecoration: 'none', mr: { xs: 1, md: 3 }, '&:hover': { textDecoration: 'none' } }} >
+          {/* Logo/Brand */}
+          <Typography
+            variant="h6"
+            component={Link}
+            to="/"
+            sx={{
+              fontWeight: 'bold',
+              color: 'var(--color-text-primary)',
+              textDecoration: 'none',
+              mr: { xs: 1, md: 3 },
+              '&:hover': { textDecoration: 'none' }
+            }}
+          >
             stdDB
           </Typography>
+          {/* Desktop Navigation */}
           <Box component="nav" sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }} aria-label="Main navigation">
             {navItems.map((item) => (
-              <Button key={item.label} component={NavLink} to={item.link} end={item.link === '/'} size="small" sx={{ color: 'var(--color-text-secondary)', fontWeight: 500, textTransform: 'none', px: 1.5, '&:hover': { color: 'var(--color-text-primary)', bgcolor: 'var(--color-bg-hover)' }, '&.active': { color: 'var(--color-text-primary)', fontWeight: 600, bgcolor: 'var(--color-bg-active)' } }} >
+              <Button
+                key={item.label}
+                component={NavLink}
+                to={item.link}
+                end={item.link === '/'}
+                size="small"
+                sx={{
+                  color: 'var(--color-text-secondary)',
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  px: 1.5,
+                  '&:hover': {
+                    color: 'var(--color-text-primary)',
+                    bgcolor: 'var(--color-bg-hover)'
+                  },
+                  '&.active': {
+                    color: 'var(--color-text-primary)',
+                    fontWeight: 600,
+                    bgcolor: 'var(--color-bg-active)'
+                  }
+                }}
+              >
                 {item.label}
               </Button>
             ))}
           </Box>
         </Box>
 
-        {/* === Right Section === */}
+        {/* === Right Section: Search, Icons, User Menu === */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } }}>
-          <Box sx={{ position: 'relative', bgcolor: 'var(--color-bg-search)', borderRadius: 'var(--border-radius)', display: { xs: 'none', sm: 'flex' }, alignItems: 'center', height: '36px' }}>
+          {/* Desktop Search Bar */}
+          <Box sx={{
+            position: 'relative',
+            bgcolor: 'var(--color-bg-search)',
+            borderRadius: 'var(--border-radius)',
+            display: { xs: 'none', sm: 'flex' },
+            alignItems: 'center',
+            height: '36px'
+          }}>
             <Box sx={{ pl: 1.5, height: '100%', position: 'absolute', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <SearchIcon sx={{ color: 'var(--color-icon)', fontSize: '1.2rem' }} />
             </Box>
-            <InputBase placeholder="Search..." inputProps={{ 'aria-label': 'search' }} sx={{ color: 'var(--color-text-primary)', pl: 5, pr: 1.5, width: { sm: '200px', md: '280px' }, height: '100%', fontSize: '0.9rem', '& ::placeholder': { color: 'var(--color-text-placeholder)', opacity: 1 } }} />
+            <InputBase
+              placeholder="Search..."
+              inputProps={{ 'aria-label': 'search' }}
+              sx={{
+                color: 'var(--color-text-primary)',
+                pl: 5, pr: 1.5,
+                width: { sm: '200px', md: '280px' },
+                height: '100%',
+                fontSize: '0.9rem',
+                '& ::placeholder': {
+                  color: 'var(--color-text-placeholder)',
+                  opacity: 1
+                }
+              }} />
           </Box>
-          <Tooltip title="Search"><IconButton sx={{ display: { xs: 'inline-flex', sm: 'none' }, color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}><SearchIcon /></IconButton></Tooltip>
-          <Tooltip title="Notifications">
-            <IconButton sx={{ color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}>
-              <Badge badgeContent={notificationCount} color="error" overlap="circular"><NotificationsNoneIcon /></Badge>
+          {/* Mobile Search Icon */}
+          <Tooltip title="Search">
+            <IconButton sx={{ display: { xs: 'inline-flex', sm: 'none' }, color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}>
+              <SearchIcon />
             </IconButton>
           </Tooltip>
+          {/* Notifications Icon */}
+          <Tooltip title="Notifications">
+            <IconButton sx={{ color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}>
+              <Badge badgeContent={notificationCount} color="error" overlap="circular">
+                <NotificationsNoneIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+          {/* User Avatar & Menu */}
           <Tooltip title="Account settings">
-            <IconButton onClick={handleOpenUserMenu} size="small" aria-label="Open account menu" aria-controls={Boolean(anchorElUser) ? 'account-menu' : undefined} aria-haspopup="true" sx={{ p: 0.5, '&:hover': { bgcolor: 'var(--color-bg-hover)' } }} >
-              <Avatar sx={{ width: 32, height: 32, bgcolor: theme.palette.primary.main, fontSize: '0.875rem', color: 'var(--color-text-inverted)' }} src={basicInfo?.profileImageUrl || undefined} alt={basicInfo?.fullName || 'User'} >
+            <IconButton
+              onClick={handleOpenUserMenu}
+              size="small"
+              aria-label="Open account menu"
+              aria-controls={Boolean(anchorElUser) ? 'account-menu' : undefined}
+              aria-haspopup="true"
+              sx={{ p: 0.5, '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}
+            >
+              <Avatar
+                sx={{
+                  width: 32, height: 32,
+                  bgcolor: theme.palette.primary.main,
+                  fontSize: '0.875rem',
+                  color: 'var(--color-text-inverted)'
+                }}
+                src={basicInfo?.profileImageUrl || undefined}
+                alt={basicInfo?.fullName || 'User'}
+              >
                 {!basicInfo?.profileImageUrl && basicInfo?.fullName ? getInitials(basicInfo.fullName) : !basicInfo?.profileImageUrl ? <PersonIcon sx={{ fontSize: '1.2rem' }} /> : null}
               </Avatar>
             </IconButton>
           </Tooltip>
+          {/* User Account Menu */}
           <Menu
             id="account-menu"
             anchorEl={anchorElUser}
@@ -150,19 +243,36 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
             MenuListProps={{ 'aria-labelledby': 'account-menu-button' }}
             slotProps={{
               paper: {
-                elevation: 0,
+                elevation: 0, // Keep paper flat
                 sx: {
-                  mt: 1.5, minWidth: 220, overflow: 'visible', bgcolor: 'var(--color-bg-card)', color: 'var(--color-text-primary)', border: `1px solid var(--color-border)`, filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
-                  '&::before': { content: '""', display: 'block', position: 'absolute', top: 0, right: 14, width: 10, height: 10, bgcolor: 'var(--color-bg-card)', transform: 'translateY(-50%) rotate(45deg)', zIndex: 0, borderTop: 'inherit', borderLeft: 'inherit'},
-                  '& .MuiMenuItem-root': { fontSize: '0.9rem', padding: theme.spacing(1, 2), '&:hover': { bgcolor: 'var(--color-bg-hover)' }, '& a': { textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', width: '100%' } },
+                  mt: 1.5, minWidth: 220, overflow: 'visible',
+                  bgcolor: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
+                  border: `1px solid var(--color-border)`,
+                  filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))', // Keep dropdown shadow
+                  '&::before': {
+                     content: '""', display: 'block', position: 'absolute',
+                     top: 0, right: 14, width: 10, height: 10,
+                     bgcolor: 'var(--color-bg-card)',
+                     transform: 'translateY(-50%) rotate(45deg)', zIndex: 0,
+                     borderTop: 'inherit', borderLeft: 'inherit'
+                  },
+                  '& .MuiMenuItem-root': {
+                     fontSize: '0.9rem', padding: theme.spacing(1, 2),
+                     '&:hover': { bgcolor: 'var(--color-bg-hover)' },
+                     '& a': { textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', width: '100%' }
+                  },
                   '& .MuiSvgIcon-root': { fontSize: '1.1rem', color: 'var(--color-icon)', mr: 1.5 }
                 }
               }
             }}
           >
              <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid var(--color-border)` }}>
-                <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, lineHeight: 1.3 }}>{basicInfo?.fullName || 'User Name'}</Typography>
-                <Typography variant="body2" noWrap sx={{ color: 'var(--color-text-secondary)', lineHeight: 1.3 }}>{basicInfo?.email || 'user@example.com'}</Typography>
+                <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+                  {basicInfo?.fullName || 'User Name'}
+                </Typography>
+                <Typography variant="body2" noWrap sx={{ color: 'var(--color-text-secondary)', lineHeight: 1.3 }}>
+                  {basicInfo?.email || 'user@example.com'}
+                </Typography>
              </Box>
             <MenuItem onClick={handleCloseUserMenu} component={Link} to="/profile"><PersonIcon/>Profile</MenuItem>
             <MenuItem onClick={handleCloseUserMenu} component={Link} to="/settings"><SettingsIcon/>Settings</MenuItem>

@@ -14,7 +14,6 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Paper from '@mui/material/Paper';
 import Divider from '@mui/material/Divider';
-// Button import removed as it's not used in the final structure
 import Avatar from '@mui/material/Avatar';
 import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
@@ -39,7 +38,6 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
  * Helper to format optional values or display placeholder text.
  */
 const formatDisplayValue = (value, isDate = false) => {
-    // Keep "Not Set" styling using theme disabled color for semantic clarity
     if (value === undefined || value === null || value === '') {
       return <Typography variant="body1" color="text.disabled" component="span" sx={{ fontStyle: 'italic' }}>Not Set</Typography>;
     }
@@ -51,7 +49,7 @@ const formatDisplayValue = (value, isDate = false) => {
            return <Typography variant="body1" color="error" component="span">Invalid Date</Typography>;
        }
     }
-    return value; // Return raw value for ListItemText to style
+    return value;
 };
 
 /**
@@ -117,11 +115,14 @@ const Profile = () => {
   return (
     <Container
       component="main"
-      maxWidth="lg"
-      disableGutters={false}
+      maxWidth="lg" // Use consistent maxWidth or false
+      disableGutters={false} // Let Container handle gutters
       sx={{
           flexGrow: 1,
-          py: { xs: 2, sm: 3, md: 4 },
+          // --- FIXED PADDING ---
+          pt: 0, // Explicitly set top padding to 0
+          pb: { xs: 2, sm: 3, md: 4 }, // Keep bottom padding
+          // --------------------
       }}
     >
       {loading ? (
@@ -138,7 +139,7 @@ const Profile = () => {
           elevation={0}
           variant="outlined"
           sx={{
-            p: 0,
+            p: 0, // Padding handled by inner Boxes
             width: '100%',
             bgcolor: 'var(--color-bg-card)', // Use CSS Variable for background
             borderColor: 'divider', // Keep using theme divider

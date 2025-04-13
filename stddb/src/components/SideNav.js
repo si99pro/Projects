@@ -8,15 +8,15 @@ import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
+import Button from '@mui/material/Button'; // Keep Button if used elsewhere, otherwise remove
 import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Tooltip from '@mui/material/Tooltip';
-import IconButton from '@mui/material/IconButton';
+// Tooltip import removed as it's not used
+// IconButton import removed as it's not used
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
@@ -31,7 +31,10 @@ import GroupIcon from '@mui/icons-material/GroupOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 
 // --- Constants ---
-const drawerWidth = 'var(--sidebar-left-width, 250px)'; // Use CSS variable
+// Base width variable (for content & mobile)
+const sidebarContentWidth = 'var(--sidebar-left-width, 250px)';
+// Calculated width including the gap for the permanent drawer
+const permanentDrawerCalculatedWidth = `calc(${sidebarContentWidth} + var(--layout-gap, 20px))`; // Add fallback for gap
 
 // --- Helper Function ---
 const getInitials = (name) => {
@@ -97,18 +100,19 @@ const SideNav = ({ isOpen, onClose }) => {
   // --- Drawer Content ---
   const DrawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      {isMobile && (
-        <Box sx={{ p: 2, display: 'flex', alignItems: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'var(--color-text-primary)' }}>stdDB</Typography>
-        </Box>
-      )}
-      <Box sx={{ p: 2, textAlign: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
+
+      {/* REMOVED: Mobile Top Title */}
+
+      {/* --- User Profile Section (Top) --- */}
+      <Box sx={{ pt: isMobile ? 2 : 0, p: 2, textAlign: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
         <Avatar component={NavLink} to="/profile" onClick={isMobile ? onClose : undefined} sx={{ width: 64, height: 64, margin: '0 auto 12px auto', bgcolor: theme.palette.primary.light, color: theme.palette.primary.contrastText, fontSize: '1.5rem', cursor: 'pointer', transition: 'transform 0.2s ease-in-out', '&:hover': { transform: 'scale(1.05)' } }} src={basicInfo?.profileImageUrl || undefined} alt={basicInfo?.fullName || 'User Profile'}>
           {!basicInfo?.profileImageUrl && userInitials() ? userInitials() : <PersonIcon />}
         </Avatar>
         <Typography variant="subtitle1" component="div" noWrap sx={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{basicInfo?.fullName || 'Your Name'}</Typography>
         <Typography variant="body2" noWrap sx={{ color: 'var(--color-text-secondary)', mb: 1 }}>{basicInfo?.headline || basicInfo?.email || 'Your Role/Email'}</Typography>
       </Box>
+
+      {/* --- Main Navigation List --- */}
       <List sx={{ flexGrow: 1, py: 1 }}>
         {mainNavItems.map((item) => (
           <ListItem key={item.label} disablePadding>
@@ -119,8 +123,12 @@ const SideNav = ({ isOpen, onClose }) => {
           </ListItem>
         ))}
       </List>
+
+      {/* --- Divider --- */}
       <Divider sx={{ mx: 2, my: 1 }} />
-      <List sx={{ py: 1 }}>
+
+      {/* --- User Actions / Settings List --- */}
+      <List sx={{ py: 1, pb: 2 }}>
         {userNavItems.map((item) => (
            <ListItem key={item.label} disablePadding>
             <ListItemButton component={NavLink} to={item.link} onClick={isMobile ? onClose : undefined} sx={{ py: 0.75, px: 2.5, mb: 0.5, borderRadius: 'var(--border-radius-sm)', mx: 1.5, color: 'var(--color-text-secondary)', '& .MuiListItemIcon-root': { minWidth: 'auto', marginRight: 1.5, color: 'var(--color-icon)' }, '& .MuiListItemText-primary': { fontSize: '0.9rem', fontWeight: 500 }, '&:hover': { backgroundColor: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', '& .MuiListItemIcon-root': { color: theme.palette.primary.main } }, '&.active': { backgroundColor: 'var(--color-bg-active)', color: 'var(--color-text-primary)', fontWeight: 600, '& .MuiListItemIcon-root': { color: theme.palette.primary.main }, '& .MuiListItemText-primary': { fontWeight: 600 } } }}>
@@ -136,10 +144,9 @@ const SideNav = ({ isOpen, onClose }) => {
            </ListItemButton>
         </ListItem>
       </List>
-      <Box sx={{ p: 2, mt: 'auto', borderTop: `1px solid ${theme.palette.divider}` }}>
-          <Typography variant="body2" sx={{ mb: 1, color: 'var(--color-text-secondary)', textAlign:'center' }}>Grow your career</Typography>
-          <Button variant="outlined" size="small" fullWidth startIcon={<Box sx={{ width: 16, height: 16, bgcolor: 'var(--color-premium-icon-bg, #f8c77e)', mr: 0.5, borderRadius: '2px' }} />} sx={{ borderColor: 'var(--color-premium-border, gold)', color: 'var(--color-premium-text, gold)', textTransform:'none', '&:hover': { bgcolor: 'var(--color-premium-hover-bg, rgba(255, 215, 0, 0.1))' } }}>Try Premium Free</Button>
-      </Box>
+
+      {/* REMOVED: "Grow your career" section */}
+
     </Box>
   );
 
@@ -151,45 +158,45 @@ const SideNav = ({ isOpen, onClose }) => {
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
       sx={{
-        // Common styles
-        width: drawerWidth,
+        // --- Use CALCULATED WIDTH for permanent variant ---
+        width: isMobile ? sidebarContentWidth : permanentDrawerCalculatedWidth, // Dynamic width
         flexShrink: 0,
 
         // --- CONDITIONAL STYLES ---
         ...(isMobile
-          ? // MOBILE (temporary) - Handled by Modal, zIndex is key
+          ? // MOBILE (temporary)
             {
-              zIndex: theme.zIndex.drawer + 2, // Above overlay
+              zIndex: theme.zIndex.drawer + 2,
               [`& .MuiDrawer-paper`]: {
-                width: drawerWidth,
+                width: sidebarContentWidth, // Use base width
                 boxSizing: 'border-box',
-                bgcolor: 'var(--color-bg-card)',
+                // Use standard sidenav background for mobile (or card bg if preferred)
+                bgcolor: 'var(--color-bg-sidenav)', // #ffffff in light theme
                 color: 'var(--color-text-primary)',
-                ...scrollbarStyles, // Apply scrollbar styles to paper
+                ...scrollbarStyles,
               },
             }
-          : // DESKTOP (permanent) - Apply fixed positioning
+          : // DESKTOP (permanent) - Apply fixed positioning and CALCULATED width
             {
-              // Apply position fixed to the Drawer component itself
-              position: 'fixed',          // <<< FIXED POSITION
+              position: 'fixed',
               left: 0,
-              top: 'var(--header-height)', // <<< START BELOW HEADER
-              height: 'calc(100vh - var(--header-height))', // Fill remaining height
-              zIndex: theme.zIndex.appBar - 1, // Sit below the AppBar
+              top: 'var(--header-height)',
+              height: 'calc(100vh - var(--header-height))',
+              zIndex: theme.zIndex.appBar - 1,
 
               // Style the inner paper container
               [`& .MuiDrawer-paper`]: {
-                width: drawerWidth,
+                width: permanentDrawerCalculatedWidth,
                 boxSizing: 'border-box',
-                // CRITICAL: Reset internal position for content flow
-                position: 'relative',     // <<< ALLOWS NORMAL CONTENT SCROLL
-                top: 0,                   // Reset any accidental top offset
-                left: 0,                  // Reset any accidental left offset
-                height: '100%',           // Fill the fixed container height
-                borderRight: `1px solid ${theme.palette.divider}`,
-                bgcolor: 'var(--color-bg-card)',
+                position: 'relative', // Keep relative for content flow
+                top: 0, left: 0, // Reset relative offsets
+                height: '100%', // Fill fixed container
+                borderRight: 'none', // Keep border removed
+                // --- MODIFIED: Use header background color for desktop sidenav ---
+                bgcolor: 'var(--color-bg-header)', // #F9FAFB in light theme
+                // -----------------------------------------------------------------
                 color: 'var(--color-text-primary)',
-                ...scrollbarStyles, // Apply scrollbar styles to paper
+                ...scrollbarStyles,
               },
             }),
         // --- END CONDITIONAL STYLES ---
