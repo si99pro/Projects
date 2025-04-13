@@ -10,7 +10,7 @@
   --color-bg-rightsidebar: #ffffff;
   --color-bg-hover: rgba(0, 0, 0, 0.04);
   --color-bg-active: rgba(0, 0, 0, 0.06);
-  --color-bg-search: #F3F4F6;
+  --color-bg-search: #ffffff;
   /* --------------------------------------------- */
 
   /* --- Text Colors (Adjusted for contrast) --- */
@@ -43,7 +43,7 @@
   --spacing-lg: 24px; /* Used for grid container vertical padding */
 
   /* --- NEW: Max width for the inner content wrapper --- */
-  --main-content-max-width: 960px; /* <<< ADJUST THIS VALUE (e.g., 800px, 1024px) */
+  --main-content-max-width: 800px; /* <<< ADJUST THIS VALUE (e.g., 800px, 960px, 1024px) */
   /* ---------------------------------------------------- */
 
   /* --- Font & Transition Variables --- */

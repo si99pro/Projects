@@ -1,4 +1,3 @@
-// src/components/Layout.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
@@ -12,98 +11,112 @@ const Layout = () => {
 
   // --- Mobile Nav Handlers ---
   const handleToggleMobileNav = useCallback(() => {
-    setMobileNavOpen(prev => !prev);
-    document.body.classList.toggle('mobile-nav-active', !isMobileNavOpen);
-  }, [isMobileNavOpen]);
+    setMobileNavOpen(prev => {
+      const nextState = !prev;
+      document.body.classList.toggle('mobile-nav-active', nextState);
+      return nextState;
+    });
+  }, []);
 
   const closeMobileNav = useCallback(() => {
     setMobileNavOpen(false);
     document.body.classList.remove('mobile-nav-active');
   }, []);
 
-  // --- Header Height Calculation ---
+  // --- Header Height Calculation & Layout Adjustment ---
   useEffect(() => {
     const updateLayoutOffsets = () => {
-       const headerElement = headerRef.current;
-       // Use the CSS variable defined in :root as the default/fallback
-       const defaultHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header-height')) || 60;
-       const headerHeight = headerElement?.offsetHeight || defaultHeight;
+      const rootStyle = getComputedStyle(document.documentElement);
+      const headerElement = headerRef.current;
+      const defaultHeight = parseFloat(rootStyle.getPropertyValue('--header-height')) || 60; // Fallback
+      const headerHeight = headerElement?.offsetHeight || defaultHeight;
+      const spacingLg = parseFloat(rootStyle.getPropertyValue('--spacing-lg') || '24'); // Fallback
 
-       // Update the CSS variable value dynamically
-       document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+      // --- Update the --header-height CSS variable ---
+      const currentHeaderVar = parseFloat(rootStyle.getPropertyValue('--header-height'));
+      if (Math.abs(headerHeight - currentHeaderVar) > 1) { // Update only if changed
+          document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+      }
+      // --- Variable Updated ---
 
-       // Apply padding top to the grid container to offset fixed header
-       const gridContainer = document.querySelector('.main-grid-container');
-       if (gridContainer) {
-           gridContainer.style.paddingTop = `${headerHeight + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-lg') || '24px')}px`; // Add grid padding
-           // Adjust grid container height directly if needed (alternative to padding)
-           // gridContainer.style.height = `calc(100vh - ${headerHeight}px)`;
-       }
 
-       // Adjust sticky top for right sidebar if needed (CSS might be sufficient)
-        // const rightSidebar = document.querySelector('.right-sidebar-wrapper');
-        // if (rightSidebar) {
-        //   rightSidebar.style.top = `${headerHeight + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-lg') || '24px')}px`;
-        // }
+      const gridContainer = document.querySelector('.main-grid-container');
+      if (gridContainer) {
+        const isMobileView = window.innerWidth < 900; // Check breakpoint
+
+        if (!isMobileView) {
+          // --- Adjust Padding Top for Grid Container ---
+          // This pushes the grid content below the fixed header
+          gridContainer.style.paddingTop = `${headerHeight + spacingLg}px`;
+
+          // --- REMOVE Height Calculation/Setting for Left Sidebar & Main Content ---
+          // Let their height be determined by content or CSS (like max-height for sticky)
+          // const leftSidebar = document.querySelector('.side-nav-wrapper'); // No longer needed here
+          // const mainContentArea = document.querySelector('.main-content-area'); // No longer needed here
+          // const calculatedHeight = `calc(100vh - ${headerHeight}px - ${spacingLg}px)`; // No longer needed here
+          // if (leftSidebar) leftSidebar.style.height = calculatedHeight; // REMOVED
+          // if (mainContentArea) mainContentArea.style.height = calculatedHeight; // REMOVED
+          // --- Heights NO LONGER SET by JS ---
+
+        } else {
+          // On mobile, reset styles potentially set by JS for desktop view
+          gridContainer.style.paddingTop = ''; // Let mobile CSS handle padding
+
+          // Reset heights if they were set dynamically (redundant now, but safe)
+           const leftSidebar = document.querySelector('.side-nav-wrapper');
+           const mainContentArea = document.querySelector('.main-content-area');
+           if (leftSidebar) leftSidebar.style.height = '';
+           if (mainContentArea) mainContentArea.style.height = '';
+        }
+      }
     };
 
     let resizeObserver;
     const headerEl = headerRef.current;
+
     if (headerEl && typeof ResizeObserver !== 'undefined') {
-        updateLayoutOffsets(); // Initial calculation
-        resizeObserver = new ResizeObserver(updateLayoutOffsets);
-        resizeObserver.observe(headerEl);
+      updateLayoutOffsets();
+      resizeObserver = new ResizeObserver(updateLayoutOffsets);
+      resizeObserver.observe(headerEl);
+      window.addEventListener('resize', updateLayoutOffsets); // Handle viewport changes
     } else {
-       // Fallback for older browsers
-       const timerId = setTimeout(updateLayoutOffsets, 0);
-       window.addEventListener('resize', updateLayoutOffsets);
-       return () => {
-         clearTimeout(timerId);
-         window.removeEventListener('resize', updateLayoutOffsets);
-         const gridContainer = document.querySelector('.main-grid-container');
-         if (gridContainer) gridContainer.style.paddingTop = '0px'; // Reset on cleanup
-       }
+      // Fallback
+      const timerId = setTimeout(updateLayoutOffsets, 50);
+      window.addEventListener('resize', updateLayoutOffsets);
+      return () => {
+        clearTimeout(timerId);
+        window.removeEventListener('resize', updateLayoutOffsets);
+      }
     }
 
-    // Cleanup function
+    // Cleanup
     return () => {
       if (resizeObserver && headerEl) {
-         resizeObserver.unobserve(headerEl);
+        resizeObserver.unobserve(headerEl);
       }
-      // Reset padding on unmount
-      const gridContainer = document.querySelector('.main-grid-container');
-      if (gridContainer) gridContainer.style.paddingTop = '0px'; // Reset on cleanup
+      window.removeEventListener('resize', updateLayoutOffsets);
     };
-  }, []); // Runs once on mount
+  }, []); // Runs on mount
 
-  // --- Cleanup for mobile nav class ---
+  // --- Cleanup for mobile nav body class ---
   useEffect(() => {
-      return () => document.body.classList.remove('mobile-nav-active');
+    return () => document.body.classList.remove('mobile-nav-active');
   }, []);
 
 
   return (
     <div className="app-layout-wrapper">
       <Header ref={headerRef} onToggleMobileNav={handleToggleMobileNav} />
-
-      {/* This is the core grid container */}
       <div className="main-grid-container">
-        {/* Left Sidebar */}
         <aside className="side-nav-wrapper">
           <SideNav isOpen={isMobileNavOpen} onClose={closeMobileNav} />
         </aside>
-
-        {/* Main Content Area (Grid Cell) */}
         <main className="main-content-area" id="main-content">
-          {/* --- ADDED WRAPPER --- */}
-          {/* This wrapper will be styled to control max-width */}
           <div className="main-content-wrapper">
-            <Outlet /> {/* Outlet is now inside the wrapper */}
+            <Outlet />
           </div>
-          {/* --- END WRAPPER --- */}
         </main>
-
-        {/* Right Sidebar */}
+        {/* Right sidebar uses position: sticky defined in CSS */}
         <aside className="right-sidebar-wrapper">
           <RightSidebar />
         </aside>

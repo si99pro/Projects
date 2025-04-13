@@ -1,5 +1,5 @@
 // src/components/SideNav.js
-import React, { useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -8,15 +8,13 @@ import Box from '@mui/material/Box';
 import Drawer from '@mui/material/Drawer';
 import Avatar from '@mui/material/Avatar';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button'; // Keep Button if used elsewhere, otherwise remove
 import Divider from '@mui/material/Divider';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-// Tooltip import removed as it's not used
-// IconButton import removed as it's not used
+import Collapse from '@mui/material/Collapse'; // <-- Import Collapse
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 
@@ -29,12 +27,13 @@ import SettingsIcon from '@mui/icons-material/SettingsOutlined';
 import BookmarkIcon from '@mui/icons-material/BookmarkBorderOutlined';
 import GroupIcon from '@mui/icons-material/GroupOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ExpandLess from '@mui/icons-material/ExpandLess'; // <-- Icon for dropdown open
+import ExpandMore from '@mui/icons-material/ExpandMore'; // <-- Icon for dropdown closed
+import FolderOpenIcon from '@mui/icons-material/FolderOpenOutlined'; // <-- Example Icon for parent item
 
 // --- Constants ---
-// Base width variable (for content & mobile)
 const sidebarContentWidth = 'var(--sidebar-left-width, 250px)';
-// Calculated width including the gap for the permanent drawer
-const permanentDrawerCalculatedWidth = `calc(${sidebarContentWidth} + var(--layout-gap, 20px))`; // Add fallback for gap
+const permanentDrawerCalculatedWidth = `calc(${sidebarContentWidth} + var(--layout-gap, 20px))`;
 
 // --- Helper Function ---
 const getInitials = (name) => {
@@ -45,18 +44,33 @@ const getInitials = (name) => {
     return '';
 };
 
-// --- Navigation Items ---
-const mainNavItems = [
+// --- Navigation Items (Restructured for Dropdown) ---
+// Define keys for collapsible items
+const MENU_KEYS = {
+    MANAGEMENT: 'management',
+    // Add other keys here if you create more dropdowns
+};
+
+const navItems = [
   { label: 'Dashboard', link: '/', icon: <DashboardIcon /> },
-  { label: 'Students', link: '/students', icon: <SchoolIcon /> },
-  { label: 'Courses', link: '/courses', icon: <BookIcon /> },
-  { label: 'Groups', link: '/groups', icon: <GroupIcon /> },
+  {
+    label: 'Management',
+    key: MENU_KEYS.MANAGEMENT, // Unique key for state management
+    icon: <FolderOpenIcon />,  // Icon for the parent item
+    subItems: [
+      { label: 'Students', link: '/students', icon: <SchoolIcon /> },
+      { label: 'Courses', link: '/courses', icon: <BookIcon /> },
+      { label: 'Groups', link: '/groups', icon: <GroupIcon /> },
+    ]
+  },
   { label: 'Saved Items', link: '/saved', icon: <BookmarkIcon /> },
 ];
+
+// User-specific items (Profile link removed as Avatar links there)
 const userNavItems = [
-  { label: 'Profile', link: '/profile', icon: <PersonIcon /> },
   { label: 'Settings', link: '/settings', icon: <SettingsIcon /> },
 ];
+
 
 // --- Component ---
 const SideNav = ({ isOpen, onClose }) => {
@@ -65,29 +79,38 @@ const SideNav = ({ isOpen, onClose }) => {
   const { contextUserData, logout } = useAuth();
   const basicInfo = contextUserData?.basicInfo;
 
+  // State to manage open/closed status of dropdown menus
+  const [openMenus, setOpenMenus] = useState({}); // Stores { menuKey: boolean }
+
   const handleLogout = async () => {
-    onClose();
+    onClose(); // Close drawer on mobile first
     try {
       if (typeof logout === 'function') { await logout(); }
       else { console.warn("AuthContext does not provide a logout function."); }
     } catch (error) { console.error("Logout failed:", error); }
   };
 
+  // Toggle function for dropdown menus
+  const handleMenuClick = (key) => {
+    setOpenMenus(prevOpenMenus => ({
+      ...prevOpenMenus,
+      [key]: !prevOpenMenus[key]
+    }));
+  };
+
   const userInitials = useCallback(() => getInitials(basicInfo?.fullName), [basicInfo?.fullName]);
 
-  // --- Define reusable scrollbar styles ---
+  // --- Reusable scrollbar styles ---
   const scrollbarStyles = {
-     // Define fallback variables for scrollbars
      '--_scrollbar-thumb-color': 'rgba(0, 0, 0, 0.2)',
      '--_scrollbar-thumb-hover-color': 'rgba(0, 0, 0, 0.4)',
      '@media (prefers-color-scheme: dark)': {
        '--_scrollbar-thumb-color': 'rgba(255, 255, 255, 0.2)',
        '--_scrollbar-thumb-hover-color': 'rgba(255, 255, 255, 0.4)',
      },
-     // Apply styles
      overflowY: 'auto',
-     scrollbarWidth: 'thin', // Firefox
-     scrollbarColor: 'var(--_scrollbar-thumb-color) transparent', // Firefox
+     scrollbarWidth: 'thin',
+     scrollbarColor: 'var(--_scrollbar-thumb-color) transparent',
      '&::-webkit-scrollbar': { width: '6px', height: '6px' },
      '&::-webkit-scrollbar-track': { background: 'transparent' },
      '&::-webkit-scrollbar-thumb': {
@@ -97,11 +120,52 @@ const SideNav = ({ isOpen, onClose }) => {
      },
   };
 
+   // --- Reusable ListItemButton Styles ---
+   // Define common styles to avoid repetition
+   const listItemButtonStyles = {
+        py: 0.75,
+        px: 2.5,
+        mb: 0.5,
+        borderRadius: 'var(--border-radius-sm)',
+        mx: 1.5,
+        color: 'var(--color-text-secondary)',
+        '& .MuiListItemIcon-root': {
+            minWidth: 'auto',
+            marginRight: 1.5,
+            color: 'var(--color-icon)'
+        },
+        '& .MuiListItemText-primary': {
+            fontSize: '0.9rem',
+            fontWeight: 500
+        },
+        '&:hover': {
+            backgroundColor: 'var(--color-bg-hover)',
+            color: 'var(--color-text-primary)',
+            '& .MuiListItemIcon-root': { color: theme.palette.primary.main }
+        },
+        '&.active': { // Styles for active NavLink
+            backgroundColor: 'var(--color-bg-active)',
+            color: 'var(--color-text-primary)',
+            fontWeight: 600,
+            '& .MuiListItemIcon-root': { color: theme.palette.primary.main },
+            '& .MuiListItemText-primary': { fontWeight: 600 }
+        },
+   };
+
+   // Styles for nested items
+   const nestedListItemButtonStyles = {
+        ...listItemButtonStyles, // Inherit base styles
+        pl: 4, // Indentation for nested items
+        py: 0.6, // Slightly less padding vertically if desired
+        '& .MuiListItemText-primary': {
+            fontSize: '0.85rem', // Slightly smaller font for sub-items
+        },
+        // Adjust active/hover if needed for nested items
+   };
+
   // --- Drawer Content ---
   const DrawerContent = (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-
-      {/* REMOVED: Mobile Top Title */}
 
       {/* --- User Profile Section (Top) --- */}
       <Box sx={{ pt: isMobile ? 2 : 0, p: 2, textAlign: 'center', borderBottom: `1px solid ${theme.palette.divider}` }}>
@@ -114,38 +178,96 @@ const SideNav = ({ isOpen, onClose }) => {
 
       {/* --- Main Navigation List --- */}
       <List sx={{ flexGrow: 1, py: 1 }}>
-        {mainNavItems.map((item) => (
-          <ListItem key={item.label} disablePadding>
-            <ListItemButton component={NavLink} to={item.link} end={item.link === '/'} onClick={isMobile ? onClose : undefined} sx={{ py: 0.75, px: 2.5, mb: 0.5, borderRadius: 'var(--border-radius-sm)', mx: 1.5, color: 'var(--color-text-secondary)', '& .MuiListItemIcon-root': { minWidth: 'auto', marginRight: 1.5, color: 'var(--color-icon)' }, '& .MuiListItemText-primary': { fontSize: '0.9rem', fontWeight: 500 }, '&:hover': { backgroundColor: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', '& .MuiListItemIcon-root': { color: theme.palette.primary.main } }, '&.active': { backgroundColor: 'var(--color-bg-active)', color: 'var(--color-text-primary)', fontWeight: 600, '& .MuiListItemIcon-root': { color: theme.palette.primary.main }, '& .MuiListItemText-primary': { fontWeight: 600 } }, }}>
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.label} />
-            </ListItemButton>
-          </ListItem>
+        {navItems.map((item) => (
+          <React.Fragment key={item.label}>
+            {item.subItems ? (
+              // --- Render Collapsible Item ---
+              <>
+                <ListItem disablePadding>
+                  <ListItemButton onClick={() => handleMenuClick(item.key)} sx={listItemButtonStyles}>
+                    <ListItemIcon>{item.icon}</ListItemIcon>
+                    <ListItemText primary={item.label} />
+                    {/* Show Expand/Collapse Icon */}
+                    {openMenus[item.key] ? <ExpandLess /> : <ExpandMore />}
+                  </ListItemButton>
+                </ListItem>
+                <Collapse in={openMenus[item.key]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {item.subItems.map((subItem) => (
+                      <ListItem key={subItem.label} disablePadding>
+                        <ListItemButton
+                          component={NavLink}
+                          to={subItem.link}
+                          onClick={isMobile ? onClose : undefined}
+                          sx={nestedListItemButtonStyles} // Apply nested styles
+                          end // Use end prop for exact matching if needed
+                        >
+                          <ListItemIcon sx={{ pl: 1.5 }}> {/* Optional: extra padding for icon */}
+                            {subItem.icon}
+                          </ListItemIcon>
+                          <ListItemText primary={subItem.label} />
+                        </ListItemButton>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            ) : (
+              // --- Render Regular Item ---
+              <ListItem key={item.label} disablePadding>
+                <ListItemButton
+                  component={NavLink}
+                  to={item.link}
+                  end={item.link === '/'} // Exact match for Dashboard ('/')
+                  onClick={isMobile ? onClose : undefined}
+                  sx={listItemButtonStyles}
+                >
+                  <ListItemIcon>{item.icon}</ListItemIcon>
+                  <ListItemText primary={item.label} />
+                </ListItemButton>
+              </ListItem>
+            )}
+          </React.Fragment>
         ))}
       </List>
 
       {/* --- Divider --- */}
       <Divider sx={{ mx: 2, my: 1 }} />
 
-      {/* --- User Actions / Settings List --- */}
+      {/* --- User Actions / Settings List (Bottom) --- */}
       <List sx={{ py: 1, pb: 2 }}>
         {userNavItems.map((item) => (
            <ListItem key={item.label} disablePadding>
-            <ListItemButton component={NavLink} to={item.link} onClick={isMobile ? onClose : undefined} sx={{ py: 0.75, px: 2.5, mb: 0.5, borderRadius: 'var(--border-radius-sm)', mx: 1.5, color: 'var(--color-text-secondary)', '& .MuiListItemIcon-root': { minWidth: 'auto', marginRight: 1.5, color: 'var(--color-icon)' }, '& .MuiListItemText-primary': { fontSize: '0.9rem', fontWeight: 500 }, '&:hover': { backgroundColor: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', '& .MuiListItemIcon-root': { color: theme.palette.primary.main } }, '&.active': { backgroundColor: 'var(--color-bg-active)', color: 'var(--color-text-primary)', fontWeight: 600, '& .MuiListItemIcon-root': { color: theme.palette.primary.main }, '& .MuiListItemText-primary': { fontWeight: 600 } } }}>
+            <ListItemButton
+              component={NavLink}
+              to={item.link}
+              onClick={isMobile ? onClose : undefined}
+              sx={listItemButtonStyles} // Use common styles
+            >
                 <ListItemIcon>{item.icon}</ListItemIcon>
                 <ListItemText primary={item.label} />
             </ListItemButton>
            </ListItem>
         ))}
+        {/* Logout Button */}
         <ListItem disablePadding>
-           <ListItemButton onClick={handleLogout} sx={{ py: 0.75, px: 2.5, mb: 0.5, borderRadius: 'var(--border-radius-sm)', mx: 1.5, color: 'var(--color-text-secondary)', '& .MuiListItemIcon-root': { minWidth: 'auto', marginRight: 1.5, color: 'var(--color-icon)' }, '& .MuiListItemText-primary': { fontSize: '0.9rem', fontWeight: 500 }, '&:hover': { backgroundColor: 'var(--color-bg-hover)', color: 'var(--color-text-primary)', '& .MuiListItemIcon-root': { color: theme.palette.error.main } } }}>
+           <ListItemButton
+              onClick={handleLogout}
+              // Apply base styles and specific hover for logout
+              sx={{
+                ...listItemButtonStyles,
+                '&:hover': {
+                    backgroundColor: 'var(--color-bg-hover)',
+                    color: theme.palette.error.main, // Use error color on hover
+                    '& .MuiListItemIcon-root': { color: theme.palette.error.main }
+                 }
+              }}
+            >
                 <ListItemIcon><LogoutIcon /></ListItemIcon>
                 <ListItemText primary="Sign Out" />
            </ListItemButton>
         </ListItem>
       </List>
-
-      {/* REMOVED: "Grow your career" section */}
 
     </Box>
   );
@@ -158,52 +280,50 @@ const SideNav = ({ isOpen, onClose }) => {
       onClose={onClose}
       ModalProps={{ keepMounted: true }}
       sx={{
-        // --- Use CALCULATED WIDTH for permanent variant ---
-        width: isMobile ? sidebarContentWidth : permanentDrawerCalculatedWidth, // Dynamic width
+        width: isMobile ? sidebarContentWidth : permanentDrawerCalculatedWidth,
         flexShrink: 0,
-
-        // --- CONDITIONAL STYLES ---
         ...(isMobile
-          ? // MOBILE (temporary)
-            {
+          ? { // MOBILE (temporary)
               zIndex: theme.zIndex.drawer + 2,
               [`& .MuiDrawer-paper`]: {
-                width: sidebarContentWidth, // Use base width
+                width: sidebarContentWidth,
                 boxSizing: 'border-box',
-                // Use standard sidenav background for mobile (or card bg if preferred)
-                bgcolor: 'var(--color-bg-sidenav)', // #ffffff in light theme
+                bgcolor: 'var(--color-bg-sidenav)',
                 color: 'var(--color-text-primary)',
                 ...scrollbarStyles,
               },
             }
-          : // DESKTOP (permanent) - Apply fixed positioning and CALCULATED width
-            {
+          : { // DESKTOP (permanent)
               position: 'fixed',
               left: 0,
               top: 'var(--header-height)',
               height: 'calc(100vh - var(--header-height))',
               zIndex: theme.zIndex.appBar - 1,
-
-              // Style the inner paper container
               [`& .MuiDrawer-paper`]: {
                 width: permanentDrawerCalculatedWidth,
                 boxSizing: 'border-box',
-                position: 'relative', // Keep relative for content flow
-                top: 0, left: 0, // Reset relative offsets
-                height: '100%', // Fill fixed container
-                borderRight: 'none', // Keep border removed
-                // --- MODIFIED: Use header background color for desktop sidenav ---
-                bgcolor: 'var(--color-bg-header)', // #F9FAFB in light theme
-                // -----------------------------------------------------------------
+                position: 'relative',
+                top: 0, left: 0,
+                height: '100%',
+                borderRight: 'none',
+                bgcolor: 'var(--color-bg-header)', // Using header background as before
                 color: 'var(--color-text-primary)',
                 ...scrollbarStyles,
+                // Apply scrollbar styles directly to the paper for permanent drawer
               },
             }),
-        // --- END CONDITIONAL STYLES ---
       }}
       aria-label="Main navigation sidebar"
     >
-      {DrawerContent}
+      {/* Apply scrollbar styles to the content wrapper for temporary drawer */}
+      {isMobile ? (
+         <Box sx={{height: '100%', ...scrollbarStyles}}>
+             {DrawerContent}
+         </Box>
+       ) : (
+         DrawerContent // Scrollbar styles applied to Drawer Paper for permanent
+       )
+      }
     </Drawer>
   );
 };
