@@ -33,7 +33,7 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
   const { contextUserData, logout } = useAuth();
   const basicInfo = contextUserData?.basicInfo;
 
-  const notificationCount = 5;
+  const notificationCount = 5; // Example count
 
   const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
   const handleCloseUserMenu = () => setAnchorElUser(null);
@@ -64,35 +64,39 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
     <AppBar
       ref={ref}
       component="header"
-      position="sticky"
-      elevation={0}
-      className="app-header"
+      // --- CHANGE POSITION TO FIXED ---
+      position="fixed" // <<< CHANGED from "sticky"
+      // --- ENSURE IT'S AT THE TOP AND FULL WIDTH ---
       sx={{
+        top: 0,          // <<< ADDED
+        left: 0,         // <<< ADDED
+        right: 0,        // <<< ADDED (or width: '100%')
         bgcolor: 'var(--color-bg-header)',
         borderBottom: `1px solid var(--color-border)`,
-        height: 'var(--header-height)',
-        zIndex: theme.zIndex.appBar,
+        height: 'var(--header-height)', // Keep dynamic height calculation
+        zIndex: theme.zIndex.drawer + 1, // Ensure it's above sidebars/drawers
+        // --- REMOVE ELEVATION IF YOU WANT FLAT DESIGN ---
+        elevation: 0, // Optional: Keep if you want a flat look
       }}
+      className="app-header"
     >
+      {/* Toolbar styles remain largely the same */}
       <Toolbar
-        disableGutters // Keep this to remove default MUI padding
+        disableGutters
         sx={{
           minHeight: 'var(--header-height) !important',
           height: 'var(--header-height)',
-          // --- RE-ADD HORIZONTAL PADDING ---
-          px: 'var(--layout-padding-x)', // <<< ADD THIS BACK >>>
-          // ---------------------------------
-          maxWidth: 'var(--layout-max-width)',
-          width: '100%',
-          mx: 'auto', // Centers the toolbar content area
+          px: 'var(--layout-padding-x)', // Horizontal padding for content
+          maxWidth: 'var(--layout-max-width)', // Max width for content
+          width: '100%',                   // Ensure toolbar uses available width
+          mx: 'auto',                      // Center content within the AppBar
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}
       >
         {/* === Left Section === */}
-        {/* REMOVE pl from here if it exists, Toolbar handles padding now */}
-        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 /* , pl: '...' REMOVED */ }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
           <Tooltip title="Toggle Navigation">
             <IconButton
               onClick={onToggleMobileNav}
@@ -116,8 +120,7 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
         </Box>
 
         {/* === Right Section === */}
-        {/* REMOVE pr from here if it exists, Toolbar handles padding now */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } /* , pr: '...' REMOVED */ }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1.5 } }}>
           <Box sx={{ position: 'relative', bgcolor: 'var(--color-bg-search)', borderRadius: 'var(--border-radius)', display: { xs: 'none', sm: 'flex' }, alignItems: 'center', height: '36px' }}>
             <Box sx={{ pl: 1.5, height: '100%', position: 'absolute', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <SearchIcon sx={{ color: 'var(--color-icon)', fontSize: '1.2rem' }} />
@@ -150,7 +153,7 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
                 elevation: 0,
                 sx: {
                   mt: 1.5, minWidth: 220, overflow: 'visible', bgcolor: 'var(--color-bg-card)', color: 'var(--color-text-primary)', border: `1px solid var(--color-border)`, filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))',
-                  '&::before': { content: '""', display: 'block', position: 'absolute', top: 0, right: 14, width: 10, height: 10, bgcolor: 'var(--color-bg-card)', transform: 'translateY(-50%) rotate(45deg)', zIndex: 0, borderTop: 'inherit', borderLeft: 'inherit'}, // Arrow
+                  '&::before': { content: '""', display: 'block', position: 'absolute', top: 0, right: 14, width: 10, height: 10, bgcolor: 'var(--color-bg-card)', transform: 'translateY(-50%) rotate(45deg)', zIndex: 0, borderTop: 'inherit', borderLeft: 'inherit'},
                   '& .MuiMenuItem-root': { fontSize: '0.9rem', padding: theme.spacing(1, 2), '&:hover': { bgcolor: 'var(--color-bg-hover)' }, '& a': { textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', width: '100%' } },
                   '& .MuiSvgIcon-root': { fontSize: '1.1rem', color: 'var(--color-icon)', mr: 1.5 }
                 }

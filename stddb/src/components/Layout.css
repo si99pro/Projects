@@ -1,100 +1,102 @@
 /* src/components/Layout.css */
 
-.app-layout-wrapper {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+/* --- Layout Wrapper --- */
+.app-layout-wrapper { min-height: 100vh; }
 
-/* --- Main Grid Container --- */
+/* --- Main Grid Container (Desktop First) --- */
 .main-grid-container {
   display: grid;
-  grid-template-columns: var(--sidebar-left-width) 1fr var(--sidebar-right-width);
+  /* Define columns: SideNav space | Main | Right Sidebar */
+  grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr) var(--sidebar-right-width);
   gap: var(--layout-gap);
-
-  /* Use margin-top for space below sticky header */
-  margin-top: var(--layout-gap); /* Pushes the grid down */
-  /* Apply only Left/Right/Bottom padding to the grid container itself */
-  padding: 0 var(--layout-padding-x) var(--spacing-md); /* Top=0, L/R=var, Bot=var */
-
+  /* Padding needed for spacing between grid items and edges */
+  /* Body padding handles space below fixed header */
+  padding: var(--spacing-lg) var(--layout-padding-x) var(--spacing-lg);
   max-width: var(--layout-max-width);
-  margin-left: auto; /* Horizontal centering */
-  margin-right: auto; /* Horizontal centering */
-  width: 100%;
-  box-sizing: border-box;
-  align-items: start; /* Align grid items to the top */
-  flex-grow: 1; /* Allow grid to fill vertical space */
+  margin-left: auto; margin-right: auto; width: 100%;
+  box-sizing: border-box; align-items: start;
 }
 
-/* --- Main Content Area (Middle Column) --- */
-/* Styles for the <main> element rendered by Layout.js */
+/* --- Left Sidebar Wrapper (Simplified - Placeholder in Grid) --- */
+.side-nav-wrapper {
+  grid-column: 1 / 2;
+  /* This element ONLY reserves space in the grid. */
+  /* Positioning is handled by SideNav.js fixed styles. */
+  /* No position, top, height, or z-index needed here. */
+}
+
+/* --- Main Content Area --- */
 .main-content-area {
-  min-width: 0; /* Prevent grid blowout from wide content */
-  /* No fixed height or internal overflow - Body handles scrolling */
-
-  /* --- Padding Removed --- */
-  padding: 0; /* <<< Padding removed as requested >>> */
-  /* Content inside (like pages) will need its own padding */
-
-  /* Add margin at the bottom to ensure space below content before page end */
-  margin-bottom: var(--layout-gap);
+  grid-column: 2 / 3;
+  min-width: 0;
+  /* Starts below header (body padding) + grid top padding */
 }
 
-
-/* --- Sidebar Wrappers --- */
-
-/* --- Mobile Navigation Overlay --- */
-/* Dark overlay shown when mobile nav is open */
-.mobile-nav-overlay {
-  position: fixed;
+/* --- Right Sidebar Wrapper (Kept Sticky) --- */
+.right-sidebar-wrapper {
+  grid-column: 3 / 4;
+  position: sticky;
+  /* Stick relative to the container top (which is below header) */
   top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  z-index: 1199; /* Below mobile nav (1200), above content */
-  opacity: 0;
-  visibility: hidden;
-  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
-  display: none; /* Hidden by default */
-}
+  /* Adjust height calculation: Viewport - Header - Grid Bottom Padding */
+  height: calc(100vh - var(--header-height) - var(--spacing-lg));
+  overflow-y: auto;
+  padding-bottom: var(--spacing-lg);
+  box-sizing: border-box;
 
+  /* Scrollbar styles... */
+  --_scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --_scrollbar-thumb-hover: rgba(0, 0, 0, 0.4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--_scrollbar-thumb) transparent;
+
+  @media (prefers-color-scheme: dark) {
+    --_scrollbar-thumb: rgba(255, 255, 255, 0.2);
+    --_scrollbar-thumb-hover: rgba(255, 255, 255, 0.4);
+  }
+}
+.right-sidebar-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+.right-sidebar-wrapper::-webkit-scrollbar-track { background: transparent; }
+.right-sidebar-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--_scrollbar-thumb); border-radius: 4px;
+    border: 2px solid transparent; background-clip: content-box; }
+.right-sidebar-wrapper::-webkit-scrollbar-thumb:hover { background-color: var(--_scrollbar-thumb-hover); }
+
+
+/* ============================================ */
 /* --- Responsive Adjustments --- */
+/* ============================================ */
 
-/* Tablet: Hide right sidebar */
-@media (max-width: 992px) {
+/* --- Tablet View --- */
+@media (max-width: 1199px) {
   .main-grid-container {
-    grid-template-columns: var(--sidebar-left-width) 1fr; /* Switch to 2 columns */
-    /* Desktop margin-top and padding rules still apply unless overridden */
-    /* Example: Adjust side padding if needed */
-    /* padding-left: var(--spacing-md); */
-    /* padding-right: var(--spacing-md); */
+    /* Grid adjusts, SideNav fixed positioning handles itself */
+    grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
+    padding-left: var(--layout-padding-x);
+    padding-right: var(--layout-padding-x);
   }
-  /* .main-content-area padding remains 0 */
+  .right-sidebar-wrapper { display: none; }
+  .side-nav-wrapper { /* Still needed as grid placeholder */ }
 }
 
-/* Mobile: Single column, different spacing */
-@media (max-width: 768px) {
+/* --- Mobile View --- */
+@media (max-width: 767px) {
   .main-grid-container {
-    grid-template-columns: 1fr; /* Single column */
-    gap: 0; /* No gap needed */
-    /* Adjust mobile margin/padding for the grid container */
-    margin-top: var(--spacing-md); /* Less space below header */
-    padding: 0 var(--spacing-md) var(--spacing-md); /* T=0, L/R=sp-md, B=sp-md */
+    display: block; /* Stack elements */
+    padding: 0; /* Remove grid padding */
+    max-width: none; width: 100%; gap: 0;
   }
 
-   /* Main content area padding remains 0 on mobile */
-   .main-content-area {
-      padding: 0; /* Confirm padding is 0 */
-      margin-bottom: var(--spacing-md); /* Adjust bottom margin */
-   }
-
-   /* Show overlay when mobile nav is active */
-   /* Uses :has pseudo-class for cleaner targeting */
-  .app-layout-wrapper:has(.side-nav.mobile-visible) > .mobile-nav-overlay {
-     display: block; /* Allow transition */
-     opacity: 1;
-     visibility: visible;
+  .side-nav-wrapper {
+     /* Wrapper not needed visually when drawer is temporary */
+     display: none;
   }
+
+  .main-content-area {
+     /* Add padding since grid padding is removed */
+     /* Body padding still provides space below header */
+     padding: var(--spacing-lg);
+  }
+
+  .right-sidebar-wrapper { display: none; }
 }

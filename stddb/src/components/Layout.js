@@ -1,43 +1,33 @@
-/* eslint-disable no-unused-vars */
 // src/components/Layout.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-// import PullToRefresh from 'react-simple-pull-to-refresh'; // <-- DELETED
-
-// Import Components
+import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import SideNav from './SideNav';
 import RightSidebar from './RightSidebar';
-
-// Import Layout-specific CSS
 import './Layout.css';
-// import './PullToRefresh.css'; // <-- DELETED
 
 const Layout = () => {
-  const location = useLocation();
   const headerRef = useRef(null);
   const [isMobileNavOpen, setMobileNavOpen] = useState(false);
 
   const handleToggleMobileNav = useCallback(() => {
-    setMobileNavOpen(prev => {
-        const newState = !prev;
-        document.body.classList.toggle('mobile-nav-active', newState);
-        return newState;
-    });
-  }, []);
+    setMobileNavOpen(prev => !prev);
+    document.body.classList.toggle('mobile-nav-active', !isMobileNavOpen);
+  }, [isMobileNavOpen]);
 
   const closeMobileNav = useCallback(() => {
     setMobileNavOpen(false);
     document.body.classList.remove('mobile-nav-active');
   }, []);
 
-  // Effect to set the --header-height CSS variable
   useEffect(() => {
     const updateHeaderHeight = () => {
-      const headerElement = headerRef.current;
-      const defaultHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height').trim(), 10) || 55;
-      const headerHeight = headerElement?.offsetHeight || defaultHeight;
-      document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+       const headerElement = headerRef.current;
+       const defaultHeight = 60;
+       const headerHeight = headerElement?.offsetHeight || defaultHeight;
+       document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+       // Keep body padding for initial offset of the grid container
+       document.body.style.paddingTop = `${headerHeight}px`;
     };
 
     let resizeObserver;
@@ -52,44 +42,41 @@ const Layout = () => {
        return () => {
          clearTimeout(timerId);
          window.removeEventListener('resize', updateHeaderHeight);
+         document.body.style.paddingTop = '0px';
        }
     }
+
     return () => {
       if (resizeObserver && headerEl) {
          resizeObserver.unobserve(headerEl);
       }
+       document.body.style.paddingTop = '0px';
     };
   }, []);
 
-  // Clean up body class on unmount
   useEffect(() => {
       return () => document.body.classList.remove('mobile-nav-active');
   }, []);
 
 
-  // --- Pull-to-Refresh Handler --- // <-- DELETED Block Below
-  // const handleRefresh = async () => { ... }; // <-- DELETED
-
   return (
     <div className="app-layout-wrapper">
-      {isMobileNavOpen && <div className="mobile-nav-overlay" onClick={closeMobileNav}></div>}
-
       <Header ref={headerRef} onToggleMobileNav={handleToggleMobileNav} />
 
       <div className="main-grid-container">
-        <aside className="left-sidebar-wrapper">
-             <SideNav isOpen={isMobileNavOpen} closeNav={closeMobileNav} />
+        {/* --- ADDED WRAPPER for SideNav --- */}
+        <aside className="side-nav-wrapper">
+          <SideNav isOpen={isMobileNavOpen} onClose={closeMobileNav} />
         </aside>
+        {/* --- END WRAPPER --- */}
 
-        {/* PullToRefresh wrapper removed */}
-        {/* <PullToRefresh ... > */} {/* <-- DELETED */}
-            <main className="main-content-area" id="main-content">
-                <Outlet /> {/* Page content determines height */}
-            </main>
-        {/* </PullToRefresh> */} {/* <-- DELETED */}
+        <main className="main-content-area" id="main-content">
+          <Outlet />
+        </main>
 
+        {/* Keep RightSidebar wrapper as is */}
         <aside className="right-sidebar-wrapper">
-            <RightSidebar />
+          <RightSidebar />
         </aside>
       </div>
     </div>

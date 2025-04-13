@@ -2,7 +2,7 @@
 
 /* --- Define Theme Variables --- */
 :root {
-  /* ... (All variable definitions remain the same) ... */
+  /* ... (other variables remain the same) ... */
   --color-bg-primary: #f3f2ef;
   --color-bg-card: #ffffff;
   --color-bg-header: #ffffff;
@@ -12,9 +12,6 @@
   --color-bg-active: rgba(0, 0, 0, 0.08);
   --color-bg-search: #eef3f8;
   /* REMOVED scrollbar variables */
-  /* --color-scrollbar-track: transparent; */
-  /* --color-scrollbar-thumb: #c1c1c1; */
-  /* --color-scrollbar-thumb-hover: #a8a8a8; */
 
   --color-text-primary: #191919;
   --color-text-secondary: #5e5e5e;
@@ -28,10 +25,14 @@
   --color-icon-hover: #191919;
   --color-icon-active-indicator: var(--color-text-primary);
 
-  --header-height: 55px;
-  --sidebar-left-width: 240px;
-  --sidebar-right-width: 320px;
-  --layout-max-width: 1200px;
+  --header-height: 55px; /* Keep as is, Layout.js uses it */
+  /* --- MODIFIED --- */
+  --sidebar-left-width: 280px; /* Increased from 240px */
+  /* --- END MODIFIED --- */
+  --sidebar-right-width: 320px; /* Keep as is, adjust if needed */
+  /* --- MODIFIED --- */
+  --layout-max-width: 1600px; /* Increased from 1200px */
+  /* --- END MODIFIED --- */
   --layout-gap: 20px;
   --layout-padding-y: 15px;
   --layout-padding-x: 20px;
@@ -67,9 +68,6 @@
     --color-bg-active: rgba(255, 255, 255, 0.12);
     --color-bg-search: #444;
     /* REMOVED scrollbar variables */
-    /* --color-scrollbar-track: transparent; */
-    /* --color-scrollbar-thumb: #555; */
-    /* --color-scrollbar-thumb-hover: #777; */
 
     --color-text-primary: #e0e0e0;
     --color-text-secondary: #b0b0b0;
@@ -87,29 +85,14 @@
 
 /* --- HTML Element Styling --- */
 html {
-  /* Optional: Keep gutter stable if you want space reserved */
-  /* scrollbar-gutter: stable both-edges; */
   font-size: var(--base-font-size);
   line-height: var(--base-line-height);
-  /* --- REMOVED Firefox Scrollbar Styling --- */
-  /* scrollbar-width: thin; */
-  /* scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track); */
+  /* REMOVED Scrollbar Styling */
 }
 
 /* --- REMOVED WebKit Scrollbar Styling --- */
-/*
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--color-scrollbar-track); }
-::-webkit-scrollbar-thumb { background-color: var(--color-scrollbar-thumb); border-radius: 4px; border: 2px solid var(--color-scrollbar-track); }
-::-webkit-scrollbar-thumb:hover { background-color: var(--color-scrollbar-thumb-hover); }
-::-webkit-scrollbar-corner { background: var(--color-scrollbar-track); }
-*/
 
 /* --- REMOVED .not-scrollable class rules --- */
-/*
-.not-scrollable::-webkit-scrollbar-thumb { background-color: transparent; border: none; }
-.not-scrollable { scrollbar-color: transparent var(--color-scrollbar-track); }
-*/
 
 /* --- Basic Reset & Body Styles --- */
 *,
@@ -130,15 +113,17 @@ body {
   overflow-x: hidden;
   overflow-y: auto; /* Body remains scrollable */
   overscroll-behavior-y: contain;
+  /* Body paddingTop is set by Layout.js based on header height */
 }
 
 /* --- Transitions --- */
+/* (Keep existing transition selectors) */
 body, button, input, select, textarea, a,
 .MuiPaper-root, .MuiAppBar-root, .MuiDrawer-paper, .MuiCard-root,
 .MuiButtonBase-root, .MuiIconButton-root,
 .MuiTypography-root, .MuiSvgIcon-root,
 .MuiListItemText-primary, .MuiListItemText-secondary,
-.side-nav, .right-sidebar
+.side-nav, .right-sidebar /* Assuming these are your component class names */
  {
    transition: var(--transition-colors);
 }
