@@ -1,77 +1,139 @@
 /* src/components/Layout.css */
 
 /* --- Layout Wrapper --- */
-.app-layout-wrapper { min-height: 100vh; }
+.app-layout-wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-primary);
+}
 
-/* --- Main Grid Container (Desktop First - applies >= 900px) --- */
+/* --- Main Grid Container (Desktop First - applies >= 900px by default) --- */
 .main-grid-container {
+  flex-grow: 1; /* Takes vertical space below header */
   display: grid;
   grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr) var(--sidebar-right-width);
-  gap: var(--layout-gap);
-  /* Keep grid padding for overall structure */
-  padding: var(--spacing-lg) var(--layout-padding-x) var(--spacing-lg);
+  gap: var(--layout-gap); /* Gap between grid columns */
+  /* Overall grid padding */
+  /* Padding top is set dynamically by JS */
+  padding-bottom: var(--spacing-lg);
+  padding-left: var(--layout-padding-x);
+  padding-right: var(--layout-padding-x);
   max-width: var(--layout-max-width);
-  margin-left: auto; margin-right: auto; width: 100%;
-  box-sizing: border-box; align-items: start;
+  margin-left: auto; margin-right: auto;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: start; /* Align items to the top of their cell */
+  overflow: hidden; /* Prevent grid itself from scrolling */
 }
 
-/* --- Left Sidebar Wrapper (Placeholder) --- */
+/* --- Left Sidebar Wrapper --- */
 .side-nav-wrapper {
   grid-column: 1 / 2;
+  /* Calculate height based on viewport, header, and grid's bottom padding */
+  height: calc(100vh - var(--header-height) - var(--spacing-lg));
+  position: relative; /* For potential internal absolute positioning */
+  overflow-y: auto; /* Allow independent scrolling */
 }
 
-/* --- Main Content Area --- */
+/* --- Main Content Area (Grid Cell) --- */
 .main-content-area {
   grid-column: 2 / 3;
-  min-width: 0;
-  /* Top edge aligns with grid container's padding */
-  /* Internal padding now controlled by page component (e.g., Profile.js) */
+  min-width: 0; /* Prevent content from breaking grid */
+  /* Calculate height based on viewport, header, and grid's bottom padding */
+  height: calc(100vh - var(--header-height) - var(--spacing-lg));
+  overflow-y: auto; /* Allow this column to scroll if inner wrapper is too tall */
+  box-sizing: border-box;
+  /* NO PADDING applied directly here */
+}
+
+/* --- Inner Content Wrapper (Controls Max Width) --- */
+.main-content-wrapper {
+  /* Apply the max-width using the CSS variable */
+  max-width: var(--main-content-max-width); /* Defined in index.css */
+  /* Center the wrapper horizontally within .main-content-area */
+  margin-left: auto;
+  margin-right: auto;
+  /* Ensure it takes full width up to the max-width */
+  width: 100%;
+  /* Apply vertical padding */
+  padding-top: var(--layout-padding-y);
+  padding-bottom: var(--layout-padding-y);
+  box-sizing: border-box;
 }
 
 /* --- Right Sidebar Wrapper (Sticky) --- */
 .right-sidebar-wrapper {
   grid-column: 3 / 4;
   position: sticky;
-  top: 0; /* Sticks relative to grid cell top */
-  height: calc(100vh - var(--header-height) - var(--spacing-lg));
-  overflow-y: auto;
-  /* NO top padding here */
-  padding-bottom: var(--spacing-lg);
+  /* Stick relative to viewport top, considering header */
+  /* The JS now applies paddingTop to the grid container, so top: 0 might work relative to that */
+  /* Or adjust based on how JS sets the padding */
+  top: var(--header-height); /* Sticking below the actual header */
+  /* Adjust max-height considering header and grid bottom padding */
+  max-height: calc(100vh - var(--header-height) - var(--spacing-lg));
+  overflow-y: auto; /* <<<<< KEEP THIS to allow scrolling */
   box-sizing: border-box;
 
-  /* Scrollbar styles... */
-  --_scrollbar-thumb: rgba(0, 0, 0, 0.2);
-  --_scrollbar-thumb-hover: rgba(0, 0, 0, 0.4);
-  scrollbar-width: thin;
-  scrollbar-color: var(--_scrollbar-thumb) transparent;
-  @media (prefers-color-scheme: dark) {
-    --_scrollbar-thumb: rgba(255, 255, 255, 0.2);
-    --_scrollbar-thumb-hover: rgba(255, 255, 255, 0.4);
-  }
+  /* --- REMOVED Custom Scrollbar Styles --- */
+  /* scrollbar-width: thin; */
+  /* scrollbar-color: ... ; */
 }
-/* ... scrollbar rules ... */
+
+/* --- REMOVED ::-webkit-scrollbar rules for right-sidebar-wrapper --- */
+
+/* --- REMOVED @media (prefers-color-scheme: dark) for right-sidebar-wrapper scrollbar --- */
+
 
 /* --- Responsive Adjustments --- */
-/* ... (Tablet and Mobile media queries remain the same as before) ... */
-@media (min-width: 900px) and (max-width: 1199.95px) { /* Tablet */
+
+/* Tablet - Hide Right Sidebar, Adjust Grid */
+@media (min-width: 900px) and (max-width: 1199.95px) {
     .main-grid-container {
-        grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        padding-left: var(--layout-padding-x);
-        padding-right: var(--layout-padding-x);
+        grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr); /* 2 columns */
     }
-    .right-sidebar-wrapper { display: none; }
-    .side-nav-wrapper { }
+    .right-sidebar-wrapper {
+        display: none; /* Hide */
+    }
+    /* Ensure columns are correct */
+    .side-nav-wrapper { grid-column: 1 / 2; }
     .main-content-area { grid-column: 2 / 3; }
+    /* Inner wrapper max-width still applies */
 }
-@media (max-width: 899.95px) { /* Mobile */
-  .main-grid-container { display: block; padding: 0; max-width: none; width: 100%; gap: 0; }
-  .side-nav-wrapper { display: none; }
-  .main-content-area {
-     grid-column: auto;
-     max-width: 720px; /* Example */
-     margin-left: auto; margin-right: auto; width: 100%;
-     padding: var(--spacing-lg); /* Add padding back for mobile */
-     min-width: auto;
+
+/* Mobile - Stack Layout */
+@media (max-width: 899.95px) {
+  .main-grid-container {
+    display: block; /* Stack elements */
+    padding: 0; /* Remove grid padding */
+    /* Padding top still set by JS to offset header */
+    max-width: none;
+    width: 100%;
+    gap: 0;
+    height: auto;
+    overflow: visible;
   }
-  .right-sidebar-wrapper { display: none; }
+  .side-nav-wrapper {
+    display: none; /* SideNav becomes temporary */
+  }
+  .main-content-area {
+     width: 100%;
+     min-width: auto;
+     height: auto; /* Let content determine height */
+     overflow-y: visible; /* Allow natural page scroll */
+     padding: 0; /* Remove padding */
+  }
+  .main-content-wrapper {
+     max-width: none; /* Use full width */
+     margin-left: 0; margin-right: 0;
+     padding: var(--spacing-lg); /* Apply padding for mobile content */
+  }
+  .right-sidebar-wrapper {
+    display: none; /* Hide */
+  }
+}
+
+/* --- Body class for when mobile nav is active --- */
+body.mobile-nav-active {
+  overflow: hidden; /* Prevent body scroll */
 }

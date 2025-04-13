@@ -2,7 +2,7 @@
 // src/pages/Home.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
+import { db } from '../firebase'; // Assuming firebase is configured
 import { doc, getDoc } from 'firebase/firestore';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
@@ -10,7 +10,7 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
-import Container from '@mui/material/Container';
+import Container from '@mui/material/Container'; // Using Container to constrain width
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
@@ -40,30 +40,22 @@ import ContactMailIcon from '@mui/icons-material/ContactMail';
 // --- Start of Component Function ---
 const Home = () => {
   const theme = useTheme();
-  const { currentUser, userData: contextUserData } = useAuth();
-  const navigate = useNavigate();
+  const { currentUser, contextUserData } = useAuth();
+  // const navigate = useNavigate(); // Uncomment if needed
 
-  const [basicInfo, setBasicInfo] = useState(contextUserData?.basicInfo || null);
-  const [loading, setLoading] = useState(!contextUserData);
+  // --- State Management ---
+  const [basicInfo, setBasicInfo] = useState(null);
+  const [loading, setLoading] = useState(true); // Start in loading state
   const [error, setError] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
 
-  // --- Dummy Data (Keep or replace with real data fetching) ---
-  const [academicData, setAcademicData] = useState({ gpa: '3.75', status: 'Good Standing' });
-  const [financialData, setFinancialData] = useState({ balance: '$250.50', dueDate: 'Nov 15, 2023' });
-  const [advisorData, setAdvisorData] = useState({ name: 'Dr. Evelyn Reed', email: 'e.reed@university.edu', office: 'Science Bldg, Room 302' });
-  const [courseData, setCourseData] = useState({ enrolled: 4, nextClass: 'Intro to Databases (Mon 10 AM)'});
-  const [deadlines, setDeadlines] = useState([
-    { id: 1, title: "Project Proposal Due", course: "Software Eng", date: "Oct 28" },
-    { id: 2, title: "Midterm Exam", course: "Calculus II", date: "Nov 02" },
-    { id: 3, title: "Lab Report 3", course: "Physics I", date: "Nov 05" },
-  ]);
-   const [announcements, setAnnouncements] = useState([
-    { id: 1, title: "Library hours extended for finals", date: "2 days ago" },
-    { id: 2, title: "System Maintenance: Sat Nov 4th", date: "3 days ago" },
-    { id: 3, title: "Spring registration dates announced", date: "5 days ago" },
-  ]);
-  // --- End Dummy Data ---
+  // --- Dummy/Default Data (Replace with actual fetching logic as needed) ---
+  const [academicData, setAcademicData] = useState({ gpa: 'N/A', status: 'Unknown' });
+  const [financialData, setFinancialData] = useState({ balance: 'N/A', dueDate: 'N/A' });
+  const [advisorData, setAdvisorData] = useState({ name: 'N/A', email: 'N/A', office: 'N/A' });
+  const [courseData, setCourseData] = useState({ enrolled: 'N/A', nextClass: 'N/A' });
+  const [deadlines, setDeadlines] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
 
   // --- Handler ---
   const handleSnackbarClose = (event, reason) => {
@@ -74,93 +66,147 @@ const Home = () => {
   // --- Data Fetching Effect ---
   useEffect(() => {
     let isMounted = true;
-    const fetchUserInfo = async () => {
-      if (!currentUser?.uid) { if (isMounted) { setError("Not logged in."); setLoading(false); } return; }
-      try {
+    const fetchUserData = async () => {
+      if (!currentUser?.uid) {
+        if (isMounted) {
+          setError("Not logged in.");
+          setLoading(false);
+          // Clear data if logged out
+          setBasicInfo(null);
+          setAcademicData({ gpa: 'N/A', status: 'Unknown' });
+          setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
+          setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
+          setCourseData({ enrolled: 'N/A', nextClass: 'N/A' });
+          setDeadlines([]);
+          setAnnouncements([]);
+        }
+        return;
+      }
+
+      // Prioritize context data if available
+      if (contextUserData?.basicInfo && loading) {
+          setBasicInfo(contextUserData.basicInfo);
+          // Set other data from context or use dummy/fetched data
+          // For demonstration, setting dummy data here:
+          setAcademicData({ gpa: 'N/A', status: 'Unknown' }); // Example: Use N/A from screenshot
+          setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
+          setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
+          setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
+          setDeadlines([]); // Example: Use empty from screenshot
+          setAnnouncements([]); // Example: Use empty from screenshot
+          if (isMounted) setLoading(false);
+          return;
+      }
+
+      // Fetch from Firestore if no context or still loading
+      if (loading) {
+        try {
           const userDocRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(userDocRef);
           if (isMounted) {
-              if (docSnap.exists()) {
-                  const fetchedData = docSnap.data();
-                  setBasicInfo(fetchedData.basicInfo || { email: currentUser?.email });
-                  // TODO: Fetch other data (academic, financial, etc.) here if needed
-              } else {
-                  setError('User profile not found. Please complete setup.');
-                  setBasicInfo({ email: currentUser?.email });
-                  // Set dummy/default data if profile not found
-                  setAcademicData({ gpa: 'N/A', status: 'Unknown' });
-                  setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
-                  setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
-                  setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
-                  setDeadlines([]);
-                  setAnnouncements([]);
-              }
-              setLoading(false);
+            if (docSnap.exists()) {
+              const fetchedData = docSnap.data();
+              setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: 'Your Name' }); // Provide fallbacks
+              // Set other fetched/dummy data
+              setAcademicData({ gpa: 'N/A', status: 'Unknown' });
+              setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
+              setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
+              setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
+              setDeadlines([]);
+              setAnnouncements([]);
+            } else {
+              setError('User profile not found.');
+              setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); // Minimum info
+              // Set default/empty data
+              setAcademicData({ gpa: 'N/A', status: 'Unknown' });
+              setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
+              setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
+              setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
+              setDeadlines([]);
+              setAnnouncements([]);
+            }
+            setLoading(false);
           }
-      } catch (err) { console.error("Error fetching user info:", err); if (isMounted) { setError('Failed to load user data.'); setLoading(false); } }
+        } catch (err) {
+          console.error("Error fetching user info:", err);
+          if (isMounted) {
+            setError('Failed to load user data.');
+            setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); // Show something even on error
+            setLoading(false);
+          }
+        }
+      }
     };
-    if (contextUserData?.basicInfo && loading) { setBasicInfo(contextUserData.basicInfo); setLoading(false); /* TODO: Set other context data if available */ }
-    else if (!currentUser && loading) { setLoading(false); setError("Not logged in."); }
-    else if (currentUser && loading) { fetchUserInfo(); }
-    else if (!currentUser && !loading) { setError("Not logged in."); }
+
+    fetchUserData();
+
     return () => { isMounted = false; };
-  }, [currentUser, contextUserData]); // Removed loading dependency
+  }, [currentUser, contextUserData]); // Rerun if user or context data changes
 
-  const displayName = basicInfo?.fullName || basicInfo?.email || currentUser?.email || 'User';
+  // --- Dynamic Display Name ---
+  const displayName = basicInfo?.fullName || basicInfo?.email || 'User';
+  const displayRoleEmail = basicInfo?.headline || basicInfo?.email || 'Your Role/Email';
 
-  // --- Card Styling ---
+  // --- Consistent Card Styling ---
   const cardSx = {
-    height: '100%', // Ensure cards try to fill height within grid item
+    height: '100%',
     display: 'flex',
     flexDirection: 'column',
     bgcolor: 'var(--color-bg-card)',
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 'var(--border-radius-lg, 12px)', // Using CSS var with fallback
-    overflow: 'hidden', // Prevent content spillover
-    boxShadow: 'none', // Remove default Paper elevation shadow if using border
+    border: `1px solid var(--color-border)`,
+    borderRadius: 'var(--border-radius, 6px)', // Use theme border radius
+    overflow: 'hidden',
+    boxShadow: 'none',
   };
 
-  // --- Define Text Color SX ---
+  // --- Reusable Text Color Styles ---
   const primaryTextSx = { color: 'var(--color-text-primary)' };
-  const secondaryTextSx = { color: 'var(--color-text-secondary)' };
-  const boldPrimaryTextSx = { fontWeight: 'bold', color: 'var(--color-text-primary)' };
+  const secondaryTextSx = { color: 'var(--color-text-secondary)', fontSize: '0.875rem' }; // Slightly smaller secondary
+  const boldPrimaryTextSx = { fontWeight: 600, color: 'var(--color-text-primary)' };
+  const cardTitleSx = { display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx, fontWeight: 500 }; // Consistent card titles
 
 
   // --- Render Logic ---
   return (
+    // Use Container to constrain the content width within the middle grid column
     <Container
         component="section"
-        // Use 'xl' or false to allow container to grow wider if needed
-        maxWidth="xl"
-        disableGutters={false}
+        maxWidth="lg" // Controls the max width. Options: 'xs', 'sm', 'md', 'lg', 'xl'
+        disableGutters={false} // Let the Container handle its own padding (recommended with the grid layout)
         sx={{
-            flexGrow: 1,
-            pt: 3, // Added some top padding inside container
-            px: { xs: 2, md: 'var(--layout-padding-x)' }, // Use theme variables
-            pb: { xs: 2, md: 'var(--layout-padding-y)' }  // Use theme variables
+            flexGrow: 1, // Allow container to grow if needed (e.g., in flex context)
+            // Add vertical padding here, as Layout.css doesn't apply it to .main-content-area
+            py: 'var(--layout-padding-y)',
+             // Remove minHeight if Layout.css handles height correctly
         }}
     >
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - var(--header-height) - 60px)' }}><CircularProgress /></Box>
+        // Centered Loader
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - var(--header-height) - 80px)' }}>
+            <CircularProgress />
+        </Box>
       ) : error ? (
-        <Alert severity="error" sx={{ width: 'auto', mt: 2, mx: 'auto' }}>{error}</Alert>
+        // Centered Error Alert
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', pt: 4 }}>
+            <Alert severity="error" sx={{ width: 'auto' }}>{error}</Alert>
+        </Box>
       ) : (
+        // Main Content Box (inside Container)
         <Box>
           {/* Welcome Header */}
           <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 600, ...primaryTextSx }}>
             Welcome, {displayName}!
           </Typography>
 
-          {/* Grid Container - Use theme variable for spacing */}
-          <Grid container spacing={{ xs: 2, md: 'var(--layout-gap)' }}>
+          {/* Grid Container for Cards */}
+          <Grid container spacing={'var(--layout-gap, 20px)'}> {/* Use gap from theme */}
 
-            {/* --- Row 1 (3 items) --- */}
-            {/* Card 1: My Courses */}
-            <Grid item xs={12} md={6} lg={4}> {/* Keep lg={4} for 3 columns on large screens */}
+            {/* --- Row 1 (3 items: lg=4) --- */}
+            <Grid item xs={12} md={6} lg={4}>
               <Paper sx={cardSx}>
                 <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx }}>
-                    <SchoolIcon sx={{ mr: 1.5, color: 'primary.main' }}/> My Courses
+                  <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                    <SchoolIcon sx={{ mr: 1.5, color: 'primary.main', fontSize:'1.3rem' }}/> My Courses
                   </Typography>
                   <Typography variant="body2" sx={{ mb: 1, ...secondaryTextSx }}>
                      Currently Enrolled: <Typography component="span" sx={boldPrimaryTextSx}>{courseData.enrolled}</Typography>
@@ -169,19 +215,18 @@ const Home = () => {
                      Next Class: {courseData.nextClass}
                   </Typography>
                 </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}>
+                <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
                   <Button component={RouterLink} to="/courses" size="small">View Courses</Button>
                   <Button component={RouterLink} to="/schedule" size="small">My Schedule</Button>
                 </CardActions>
               </Paper>
             </Grid>
 
-            {/* Card 2: Quick Actions */}
-            <Grid item xs={12} md={6} lg={4}> {/* Keep lg={4} */}
+            <Grid item xs={12} md={6} lg={4}>
                <Paper sx={cardSx}>
                  <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 2, ...primaryTextSx }}>
-                     <SpeedIcon sx={{ mr: 1.5, color: 'success.main' }}/> Quick Actions
+                   <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                     <SpeedIcon sx={{ mr: 1.5, color: 'success.main', fontSize:'1.3rem' }}/> Quick Actions
                    </Typography>
                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       <Button component={RouterLink} to="/grades" variant="outlined" startIcon={<AssessmentIcon />} fullWidth>Check Grades</Button>
@@ -189,30 +234,28 @@ const Home = () => {
                       <Button component={RouterLink} to="/profile" variant="outlined" startIcon={<PersonIcon />} fullWidth>Update Profile</Button>
                    </Box>
                  </CardContent>
-                  {/* Optional: Add CardActions if needed later */}
-                  {/* <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}></CardActions> */}
+                 {/* No actions needed for this card */}
                </Paper>
             </Grid>
 
-             {/* Card 3: Upcoming Deadlines */}
-             <Grid item xs={12} md={6} lg={4}> {/* Keep lg={4} */}
+             <Grid item xs={12} md={6} lg={4}>
                 <Paper sx={cardSx}>
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx }}>
-                      <CalendarMonthIcon sx={{ mr: 1.5, color: 'warning.main' }}/> Upcoming Deadlines
+                    <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                      <CalendarMonthIcon sx={{ mr: 1.5, color: 'warning.main', fontSize:'1.3rem' }}/> Upcoming Deadlines
                     </Typography>
                     {deadlines.length > 0 ? (
                       <List dense disablePadding sx={{ width: '100%' }}>
-                        {deadlines.slice(0, 3).map((item, index) => ( // Show max 3
+                        {deadlines.slice(0, 3).map((item, index) => (
                           <React.Fragment key={item.id}>
                             <ListItem disablePadding sx={{ py: 0.75 }}>
                               <ListItemText
                                 primary={item.title}
                                 secondary={`${item.course} - ${item.date}`}
-                                primaryTypographyProps={{ sx: primaryTextSx, fontWeight: 500 }}
+                                primaryTypographyProps={{ sx: {...primaryTextSx, fontWeight: 500, fontSize: '0.9rem'} }}
                                 secondaryTypographyProps={{ sx: secondaryTextSx }}/>
                             </ListItem>
-                            {index < deadlines.slice(0, 3).length - 1 && <Divider component="li" />}
+                            {index < deadlines.slice(0, 3).length - 1 && <Divider component="li" light sx={{ borderColor: 'var(--color-border)' }} />}
                           </React.Fragment>
                         ))}
                       </List>
@@ -220,32 +263,31 @@ const Home = () => {
                       <Typography variant="body2" sx={secondaryTextSx}>No upcoming deadlines found.</Typography>
                     )}
                   </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}>
+                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
                     <Button component={RouterLink} to="/calendar" size="small">View Full Calendar</Button>
                   </CardActions>
                 </Paper>
               </Grid>
 
-            {/* --- Row 2 (2 items - CHANGED) --- */}
-            {/* Card 4: Announcements */}
-            <Grid item xs={12} md={6} lg={6}> {/* <<< CHANGED lg to 6 */}
+            {/* --- Row 2 (2 items: lg=6) --- */}
+            <Grid item xs={12} md={6} lg={6}>
                <Paper sx={cardSx}>
                  <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx }}>
-                     <CampaignIcon sx={{ mr: 1.5, color: 'info.main' }}/> Announcements
+                   <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                     <CampaignIcon sx={{ mr: 1.5, color: 'info.main', fontSize:'1.3rem' }}/> Announcements
                    </Typography>
                    {announcements.length > 0 ? (
                      <List dense disablePadding sx={{ width: '100%' }}>
-                        {announcements.slice(0, 3).map((item, index) => ( // Show max 3
+                        {announcements.slice(0, 3).map((item, index) => (
                           <React.Fragment key={item.id}>
                             <ListItem disablePadding sx={{ py: 0.75 }}>
                               <ListItemText
                                 primary={item.title}
                                 secondary={item.date}
-                                primaryTypographyProps={{ sx: primaryTextSx, fontWeight: 500 }}
+                                primaryTypographyProps={{ sx: {...primaryTextSx, fontWeight: 500, fontSize: '0.9rem'} }}
                                 secondaryTypographyProps={{ sx: secondaryTextSx }}/>
                             </ListItem>
-                            {index < announcements.slice(0, 3).length - 1 && <Divider component="li" />}
+                            {index < announcements.slice(0, 3).length - 1 && <Divider component="li" light sx={{ borderColor: 'var(--color-border)' }} />}
                           </React.Fragment>
                         ))}
                      </List>
@@ -253,39 +295,37 @@ const Home = () => {
                      <Typography variant="body2" sx={secondaryTextSx}>No recent announcements.</Typography>
                    )}
                  </CardContent>
-                 <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}>
+                 <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
                    <Button component={RouterLink} to="/announcements" size="small">View All Announcements</Button>
                  </CardActions>
                </Paper>
              </Grid>
 
-             {/* Card 5: Academic Standing */}
-             <Grid item xs={12} md={6} lg={6}> {/* <<< CHANGED lg to 6 */}
+             <Grid item xs={12} md={6} lg={6}>
                <Paper sx={cardSx}>
                  <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx }}>
-                     <TrendingUpIcon sx={{ mr: 1.5, color: 'secondary.main' }}/> Academic Standing
+                   <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                     <TrendingUpIcon sx={{ mr: 1.5, color: 'secondary.main', fontSize:'1.3rem' }}/> Academic Standing
                    </Typography>
                    <Typography variant="body2" sx={{ mb: 1, ...secondaryTextSx }}>
                      Current GPA: <Typography component="span" sx={boldPrimaryTextSx}>{academicData.gpa}</Typography>
                    </Typography>
                    <Typography variant="body2" sx={secondaryTextSx}>
-                     Status: <Typography component="span" sx={{ fontWeight: 500, color: academicData.status === 'Good Standing' ? 'success.main' : 'warning.main' }}>{academicData.status}</Typography>
+                     Status: <Typography component="span" sx={{ fontWeight: 500, color: academicData.status === 'Good Standing' ? 'success.main' : (academicData.status === 'Unknown' || academicData.status === 'N/A' ? 'text.disabled' : 'warning.main') }}>{academicData.status}</Typography>
                    </Typography>
                  </CardContent>
-                 <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}>
+                 <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
                    <Button component={RouterLink} to="/grades" size="small">View Detailed Grades</Button>
                  </CardActions>
                </Paper>
              </Grid>
 
-            {/* --- Row 3 (2 items - CHANGED) --- */}
-             {/* Card 6: Account Summary */}
-             <Grid item xs={12} md={6} lg={6}> {/* <<< CHANGED lg to 6 */}
+            {/* --- Row 3 (2 items: lg=6) --- */}
+             <Grid item xs={12} md={6} lg={6}>
                 <Paper sx={cardSx}>
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx }}>
-                      <AccountBalanceWalletIcon sx={{ mr: 1.5, color: 'success.dark' }}/> Account Summary
+                    <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                      <AccountBalanceWalletIcon sx={{ mr: 1.5, color: 'success.dark', fontSize:'1.3rem' }}/> Account Summary
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 1, ...secondaryTextSx }}>
                        Current Balance: <Typography component="span" sx={boldPrimaryTextSx}>{financialData.balance}</Typography>
@@ -294,32 +334,35 @@ const Home = () => {
                        Next Payment Due: <Typography component="span" sx={{ fontWeight: 500 }}>{financialData.dueDate}</Typography>
                     </Typography>
                   </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}>
+                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
                     <Button component={RouterLink} to="/billing" size="small">View Billing Details</Button>
                     <Button component={RouterLink} to="/financial-aid" size="small">Financial Aid</Button>
                   </CardActions>
                 </Paper>
               </Grid>
 
-             {/* Card 7: Advisor Info */}
-             <Grid item xs={12} md={6} lg={6}> {/* <<< CHANGED lg to 6 */}
+             <Grid item xs={12} md={6} lg={6}>
                 <Paper sx={cardSx}>
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={{ display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx }}>
-                      <ContactMailIcon sx={{ mr: 1.5, color: 'primary.dark' }}/> My Advisor
+                    <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
+                      <ContactMailIcon sx={{ mr: 1.5, color: 'primary.dark', fontSize:'1.3rem' }}/> My Advisor
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 0.5, ...secondaryTextSx }}>
                         Name: <Typography component="span" sx={boldPrimaryTextSx}>{advisorData.name}</Typography>
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 0.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', ...secondaryTextSx }}>
-                      Email:  {/* Use non-breaking space */}
-                      <Link href={`mailto:${advisorData.email}`} sx={{ wordBreak: 'break-all', color: 'var(--color-text-link)' }}>{advisorData.email}</Link>
+                      Email: 
+                      {advisorData.email && advisorData.email !== 'N/A' ? (
+                          <Link href={`mailto:${advisorData.email}`} sx={{ wordBreak: 'break-all', color: 'var(--color-text-link)' }}>{advisorData.email}</Link>
+                      ) : (
+                          <Typography component="span" sx={{ fontWeight: 500 }}>N/A</Typography>
+                      )}
                     </Typography>
                      <Typography variant="body2" sx={secondaryTextSx}>
                         Office: <Typography component="span" sx={{ fontWeight: 500 }}>{advisorData.office}</Typography>
                      </Typography>
                   </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, pb: 2, borderTop: `1px solid ${theme.palette.divider}`, mt: 'auto' }}>
+                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
                     <Button component={RouterLink} to="/advising" size="small">Advising Center</Button>
                   </CardActions>
                 </Paper>
@@ -330,12 +373,19 @@ const Home = () => {
         </Box>
       )}
 
-      {/* Snackbar */}
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-         <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">{snackbar.message}</Alert>
+      {/* Snackbar for Notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+         <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled">
+            {snackbar.message}
+         </Alert>
       </Snackbar>
 
-    </Container>
+    </Container> // End Main Container
   );
 };
 

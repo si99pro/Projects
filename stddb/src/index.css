@@ -3,53 +3,55 @@
 /* --- Define Theme Variables --- */
 :root {
   /* --- MODIFIED Background & Associated Colors --- */
-  --color-bg-primary: #ffffff;         /* NEW: Light grey background */
-  --color-bg-card: #ffffff;             /* Keep cards white */
-  --color-bg-header: #F4F7FC;           /* Keep header white */
-  --color-bg-sidenav: #ffffff;          /* Keep sidenav white */
-  --color-bg-rightsidebar: #ffffff;     /* Keep right sidebar white */
-  --color-bg-hover: rgba(0, 0, 0, 0.04);  /* Adjusted hover */
-  --color-bg-active: rgba(0, 0, 0, 0.06); /* Adjusted active */
-  --color-bg-search: #F3F4F6;          /* Adjusted search background */
+  --color-bg-primary: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-header: #F4F7FC; /* Updated header color */
+  --color-bg-sidenav: #ffffff;
+  --color-bg-rightsidebar: #ffffff;
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-active: rgba(0, 0, 0, 0.06);
+  --color-bg-search: #F3F4F6;
   /* --------------------------------------------- */
 
   /* --- Text Colors (Adjusted for contrast) --- */
-  --color-text-primary: #111827;        /* Darker primary text */
-  --color-text-secondary: #6B7280;      /* Adjusted secondary text */
-  --color-text-link: #0a66c2;            /* Keep link color or adjust if needed */
-  --color-text-placeholder: #9CA3AF;    /* Adjusted placeholder */
-  --color-text-inverted: #ffffff;       /* Text on dark/colored backgrounds */
+  --color-text-primary: #111827;
+  --color-text-secondary: #6B7280;
+  --color-text-link: #0a66c2;
+  --color-text-placeholder: #9CA3AF;
+  --color-text-inverted: #ffffff;
   /* --------------------------------------- */
 
   /* --- Borders & Icons (Adjusted) --- */
-  --color-border: #E5E7EB;             /* Adjusted border */
-  --color-border-input: #D1D5DB;        /* Adjusted input border */
-  --color-icon: #6B7280;                /* Match secondary text */
-  --color-icon-hover: #111827;           /* Match primary text */
+  --color-border: #E5E7EB;
+  --color-border-input: #D1D5DB;
+  --color-icon: #6B7280;
+  --color-icon-hover: #111827;
   --color-icon-active-indicator: var(--color-text-primary);
   /* ------------------------------- */
 
-  /* --- Layout Variables (Keep as is) --- */
-  --header-height: 55px;
+  /* --- Layout Variables --- */
+  --header-height: 55px; /* Initial value, JS might update */
   --sidebar-left-width: 280px;
   --sidebar-right-width: 320px;
-  --layout-max-width: 1600px;
+  --layout-max-width: 1600px; /* Max width of the entire grid container */
   --layout-gap: 20px;
-  --layout-padding-y: 15px;
-  --layout-padding-x: 20px;
+  --layout-padding-y: 15px; /* Vertical padding for content wrapper */
+  --layout-padding-x: 20px; /* Horizontal padding for grid container */
   --border-radius: 6px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
-  --spacing-lg: 24px;
-  /* ----------------------------------- */
+  --spacing-lg: 24px; /* Used for grid container vertical padding */
 
-  /* --- Font & Transition Variables (Keep as is) --- */
+  /* --- NEW: Max width for the inner content wrapper --- */
+  --main-content-max-width: 960px; /* <<< ADJUST THIS VALUE (e.g., 800px, 1024px) */
+  /* ---------------------------------------------------- */
+
+  /* --- Font & Transition Variables --- */
   --font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   --base-font-size: 1rem;
   --base-line-height: 1.5;
-
   --transition-duration: 0.2s;
   --transition-timing: ease-in-out;
   --transition-colors: background-color var(--transition-duration) var(--transition-timing),
@@ -62,27 +64,26 @@
 /* --- Apply Dark Theme Variables --- */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Keep existing dark theme variables */
+    /* --- Dark Theme Variables --- */
     --color-bg-primary: #1a1a1a;
     --color-bg-card: #2a2a2a;
-    --color-bg-header: #2a2a2a;
+    --color-bg-header: #2a2a2a; /* Dark header */
     --color-bg-sidenav: #2a2a2a;
     --color-bg-rightsidebar: #2a2a2a;
     --color-bg-hover: rgba(255, 255, 255, 0.08);
     --color-bg-active: rgba(255, 255, 255, 0.12);
     --color-bg-search: #444;
-
     --color-text-primary: #e0e0e0;
     --color-text-secondary: #b0b0b0;
     --color-text-link: #70b5f9;
     --color-text-placeholder: #aaaaaa;
     --color-text-inverted: #191919;
-
     --color-border: #444;
     --color-border-input: #666;
     --color-icon: #cccccc;
     --color-icon-hover: #ffffff;
     --color-icon-active-indicator: var(--color-icon-hover);
+    /* --main-content-max-width remains the same unless overridden */
   }
 }
 
@@ -90,11 +91,7 @@
 html {
   font-size: var(--base-font-size);
   line-height: var(--base-line-height);
-  /* REMOVED Scrollbar Styling */
 }
-
-/* --- REMOVED WebKit Scrollbar Styling --- */
-/* --- REMOVED .not-scrollable class rules --- */
 
 /* --- Basic Reset & Body Styles --- */
 *,
@@ -109,31 +106,27 @@ body {
   font-family: var(--font-family-base);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  /* Uses the NEW --color-bg-primary variable */
   background-color: var(--color-bg-primary);
-  /* Uses the adjusted --color-text-primary */
   color: var(--color-text-primary);
   min-height: 100vh;
   overflow-x: hidden;
-  overflow-y: auto;
+  /* overflow-y: auto; */ /* Let grid handle scroll */
   overscroll-behavior-y: contain;
-  /* Body paddingTop is set by Layout.js based on header height */
+  /* Padding top removed from body, applied to grid container */
 }
 
 /* --- Transitions --- */
-/* (Keep existing transition selectors) */
 body, button, input, select, textarea, a,
 .MuiPaper-root, .MuiAppBar-root, .MuiDrawer-paper, .MuiCard-root,
 .MuiButtonBase-root, .MuiIconButton-root,
 .MuiTypography-root, .MuiSvgIcon-root,
 .MuiListItemText-primary, .MuiListItemText-secondary,
-.side-nav, .right-sidebar
+.side-nav, .right-sidebar, .main-content-area, .main-content-wrapper
  {
    transition: var(--transition-colors);
 }
 
 /* --- Link Styles --- */
-/* Uses the existing --color-text-link variable */
 a { color: var(--color-text-link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
