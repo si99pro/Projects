@@ -43,7 +43,7 @@
   --spacing-lg: 24px; /* Used for grid container vertical padding */
 
   /* --- NEW: Max width for the inner content wrapper --- */
-  --main-content-max-width: 800px; /* <<< ADJUST THIS VALUE (e.g., 800px, 960px, 1024px) */
+  --main-content-max-width: 600px; /* <<< ADJUST THIS VALUE (e.g., 800px, 960px, 1024px) */
   /* ---------------------------------------------------- */
 
   /* --- Font & Transition Variables --- */

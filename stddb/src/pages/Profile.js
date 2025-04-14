@@ -116,14 +116,12 @@ const Profile = () => {
   return (
     <Container
       component="main"
-      maxWidth="lg" // Use consistent maxWidth or false
-      disableGutters={false} // Let Container handle gutters
+      maxWidth="lg" // Or false if relying solely on CSS var --main-content-max-width in Layout.css
+      disableGutters={true} // <<< MODIFIED: Remove default horizontal padding
       sx={{
           flexGrow: 1,
-          // --- FIXED PADDING ---
-          pt: 0, // Explicitly set top padding to 0
-          pb: { xs: 2, sm: 3, md: 4 }, // Keep bottom padding
-          // --------------------
+          pt: 0, // Explicitly remove top padding from container
+          pb: 0, // Explicitly remove bottom padding from container
       }}
     >
       {loading ? (
@@ -131,77 +129,80 @@ const Profile = () => {
             <CircularProgress size={50} />
         </Box>
       ) : error ? (
-        <Alert severity="error" sx={{ width: '100%', maxWidth: 'md', mx: 'auto' }}>{error}</Alert>
+        // Add some margin if needed when showing only an Alert
+        <Alert severity="error" sx={{ width: '100%', maxWidth: 'md', mx: 'auto', mt: 2, mb: 2 }}>{error}</Alert>
       ) : !basicInfo ? (
-         <Alert severity="warning" sx={{ width: '100%', maxWidth: 'md', mx: 'auto' }}>No profile data available.</Alert>
+         <Alert severity="warning" sx={{ width: '100%', maxWidth: 'md', mx: 'auto', mt: 2, mb: 2 }}>No profile data available.</Alert>
       ): (
         // --- Profile Content within a single Paper/Card ---
         <Paper
           elevation={0}
-          variant="outlined"
+          variant="outlined" // Use outlined variant for better theme border color integration
           sx={{
             p: 0, // Padding handled by inner Boxes
-            width: '100%',
-            bgcolor: 'var(--color-bg-card)', // Use CSS Variable for background
-            borderColor: 'divider', // Keep using theme divider
-            borderRadius: theme.shape.borderRadius * 2,
-            overflow: 'hidden',
+            width: '100%', // Takes full width of its container (Container with gutters disabled)
+            bgcolor: 'var(--color-bg-card)',
+            borderColor: 'divider', // Use theme's divider color for border
+            // <<< MODIFIED: Reduced border radius
+            borderRadius: theme.shape.borderRadius, // Use theme's standard radius
+            // borderRadius: '6px', // Or uncomment and use a specific value like '6px' from your CSS variable
+            overflow: 'hidden', // Keep contents within rounded corners
           }}
         >
            {/* --- Profile Header Section --- */}
+           {/* Padding here remains, this is INSIDE the Paper */}
            <Box sx={{ display: 'flex', alignItems: 'center', p: { xs: 2, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
                <Avatar
                    sx={{
-                       bgcolor: theme.palette.primary.main, // Keep theme color for avatar
+                       bgcolor: theme.palette.primary.main,
                        width: { xs: 48, sm: 64 },
                        height: { xs: 48, sm: 64 },
                        mr: { xs: 2, sm: 3 },
                        fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                       color: theme.palette.getContrastText(theme.palette.primary.main) // Keep theme color
+                       color: theme.palette.getContrastText(theme.palette.primary.main)
                    }}
                    src={basicInfo.profileImageUrl || undefined}
                    alt={`${basicInfo.fullName || 'User'}'s Avatar`}
                >
                   {!basicInfo.profileImageUrl ? userInitials() : null}
                </Avatar>
-               <Box sx={{ flexGrow: 1 }}>
+               <Box sx={{ flexGrow: 1, minWidth: 0 /* Prevent text overflow issues */ }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                        {/* Apply explicit text color */}
                         <Typography variant="h6" component="h1" sx={{ fontWeight: 600, ...primaryTextSx }}>
                             {basicInfo.fullName || 'User Profile'}
                         </Typography>
                         <Tooltip title={basicInfo.emailVerified ? "Verified Account" : "Email Not Verified"} arrow>
                             <IconButton size="small" sx={{ p: 0.25, cursor: 'default' }} disableRipple>
                                 {basicInfo.emailVerified
-                                    ? <VerifiedUserIcon color="success" sx={{ fontSize: '1.1rem' }} /> // Keep theme color
-                                    : <ErrorOutlineIcon color="warning" sx={{ fontSize: '1.1rem' }} /> // Keep theme color
+                                    ? <VerifiedUserIcon color="success" sx={{ fontSize: '1.1rem' }} />
+                                    : <ErrorOutlineIcon color="warning" sx={{ fontSize: '1.1rem' }} />
                                 }
                             </IconButton>
                         </Tooltip>
                     </Box>
-                    {/* Apply explicit text color */}
                     <Typography variant="body2" sx={{ wordBreak: 'break-all', ...secondaryTextSx }}>
                         {basicInfo.email || 'No email provided'}
                     </Typography>
                </Box>
                <Tooltip title="Edit Profile">
-                    <IconButton component={RouterLink} to="/profile/edit" size="medium" aria-label="Edit profile" sx={{ ml: 1, color: 'action.active' }}> {/* Keep theme action color */}
+                    <IconButton component={RouterLink} to="/profile/edit" size="medium" aria-label="Edit profile" sx={{ ml: 1, color: 'action.active' }}>
                         <EditIcon />
                     </IconButton>
                </Tooltip>
            </Box>
 
           {/* --- Display User Information using List --- */}
+          {/* Padding here remains, this is INSIDE the Paper */}
           <Box sx={{ p: { xs: 2, sm: 3 } }}>
               <List disablePadding>
                  {/* Full Name */}
                  <ListItem disablePadding sx={{ py: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><SchoolIcon fontSize="small"/></ListItemIcon> {/* Keep theme action color */}
+                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><SchoolIcon fontSize="small"/></ListItemIcon>
                     <ListItemText
                         primary={formatDisplayValue(basicInfo.fullName)}
                         secondary="Full Name"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }} // Use explicit color
-                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }} // Use explicit color
+                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }}
+                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
                     />
                  </ListItem>
                  {/* Student ID */}
@@ -225,7 +226,7 @@ const Profile = () => {
                     />
                  </ListItem>
 
-                 <Divider sx={{ my: 1.5 }} /> {/* Keep theme divider */}
+                 <Divider sx={{ my: 1.5 }} />
 
                  {/* Email Address */}
                   <ListItem disablePadding sx={{ py: 1.5 }}>
@@ -233,7 +234,7 @@ const Profile = () => {
                     <ListItemText
                         primary={formatDisplayValue(basicInfo.email)}
                         secondary="Email Address"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: { ...primaryTextSx, overflowWrap: 'break-word' } }} // Apply sx here
+                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: { ...primaryTextSx, overflowWrap: 'break-word' } }}
                         secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
                     />
                   </ListItem>
