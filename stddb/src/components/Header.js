@@ -26,6 +26,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone';
+import MailOutlineIcon from '@mui/icons-material/MailOutline'; // <-- Added Message Icon
 
 const Header = forwardRef(({ onToggleMobileNav }, ref) => {
   const theme = useTheme();
@@ -33,7 +34,8 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
   const { contextUserData, logout } = useAuth();
   const basicInfo = contextUserData?.basicInfo;
 
-  const notificationCount = 5; // Example count
+  const notificationCount = 5; // Example notification count
+  const messageCount = 2; // Example message count
 
   const handleOpenUserMenu = (event) => setAnchorElUser(event.currentTarget);
   const handleCloseUserMenu = () => setAnchorElUser(null);
@@ -61,26 +63,19 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
   ];
 
   // --- Define a very subtle shadow value ---
-  // Adjust the color alpha (last value in rgba) and blur (third px value)
   const subtleShadow = '0 1px 2px 0 rgba(0, 0, 0, 0.05)';
-  // Alternative slightly stronger: '0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.04)'
 
   return (
     <AppBar
       ref={ref}
       component="header"
       position="fixed"
-      // Remove elevation prop, we are defining boxShadow directly
-      // elevation={0} // REMOVED
       sx={{
-        // Apply the subtle shadow
-        boxShadow: subtleShadow, // <<< APPLY SUBTLE SHADOW
+        boxShadow: subtleShadow, // Apply subtle shadow
         top: 0,
         left: 0,
         right: 0,
         bgcolor: 'var(--color-bg-header)',
-        // Remove border if shadow provides enough separation, or keep it if preferred
-        // borderBottom: `1px solid var(--color-border)`, // Optional: keep or remove
         height: 'var(--header-height)',
         zIndex: theme.zIndex.drawer + 1,
       }}
@@ -200,6 +195,7 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
               <SearchIcon />
             </IconButton>
           </Tooltip>
+
           {/* Notifications Icon */}
           <Tooltip title="Notifications">
             <IconButton sx={{ color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}>
@@ -208,6 +204,16 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
               </Badge>
             </IconButton>
           </Tooltip>
+
+          {/* Messages Icon - ADDED */}
+          <Tooltip title="Messages">
+            <IconButton sx={{ color: 'var(--color-icon)', '&:hover': { bgcolor: 'var(--color-bg-hover)' } }}>
+              <Badge badgeContent={messageCount} color="primary" overlap="circular"> {/* Use different color for messages */}
+                <MailOutlineIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
+
           {/* User Avatar & Menu */}
           <Tooltip title="Account settings">
             <IconButton
@@ -241,6 +247,7 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             MenuListProps={{ 'aria-labelledby': 'account-menu-button' }}
+            disableScrollLock // <-- FIX: Prevent scrollbar hiding
             slotProps={{
               paper: {
                 elevation: 0, // Keep paper flat
@@ -249,23 +256,26 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
                   bgcolor: 'var(--color-bg-card)', color: 'var(--color-text-primary)',
                   border: `1px solid var(--color-border)`,
                   filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.1))', // Keep dropdown shadow
-                  '&::before': {
+                  '&::before': { // Arrow pointing to the anchor
                      content: '""', display: 'block', position: 'absolute',
                      top: 0, right: 14, width: 10, height: 10,
                      bgcolor: 'var(--color-bg-card)',
                      transform: 'translateY(-50%) rotate(45deg)', zIndex: 0,
                      borderTop: 'inherit', borderLeft: 'inherit'
                   },
-                  '& .MuiMenuItem-root': {
+                  '& .MuiMenuItem-root': { // Style menu items
                      fontSize: '0.9rem', padding: theme.spacing(1, 2),
                      '&:hover': { bgcolor: 'var(--color-bg-hover)' },
                      '& a': { textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', width: '100%' }
                   },
-                  '& .MuiSvgIcon-root': { fontSize: '1.1rem', color: 'var(--color-icon)', mr: 1.5 }
+                  '& .MuiSvgIcon-root': { // Style icons within menu items
+                    fontSize: '1.1rem', color: 'var(--color-icon)', mr: 1.5
+                  }
                 }
               }
             }}
           >
+             {/* Menu Header */}
              <Box sx={{ px: 2, py: 1.5, borderBottom: `1px solid var(--color-border)` }}>
                 <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600, lineHeight: 1.3 }}>
                   {basicInfo?.fullName || 'User Name'}
@@ -274,6 +284,7 @@ const Header = forwardRef(({ onToggleMobileNav }, ref) => {
                   {basicInfo?.email || 'user@example.com'}
                 </Typography>
              </Box>
+             {/* Menu Items */}
             <MenuItem onClick={handleCloseUserMenu} component={Link} to="/profile"><PersonIcon/>Profile</MenuItem>
             <MenuItem onClick={handleCloseUserMenu} component={Link} to="/settings"><SettingsIcon/>Settings</MenuItem>
             <Divider sx={{ my: 0.5, borderColor: 'var(--color-border)' }} />
