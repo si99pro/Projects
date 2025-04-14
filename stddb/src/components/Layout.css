@@ -12,88 +12,76 @@
 .main-grid-container {
   flex-grow: 1;
   display: grid;
-  /* Columns: Left Sidebar | Main Content (Flexible) | Right Sidebar */
-  grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr) var(--sidebar-right-width);
+  /* Columns: Left Sidebar | Main Content (Flexible) */
+  /* Fixed right sidebar positioned independently */
+  grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
   gap: var(--layout-gap);
-  /* Padding top is set dynamically by JS to account for header height */
+  /* Padding top is set dynamically by JS to account for header height + gap */
+  /* Ensure JS adds appropriate space (e.g., headerHeight + layoutGap) */
   padding-bottom: var(--spacing-lg);
   padding-left: var(--layout-padding-x);
-  padding-right: var(--layout-padding-x);
-  /* Overall max width for the entire grid container */
+  /* Adjust right padding for fixed sidebar space */
+  padding-right: calc(var(--sidebar-right-width) + var(--layout-gap) + var(--layout-padding-x));
   max-width: var(--layout-max-width);
   margin-left: auto; margin-right: auto;
   width: 100%;
   box-sizing: border-box;
-  align-items: start; /* Align items to the top of their grid cells */
+  align-items: start;
 }
 
 /* --- Left Sidebar Wrapper (Sticky) --- */
 .side-nav-wrapper {
-  grid-column: 1 / 2; /* Place in the first column */
-  position: sticky; /* MAKE STICKY */
-  /* Stick to the top edge relative to the grid container's padding-top */
-  /* The 'top' value should account for the padding-top set by JS on the parent */
-  /* NOTE: This simple 'top: 0' works because the parent grid container has padding-top */
-  /* If the parent didn't have padding, we might need calc(var(--header-height) + var(--spacing-lg)) */
+  grid-column: 1 / 2;
+  position: sticky;
+  /* Stick relative to grid container's padding-top */
   top: 0;
-  /* Set max-height relative to viewport below where the grid container's padding starts */
-  max-height: calc(100vh - var(--header-height) - var(--spacing-lg));
-  overflow-y: auto; /* Allow sidebar content to scroll if it overflows */
+   /* Adjust max-height based on header, gap, and grid bottom padding */
+   /* Assuming grid padding-top accounts for header+gap */
+   /* If padding-top is ONLY header height, this needs adjusting */
+  max-height: calc(100vh - var(--header-height) - var(--layout-gap) - var(--spacing-lg));
+  overflow-y: auto;
   overflow-x: hidden;
   box-sizing: border-box;
-  /* Optionally hide scrollbar for left sidebar */
-  /* scrollbar-width: none;
-     -ms-overflow-style: none; */
 }
 /* .side-nav-wrapper::-webkit-scrollbar { display: none; } */
 
 
 /* --- Main Content Area (Grid Cell) --- */
 .main-content-area {
-  grid-column: 2 / 3; /* Place in the second column */
-  min-width: 0; /* Crucial for grid/flex items to prevent overflow */
+  grid-column: 2 / 3;
+  min-width: 0;
   box-sizing: border-box;
-
-  /* --- REMOVE explicit overflow and height --- */
-  /* Let content determine height and allow it to overflow the container */
-  /* The browser's main scrollbar will handle overflow if the page gets too long */
-  overflow: visible; /* Explicitly allow content flow */
+  overflow: visible;
 }
 
 /* --- Inner Content Wrapper (Controls Max Width & Centering) --- */
 .main-content-wrapper {
-  /* Limits how wide the content can be, using variable from index.css */
   max-width: var(--main-content-max-width);
-  margin-left: auto; /* Centers the block horizontally */
-  margin-right: auto; /* Centers the block horizontally */
-  width: 100%; /* Ensures it takes up available space *up to* max-width */
-  /* Add vertical padding inside the constrained area */
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+  /* Vertical padding INSIDE the main content wrapper */
   padding-top: var(--layout-padding-y);
   padding-bottom: var(--layout-padding-y);
   box-sizing: border-box;
-  /* This wrapper itself shouldn't normally scroll; the parent .main-content-area grows with it */
 }
 
-/* --- Right Sidebar Wrapper (Sticky) --- */
+/* --- Right Sidebar Wrapper (NOW FIXED) --- */
 .right-sidebar-wrapper {
-  grid-column: 3 / 4; /* Place in the third column */
-  position: sticky;
-  top: 0; /* Stick to the top edge relative to the grid container's padding-top */
-  /* Use max-height instead of height to allow internal scrolling */
-  max-height: calc(100vh - var(--header-height) - var(--spacing-lg));
+  position: fixed;
+  /* <<< MODIFIED: Add layout gap to top positioning >>> */
+  top: calc(var(--header-height) + var(--layout-gap));
+  right: var(--layout-padding-x);
+  width: var(--sidebar-right-width);
+  /* <<< MODIFIED: Adjust height to account for the added top gap >>> */
+  height: calc(100vh - var(--header-height) - var(--layout-gap));
   box-sizing: border-box;
-
-  /* --- Enable scrolling but hide the scrollbar --- */
-  overflow-y: auto; /* Keep this to allow internal scrolling */
+  /* grid-column removed */
+  overflow-y: auto;
   overflow-x: hidden;
-
-  /* For Firefox */
-  scrollbar-width: none;
-  /* For Internet Explorer and Edge (pre-Chromium) */
-  -ms-overflow-style: none;
-  /* --------------------------------------------- */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
 }
-
 /* For Chrome, Safari, and newer Edge (Webkit-based) */
 .right-sidebar-wrapper::-webkit-scrollbar {
   display: none; /* Hide the scrollbar */
@@ -107,66 +95,55 @@
     .main-grid-container {
         /* Two columns: Left Sidebar | Main Content */
         grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        /* Ensure padding-top is still handled correctly by JS */
-        /* Horizontal padding remains */
+        /* Reset right padding */
+        padding-right: var(--layout-padding-x);
     }
     .right-sidebar-wrapper { display: none; } /* Hide right sidebar */
-    /* .side-nav-wrapper { grid-column: 1 / 2; } */ /* Already correct */
-    /* .main-content-area { grid-column: 2 / 3; } */ /* Already correct */
-    /* Sidebars should still be sticky and have max-height */
 }
 
-/* Mobile - Stack layout, hide sidebars (handled by JS toggle potentially) */
+/* Mobile - Stack layout, hide sidebars */
 @media (max-width: 899.95px) {
   .main-grid-container {
-    display: block; /* Stack elements vertically */
-    padding: 0 !important; /* Remove grid padding, override JS padding */
-    max-width: none; /* Allow full width */
+    display: block;
+    padding: 0 !important;
+    max-width: none;
     width: 100%;
     gap: 0;
-    height: auto; /* Height determined by content */
-    overflow: visible; /* Allow content overflow */
+    height: auto;
+    overflow: visible;
   }
-  /* Sidebars are hidden by default, potentially toggled by JS */
-  .side-nav-wrapper { display: none; height: auto; position: static; max-height: none; } /* Reset sticky/height */
-  .right-sidebar-wrapper { display: none; height: auto; position: static; max-height: none; } /* Reset sticky/height */
-
+  .side-nav-wrapper {
+      display: none; position: static; height: auto;
+      max-height: none; width: auto;
+  }
+  .right-sidebar-wrapper {
+      display: none; position: static; width: auto;
+      height: auto; max-height: none; top: auto;
+      right: auto; overflow: visible;
+  }
   .main-content-area {
-     width: 100%;
-     min-width: auto;
-     height: auto; /* Height determined by content */
-     overflow: visible; /* Allow content overflow */
-     padding: 0; /* Remove cell padding */
+     width: 100%; min-width: auto; height: auto;
+     overflow: visible; padding: 0;
   }
-  /* Adjust wrapper for mobile view */
   .main-content-wrapper {
-     max-width: none; /* Allow full width */
-     margin-left: 0; margin-right: 0; /* Remove centering */
-     /* Add padding, including space below fixed header */
+     max-width: none; margin-left: 0; margin-right: 0;
      padding: var(--spacing-md);
+     /* Add padding below header */
      padding-top: calc(var(--header-height) + var(--spacing-md));
   }
-
 }
 
 /* --- Body class for mobile nav --- */
 body.mobile-nav-active {
-   overflow: hidden; /* Prevent scrolling background when mobile nav is open */
+   overflow: hidden;
 }
 
 /* Add rule for when mobile nav IS displayed */
 @media (max-width: 899.95px) {
-    .side-nav-wrapper.mobile-nav-open { /* Assuming SideNav adds this class */
-        display: block; /* Show it when open */
-        position: fixed; /* Or absolute, depending on desired effect */
-        left: 0;
-        top: 0; /* Or below header: var(--header-height) */
-        width: var(--sidebar-left-width); /* Or a mobile-specific width */
-        height: 100vh; /* Or calc(100vh - var(--header-height)) */
-        background-color: var(--color-bg-secondary); /* Or appropriate background */
-        z-index: 1000; /* Ensure it's above other content */
-        overflow-y: auto; /* Allow scrolling */
-        max-height: none; /* Override desktop max-height */
-         /* Add transitions, etc. as needed */
+    .side-nav-wrapper.mobile-nav-open {
+        display: block; position: fixed; left: 0;
+        top: 0; width: var(--sidebar-left-width);
+        height: 100vh; background-color: var(--color-bg-sidenav);
+        z-index: 1000; overflow-y: auto; max-height: none;
     }
 }

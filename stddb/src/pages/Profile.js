@@ -22,7 +22,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import { useTheme } from '@mui/material/styles';
+import { useTheme } from '@mui/material/styles'; // Keep theme for palette colors etc.
 import IconButton from '@mui/material/IconButton';
 
 // MUI Icons
@@ -68,7 +68,7 @@ const getInitials = (name) => {
  * Profile Page Component
  */
 const Profile = () => {
-  const theme = useTheme();
+  const theme = useTheme(); // Keep theme for palette colors, breakpoints etc.
   const { currentUser, userData: contextUserData } = useAuth();
   const navigate = useNavigate();
 
@@ -102,11 +102,25 @@ const Profile = () => {
         }
       } catch (err) { console.error("Error fetching user info:", err); if (isMounted) { setError('Failed to load user data.'); setLoading(false); } }
     };
-    if (contextUserData?.basicInfo && !loading) { setBasicInfo(contextUserData.basicInfo); setLoading(false); }
-    else if (!currentUser && loading) { setLoading(false); setError("Please log in to view your profile."); }
-    else if (currentUser && loading) { fetchUserInfo(); }
+    // Use context data if available and component is loading
+    if (contextUserData?.basicInfo && loading) {
+        setBasicInfo(contextUserData.basicInfo);
+        if (isMounted) setLoading(false);
+    }
+    // If no context data, or context data already processed but still loading, fetch fresh
+    else if (!currentUser && loading) {
+        if (isMounted) { setLoading(false); setError("Please log in to view your profile."); }
+    }
+    else if (currentUser && loading) {
+        fetchUserInfo();
+    }
+    // Handle case where user logs out after initial load
+    else if (!currentUser && !loading) {
+        if (isMounted) { setError("Not logged in."); setBasicInfo(null); }
+    }
+
     return () => { isMounted = false; };
-  }, [currentUser, contextUserData, loading, navigate]);
+  }, [currentUser, contextUserData, loading, navigate]); // Ensure dependencies are correct
 
   // --- Define Text Color SX using CSS Variables (like Home.js) ---
   const primaryTextSx = { color: 'var(--color-text-primary)' };
@@ -117,7 +131,7 @@ const Profile = () => {
     <Container
       component="main"
       maxWidth="lg" // Or false if relying solely on CSS var --main-content-max-width in Layout.css
-      disableGutters={true} // <<< MODIFIED: Remove default horizontal padding
+      disableGutters={true} // Remove default horizontal padding
       sx={{
           flexGrow: 1,
           pt: 0, // Explicitly remove top padding from container
@@ -132,20 +146,21 @@ const Profile = () => {
         // Add some margin if needed when showing only an Alert
         <Alert severity="error" sx={{ width: '100%', maxWidth: 'md', mx: 'auto', mt: 2, mb: 2 }}>{error}</Alert>
       ) : !basicInfo ? (
-         <Alert severity="warning" sx={{ width: '100%', maxWidth: 'md', mx: 'auto', mt: 2, mb: 2 }}>No profile data available.</Alert>
+         // Handle case where loading is done, no error, but basicInfo is still null (e.g., logout)
+         <Alert severity="warning" sx={{ width: '100%', maxWidth: 'md', mx: 'auto', mt: 2, mb: 2 }}>No profile data available. Please log in or complete setup.</Alert>
       ): (
         // --- Profile Content within a single Paper/Card ---
         <Paper
-          elevation={0}
-          variant="outlined" // Use outlined variant for better theme border color integration
+          elevation={0} // No shadow
+          variant="outlined" // Use theme border
           sx={{
             p: 0, // Padding handled by inner Boxes
             width: '100%', // Takes full width of its container (Container with gutters disabled)
-            bgcolor: 'var(--color-bg-card)',
+            bgcolor: 'var(--color-bg-card)', // Use CSS Variable for background
             borderColor: 'divider', // Use theme's divider color for border
-            // <<< MODIFIED: Reduced border radius
-            borderRadius: theme.shape.borderRadius, // Use theme's standard radius
-            // borderRadius: '6px', // Or uncomment and use a specific value like '6px' from your CSS variable
+            // <<< MODIFIED: Use CSS variable to match Home.js cards >>>
+            borderRadius: 'var(--border-radius, 6px)',
+            // <<< END MODIFICATION >>>
             overflow: 'hidden', // Keep contents within rounded corners
           }}
         >
@@ -154,12 +169,12 @@ const Profile = () => {
            <Box sx={{ display: 'flex', alignItems: 'center', p: { xs: 2, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
                <Avatar
                    sx={{
-                       bgcolor: theme.palette.primary.main,
+                       bgcolor: theme.palette.primary.main, // Use theme color
                        width: { xs: 48, sm: 64 },
                        height: { xs: 48, sm: 64 },
                        mr: { xs: 2, sm: 3 },
                        fontSize: { xs: '1.2rem', sm: '1.5rem' },
-                       color: theme.palette.getContrastText(theme.palette.primary.main)
+                       color: theme.palette.getContrastText(theme.palette.primary.main) // Use theme color
                    }}
                    src={basicInfo.profileImageUrl || undefined}
                    alt={`${basicInfo.fullName || 'User'}'s Avatar`}
@@ -168,24 +183,26 @@ const Profile = () => {
                </Avatar>
                <Box sx={{ flexGrow: 1, minWidth: 0 /* Prevent text overflow issues */ }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
+                        {/* Apply explicit text color */}
                         <Typography variant="h6" component="h1" sx={{ fontWeight: 600, ...primaryTextSx }}>
                             {basicInfo.fullName || 'User Profile'}
                         </Typography>
                         <Tooltip title={basicInfo.emailVerified ? "Verified Account" : "Email Not Verified"} arrow>
                             <IconButton size="small" sx={{ p: 0.25, cursor: 'default' }} disableRipple>
                                 {basicInfo.emailVerified
-                                    ? <VerifiedUserIcon color="success" sx={{ fontSize: '1.1rem' }} />
-                                    : <ErrorOutlineIcon color="warning" sx={{ fontSize: '1.1rem' }} />
+                                    ? <VerifiedUserIcon color="success" sx={{ fontSize: '1.1rem' }} /> // Use theme color
+                                    : <ErrorOutlineIcon color="warning" sx={{ fontSize: '1.1rem' }} /> // Use theme color
                                 }
                             </IconButton>
                         </Tooltip>
                     </Box>
+                    {/* Apply explicit text color */}
                     <Typography variant="body2" sx={{ wordBreak: 'break-all', ...secondaryTextSx }}>
                         {basicInfo.email || 'No email provided'}
                     </Typography>
                </Box>
                <Tooltip title="Edit Profile">
-                    <IconButton component={RouterLink} to="/profile/edit" size="medium" aria-label="Edit profile" sx={{ ml: 1, color: 'action.active' }}>
+                    <IconButton component={RouterLink} to="/profile/edit" size="medium" aria-label="Edit profile" sx={{ ml: 1, color: 'action.active' }}> {/* Use theme action color */}
                         <EditIcon />
                     </IconButton>
                </Tooltip>
@@ -197,12 +214,12 @@ const Profile = () => {
               <List disablePadding>
                  {/* Full Name */}
                  <ListItem disablePadding sx={{ py: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><SchoolIcon fontSize="small"/></ListItemIcon>
+                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><SchoolIcon fontSize="small"/></ListItemIcon> {/* Use theme action color */}
                     <ListItemText
                         primary={formatDisplayValue(basicInfo.fullName)}
                         secondary="Full Name"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }}
-                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
+                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }} // Use explicit color
+                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }} // Use explicit color
                     />
                  </ListItem>
                  {/* Student ID */}
@@ -226,7 +243,7 @@ const Profile = () => {
                     />
                  </ListItem>
 
-                 <Divider sx={{ my: 1.5 }} />
+                 <Divider sx={{ my: 1.5 }} /> {/* Use theme divider */}
 
                  {/* Email Address */}
                   <ListItem disablePadding sx={{ py: 1.5 }}>
@@ -234,7 +251,7 @@ const Profile = () => {
                     <ListItemText
                         primary={formatDisplayValue(basicInfo.email)}
                         secondary="Email Address"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: { ...primaryTextSx, overflowWrap: 'break-word' } }}
+                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: { ...primaryTextSx, overflowWrap: 'break-word' } }} // Apply sx here
                         secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
                     />
                   </ListItem>

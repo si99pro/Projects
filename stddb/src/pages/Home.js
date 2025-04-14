@@ -64,7 +64,7 @@ const Home = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Data Fetching Effect ---
+  // --- Data Fetching Effect (Keep as is) ---
   useEffect(() => {
     let isMounted = true;
     const fetchUserData = async () => {
@@ -72,135 +72,96 @@ const Home = () => {
         if (isMounted) {
           setError("Not logged in.");
           setLoading(false);
-          // Clear data if logged out
-          setBasicInfo(null);
-          setAcademicData({ gpa: 'N/A', status: 'Unknown' });
-          setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
-          setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
-          setCourseData({ enrolled: 'N/A', nextClass: 'N/A' });
-          setDeadlines([]);
-          setAnnouncements([]);
-        }
-        return;
+          setBasicInfo(null); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A' }); setDeadlines([]); setAnnouncements([]);
+        } return;
       }
-
-      // Prioritize context data if available
       if (contextUserData?.basicInfo && loading) {
-          setBasicInfo(contextUserData.basicInfo);
-          // Set other data from context or use dummy/fetched data
-          // For demonstration, setting dummy data here:
-          setAcademicData({ gpa: 'N/A', status: 'Unknown' }); // Example: Use N/A from screenshot
-          setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
-          setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
-          setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
-          setDeadlines([]); // Example: Use empty from screenshot
-          setAnnouncements([]); // Example: Use empty from screenshot
-          if (isMounted) setLoading(false);
-          return;
+          setBasicInfo(contextUserData.basicInfo); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A'}); setDeadlines([]); setAnnouncements([]);
+          if (isMounted) setLoading(false); return;
       }
-
-      // Fetch from Firestore if no context or still loading
       if (loading) {
         try {
           const userDocRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(userDocRef);
           if (isMounted) {
             if (docSnap.exists()) {
-              const fetchedData = docSnap.data();
-              setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: 'Your Name' }); // Provide fallbacks
-              // Set other fetched/dummy data
-              setAcademicData({ gpa: 'N/A', status: 'Unknown' });
-              setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
-              setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
-              setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
-              setDeadlines([]);
-              setAnnouncements([]);
+              const fetchedData = docSnap.data(); setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: 'Your Name' }); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A'}); setDeadlines([]); setAnnouncements([]);
             } else {
-              setError('User profile not found.');
-              setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); // Minimum info
-              // Set default/empty data
-              setAcademicData({ gpa: 'N/A', status: 'Unknown' });
-              setFinancialData({ balance: 'N/A', dueDate: 'N/A' });
-              setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' });
-              setCourseData({ enrolled: 'N/A', nextClass: 'N/A'});
-              setDeadlines([]);
-              setAnnouncements([]);
-            }
-            setLoading(false);
+              setError('User profile not found.'); setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A'}); setDeadlines([]); setAnnouncements([]);
+            } setLoading(false);
           }
         } catch (err) {
           console.error("Error fetching user info:", err);
-          if (isMounted) {
-            setError('Failed to load user data.');
-            setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); // Show something even on error
-            setLoading(false);
-          }
+          if (isMounted) { setError('Failed to load user data.'); setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); setLoading(false); }
         }
       }
     };
-
     fetchUserData();
-
     return () => { isMounted = false; };
-  }, [currentUser, contextUserData]); // Rerun if user or context data changes
+  }, [currentUser, contextUserData, loading]); // Ensure loading is dependency if needed
 
   // --- Dynamic Display Name ---
   const displayName = basicInfo?.fullName || basicInfo?.email || 'User';
-  const displayRoleEmail = basicInfo?.headline || basicInfo?.email || 'Your Role/Email';
+  // const displayRoleEmail = basicInfo?.headline || basicInfo?.email || 'Your Role/Email'; // Not used currently
 
-  // --- Consistent Card Styling ---
+  // --- Consistent Card Styling (Keep as is) ---
   const cardSx = {
-    height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    bgcolor: 'var(--color-bg-card)',
-    border: `1px solid var(--color-border)`,
-    borderRadius: 'var(--border-radius, 6px)', // Use theme border radius
-    overflow: 'hidden',
-    boxShadow: 'none',
+    height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'var(--color-bg-card)',
+    border: `1px solid var(--color-border)`, borderRadius: 'var(--border-radius, 6px)',
+    overflow: 'hidden', boxShadow: 'none',
   };
 
-  // --- Reusable Text Color Styles ---
+  // --- Reusable Text Color Styles (Keep as is) ---
   const primaryTextSx = { color: 'var(--color-text-primary)' };
-  const secondaryTextSx = { color: 'var(--color-text-secondary)', fontSize: '0.875rem' }; // Slightly smaller secondary
+  const secondaryTextSx = { color: 'var(--color-text-secondary)', fontSize: '0.875rem' };
   const boldPrimaryTextSx = { fontWeight: 600, color: 'var(--color-text-primary)' };
-  const cardTitleSx = { display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx, fontWeight: 500 }; // Consistent card titles
+  const cardTitleSx = { display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx, fontWeight: 500 };
 
 
   // --- Render Logic ---
   return (
-    // Use Container to constrain the content width within the middle grid column
+    // Modified Container: Removed padding/gutters
     <Container
         component="section"
-        maxWidth="lg" // Controls the max width. Options: 'xs', 'sm', 'md', 'lg', 'xl'
-        disableGutters={false} // Let the Container handle its own padding (recommended with the grid layout)
+        maxWidth="lg" // Keep controlling max width, or set to false
+        disableGutters={true} // <<< MODIFIED: Remove horizontal gutters
         sx={{
-            flexGrow: 1, // Allow container to grow if needed (e.g., in flex context)
-            // Add vertical padding here, as Layout.css doesn't apply it to .main-content-area
-            py: 'var(--layout-padding-y)',
-             // Remove minHeight if Layout.css handles height correctly
+            flexGrow: 1, // Allow container to grow
+            // <<< MODIFIED: Remove vertical padding (py) >>>
+            // Vertical padding is handled by .main-content-wrapper in Layout.css
+            pt: 0,
+            pb: 0,
         }}
     >
       {loading ? (
-        // Centered Loader
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 'calc(100vh - var(--header-height) - 80px)' }}>
+        // Centered Loader - Consider adjusting height calculation if needed
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' /* Use minHeight for flexibility */ }}>
             <CircularProgress />
         </Box>
       ) : error ? (
-        // Centered Error Alert
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', pt: 4 }}>
-            <Alert severity="error" sx={{ width: 'auto' }}>{error}</Alert>
+        // Error Alert - Add margin if needed since container padding is removed
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', pt: 2, pb: 2 /* Add padding here if needed */ }}>
+            <Alert severity="error" sx={{ width: 'auto', mx: { xs: 2, sm: 0 } /* Add horizontal margin if needed */ }}>{error}</Alert>
         </Box>
       ) : (
         // Main Content Box (inside Container)
-        <Box>
+        // We need to add padding/margin here manually if desired around the content,
+        // since the Container no longer provides it.
+        // Alternatively, let the Layout.css handle it.
+        <Box sx={{
+            // Optional: Add padding here if you want space specifically
+            // around the Home content, independent of Layout.css padding.
+            // Example: px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }
+            // If Layout.css .main-content-wrapper padding is sufficient, leave this Box sx empty or remove Box.
+           }}
+        >
           {/* Welcome Header */}
           <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 600, ...primaryTextSx }}>
             Welcome, {displayName}!
           </Typography>
 
-          {/* Grid Container for Cards */}
-          <Grid container spacing={'var(--layout-gap, 20px)'}> {/* Use gap from theme */}
+          {/* Grid Container for Cards - Spacing handles space between cards */}
+          <Grid container spacing={'var(--layout-gap, 20px)'}>
 
             {/* --- Row 1 (3 items: lg=4) --- */}
             <Grid item xs={12} md={6} lg={4}>
@@ -235,7 +196,7 @@ const Home = () => {
                       <Button component={RouterLink} to="/profile" variant="outlined" startIcon={<PersonIcon />} fullWidth>Update Profile</Button>
                    </Box>
                  </CardContent>
-                 {/* No actions needed for this card */}
+                 {/* No actions needed */}
                </Paper>
             </Grid>
 
@@ -248,11 +209,11 @@ const Home = () => {
                     {deadlines.length > 0 ? (
                       <List dense disablePadding sx={{ width: '100%' }}>
                         {deadlines.slice(0, 3).map((item, index) => (
-                          <React.Fragment key={item.id}>
+                          <React.Fragment key={item.id || index}> {/* Add fallback key */}
                             <ListItem disablePadding sx={{ py: 0.75 }}>
                               <ListItemText
                                 primary={item.title}
-                                secondary={`${item.course} - ${item.date}`}
+                                secondary={`${item.course || ''} - ${item.date || ''}`}
                                 primaryTypographyProps={{ sx: {...primaryTextSx, fontWeight: 500, fontSize: '0.9rem'} }}
                                 secondaryTypographyProps={{ sx: secondaryTextSx }}/>
                             </ListItem>
@@ -280,11 +241,11 @@ const Home = () => {
                    {announcements.length > 0 ? (
                      <List dense disablePadding sx={{ width: '100%' }}>
                         {announcements.slice(0, 3).map((item, index) => (
-                          <React.Fragment key={item.id}>
+                          <React.Fragment key={item.id || index}> {/* Add fallback key */}
                             <ListItem disablePadding sx={{ py: 0.75 }}>
                               <ListItemText
                                 primary={item.title}
-                                secondary={item.date}
+                                secondary={item.date || ''}
                                 primaryTypographyProps={{ sx: {...primaryTextSx, fontWeight: 500, fontSize: '0.9rem'} }}
                                 secondaryTypographyProps={{ sx: secondaryTextSx }}/>
                             </ListItem>
@@ -352,7 +313,7 @@ const Home = () => {
                         Name: <Typography component="span" sx={boldPrimaryTextSx}>{advisorData.name}</Typography>
                     </Typography>
                     <Typography variant="body2" sx={{ mb: 0.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', ...secondaryTextSx }}>
-                      Email: 
+                      Email:  {/* Use non-breaking space */}
                       {advisorData.email && advisorData.email !== 'N/A' ? (
                           <Link href={`mailto:${advisorData.email}`} sx={{ wordBreak: 'break-all', color: 'var(--color-text-link)' }}>{advisorData.email}</Link>
                       ) : (
