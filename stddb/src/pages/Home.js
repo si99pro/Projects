@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/pages/Home.js
 import React, { useState, useEffect } from 'react';
