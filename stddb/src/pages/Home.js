@@ -1,7 +1,7 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
 // src/pages/Home.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase'; // Assuming firebase is configured
 import { doc, getDoc } from 'firebase/firestore';
@@ -9,75 +9,92 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 // MUI Components
 import Box from '@mui/material/Box';
+import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import Button from '@mui/material/Button';
-import Container from '@mui/material/Container'; // Using Container to constrain width
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
+import Paper from '@mui/material/Paper'; // Single Paper for content
+import Divider from '@mui/material/Divider';
 import Snackbar from '@mui/material/Snackbar';
-import Grid from '@mui/material/Grid';
-import Paper from '@mui/material/Paper';
-import CardContent from '@mui/material/CardContent';
-import CardActions from '@mui/material/CardActions';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Divider from '@mui/material/Divider';
+import ListItemButton from '@mui/material/ListItemButton'; // For clickable list items
+import Chip from '@mui/material/Chip';
+import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
-import Link from '@mui/material/Link';
+import Link from '@mui/material/Link'; // If needed for external links
 
-// MUI Icons
-import SchoolIcon from '@mui/icons-material/School';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
-import CampaignIcon from '@mui/icons-material/Campaign';
-import AssessmentIcon from '@mui/icons-material/Assessment';
-import EditNoteIcon from '@mui/icons-material/EditNote';
-import SpeedIcon from '@mui/icons-material/Speed';
-import PersonIcon from '@mui/icons-material/Person';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import ContactMailIcon from '@mui/icons-material/ContactMail';
+// MUI Icons - Choose icons relevant to dashboard sections
+import SpeedIcon from '@mui/icons-material/Speed'; // For Overview/Stats
+import NotificationsNoneIcon from '@mui/icons-material/NotificationsNone'; // Alerts
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'; // Tasks
+import EventAvailableIcon from '@mui/icons-material/EventAvailable'; // Events/Calendar
+import SchoolIcon from '@mui/icons-material/School'; // Courses/Grades
+import PaymentIcon from '@mui/icons-material/Payment'; // Billing
+import LinkIcon from '@mui/icons-material/Link'; // Quick Links
+import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'; // Indicate navigation
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import PendingIcon from '@mui/icons-material/Pending';
 
-// --- Start of Component Function ---
+
+/**
+ * Home Dashboard Component - Redesigned to match Profile.js structure
+ */
 const Home = () => {
   const theme = useTheme();
-  const { currentUser, contextUserData } = useAuth();
-  // const navigate = useNavigate(); // Uncomment if needed
+  const { currentUser, userData: contextUserData } = useAuth();
+  const navigate = useNavigate();
 
   // --- State Management ---
   const [basicInfo, setBasicInfo] = useState(null);
-  const [loading, setLoading] = useState(true); // Start in loading state
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'error' });
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
-  // --- Dummy/Default Data (Replace with actual fetching logic as needed) ---
-  const [academicData, setAcademicData] = useState({ gpa: 'N/A', status: 'Unknown' });
-  const [financialData, setFinancialData] = useState({ balance: 'N/A', dueDate: 'N/A' });
-  const [advisorData, setAdvisorData] = useState({ name: 'N/A', email: 'N/A', office: 'N/A' });
-  const [courseData, setCourseData] = useState({ enrolled: 'N/A', nextClass: 'N/A' });
-  const [deadlines, setDeadlines] = useState([]);
-  const [announcements, setAnnouncements] = useState([]);
+  // --- Placeholder Dashboard Data ---
+  // Simplified data structure suitable for List display
+  const [dashboardData, setDashboardData] = useState({
+    alertsCount: 2,
+    pendingTasksCount: 1,
+    nextEvent: { title: 'Project Deadline - CS301', date: 'Oct 28' },
+    quickStats: [
+        { label: 'Active Courses', value: 3, icon: <SchoolIcon fontSize="small"/>, path: '/courses' },
+        { label: 'Account Balance', value: '$150.75', icon: <PaymentIcon fontSize="small"/>, path: '/billing' },
+        // Add more stats if needed
+    ],
+     tasksPreview: [ // Show only 1-2 important tasks
+        { id: 't1', title: 'Submit Project Proposal', status: 'pending', path: '/tasks/t1' },
+        { id: 't3', title: 'Register for Spring Semester', status: 'overdue', path: '/registration' },
+    ],
+    quickLinks: [ // Key navigation points
+        { id: 'ql1', label: 'My Grades', path: '/grades' },
+        { id: 'ql2', label: 'My Schedule', path: '/schedule' },
+        { id: 'ql4', label: 'Full Calendar', path: '/calendar' },
+        { id: 'ql5', label: 'View All Tasks', path: '/tasks' },
+    ]
+  });
 
-  // --- Handler ---
+  // --- Handlers ---
   const handleSnackbarClose = (event, reason) => {
     if (reason === 'clickaway') return;
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // --- Data Fetching Effect (Keep as is) ---
+  // --- Data Fetching Effect (Similar to Profile.js) ---
   useEffect(() => {
     let isMounted = true;
     const fetchUserData = async () => {
       if (!currentUser?.uid) {
-        if (isMounted) {
-          setError("Not logged in.");
-          setLoading(false);
-          setBasicInfo(null); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A' }); setDeadlines([]); setAnnouncements([]);
-        } return;
+        if (isMounted) { setError("Not logged in."); setLoading(false); setBasicInfo(null); } return;
       }
       if (contextUserData?.basicInfo && loading) {
-          setBasicInfo(contextUserData.basicInfo); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A'}); setDeadlines([]); setAnnouncements([]);
-          if (isMounted) setLoading(false); return;
+          setBasicInfo(contextUserData.basicInfo);
+          // TODO: Fetch/set dashboard data
+          if (isMounted) setLoading(false);
+          return;
       }
       if (loading) {
         try {
@@ -85,257 +102,217 @@ const Home = () => {
           const docSnap = await getDoc(userDocRef);
           if (isMounted) {
             if (docSnap.exists()) {
-              const fetchedData = docSnap.data(); setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: 'Your Name' }); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A'}); setDeadlines([]); setAnnouncements([]);
+              const fetchedData = docSnap.data();
+              setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: 'User' });
+              // TODO: Fetch/set actual dashboard data
             } else {
-              setError('User profile not found.'); setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); setAcademicData({ gpa: 'N/A', status: 'Unknown' }); setFinancialData({ balance: 'N/A', dueDate: 'N/A' }); setAdvisorData({ name: 'N/A', email: 'N/A', office: 'N/A' }); setCourseData({ enrolled: 'N/A', nextClass: 'N/A'}); setDeadlines([]); setAnnouncements([]);
-            } setLoading(false);
+              setError('User profile not found. Using default view.');
+              setBasicInfo({ email: currentUser.email, fullName: 'User' });
+              // TODO: Set default dashboard data
+            }
+            setLoading(false);
           }
         } catch (err) {
           console.error("Error fetching user info:", err);
-          if (isMounted) { setError('Failed to load user data.'); setBasicInfo({ email: currentUser.email, fullName: 'Your Name' }); setLoading(false); }
+          if (isMounted) { setError('Failed to load user data.'); setLoading(false); setBasicInfo({ email: currentUser.email, fullName: 'User' }); }
         }
       }
     };
     fetchUserData();
     return () => { isMounted = false; };
-  }, [currentUser, contextUserData, loading]); // Ensure loading is dependency if needed
+  }, [currentUser, contextUserData, loading]);
 
   // --- Dynamic Display Name ---
-  const displayName = basicInfo?.fullName || basicInfo?.email || 'User';
-  // const displayRoleEmail = basicInfo?.headline || basicInfo?.email || 'Your Role/Email'; // Not used currently
+  const displayName = basicInfo?.fullName || 'User';
 
-  // --- Consistent Card Styling (Keep as is) ---
-  const cardSx = {
-    height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'var(--color-bg-card)',
-    border: `1px solid var(--color-border)`, borderRadius: 'var(--border-radius, 6px)',
-    overflow: 'hidden', boxShadow: 'none',
-  };
-
-  // --- Reusable Text Color Styles (Keep as is) ---
+  // --- Reusable Styling (Adopted from Profile.js) ---
   const primaryTextSx = { color: 'var(--color-text-primary)' };
-  const secondaryTextSx = { color: 'var(--color-text-secondary)', fontSize: '0.875rem' };
-  const boldPrimaryTextSx = { fontWeight: 600, color: 'var(--color-text-primary)' };
-  const cardTitleSx = { display: 'flex', alignItems: 'center', mb: 1.5, ...primaryTextSx, fontWeight: 500 };
+  const secondaryTextSx = { color: 'var(--color-text-secondary)' };
 
+  // Helper to render task status icons (same as before)
+  const renderTaskStatusIcon = (status) => {
+    switch (status) {
+        case 'completed': return <CheckCircleOutlineIcon color="success" sx={{ fontSize: '1.1rem' }} />;
+        case 'pending': return <PendingIcon color="warning" sx={{ fontSize: '1.1rem' }} />;
+        case 'overdue': return <ErrorOutlineIcon color="error" sx={{ fontSize: '1.1rem' }} />;
+        default: return null;
+    }
+  }
 
   // --- Render Logic ---
   return (
-    // Modified Container: Removed padding/gutters
     <Container
-        component="section"
-        maxWidth="lg" // Keep controlling max width, or set to false
-        disableGutters={true} // <<< MODIFIED: Remove horizontal gutters
-        sx={{
-            flexGrow: 1, // Allow container to grow
-            // <<< MODIFIED: Remove vertical padding (py) >>>
-            // Vertical padding is handled by .main-content-wrapper in Layout.css
-            pt: 0,
-            pb: 0,
-        }}
+      component="main"
+      maxWidth="lg"
+      disableGutters={true} // Container provides no gutters/padding
+      sx={{
+          flexGrow: 1,
+          // Container has no explicit padding or margin
+      }}
     >
+      {/* --- PAGE TITLE (Outside Paper) --- */}
+      <Typography
+        variant="h4"
+        component="h1"
+        sx={{
+          fontWeight: 500, // Match Profile.js title weight
+          ...primaryTextSx,
+          mb: 2, // Margin below title before the main Paper
+          // Add padding if needed, e.g., px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 3 }
+          // Or handle padding in Layout.css
+        }}
+      >
+        Dashboard
+      </Typography>
+
+      {/* --- CONDITIONAL CONTENT AREA --- */}
       {loading ? (
-        // Centered Loader - Consider adjusting height calculation if needed
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' /* Use minHeight for flexibility */ }}>
-            <CircularProgress />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', minHeight: '50vh', p: 3 }}>
+            <CircularProgress size={50} />
         </Box>
       ) : error ? (
-        // Error Alert - Add margin if needed since container padding is removed
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', pt: 2, pb: 2 /* Add padding here if needed */ }}>
-            <Alert severity="error" sx={{ width: 'auto', mx: { xs: 2, sm: 0 } /* Add horizontal margin if needed */ }}>{error}</Alert>
-        </Box>
+        // Add margin/padding if needed as Paper is removed for error state
+        <Alert severity="error" sx={{ width: 'auto', mx: { xs: 2, sm: 3 }, mb: { xs: 2, sm: 3 }, borderRadius: 'var(--border-radius, 6px)' }}>{error}</Alert>
       ) : (
-        // Main Content Box (inside Container)
-        // We need to add padding/margin here manually if desired around the content,
-        // since the Container no longer provides it.
-        // Alternatively, let the Layout.css handle it.
-        <Box sx={{
-            // Optional: Add padding here if you want space specifically
-            // around the Home content, independent of Layout.css padding.
-            // Example: px: { xs: 2, sm: 3 }, py: { xs: 2, sm: 3 }
-            // If Layout.css .main-content-wrapper padding is sufficient, leave this Box sx empty or remove Box.
-           }}
+        // --- Main Content Paper (Single Paper like Profile.js) ---
+        <Paper
+          elevation={0}
+          variant="outlined"
+          sx={{
+            p: 0, // Padding handled by inner Boxes
+            width: '100%', // Takes full width of container
+            bgcolor: 'var(--color-bg-card)',
+            borderColor: 'divider',
+            borderRadius: 'var(--border-radius, 6px)', // Consistent corner radius
+            overflow: 'hidden',
+            // Add margin if needed (e.g., mx, mb) if container/layout doesn't provide spacing
+            // mx: { xs: 2, sm: 3 }, mb: { xs: 2, sm: 3 }
+          }}
         >
-          {/* Welcome Header */}
-          <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 600, ...primaryTextSx }}>
-            Welcome, {displayName}!
-          </Typography>
-
-          {/* Grid Container for Cards - Spacing handles space between cards */}
-          <Grid container spacing={'var(--layout-gap, 20px)'}>
-
-            {/* --- Row 1 (3 items: lg=4) --- */}
-            <Grid item xs={12} md={6} lg={4}>
-              <Paper sx={cardSx}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                    <SchoolIcon sx={{ mr: 1.5, color: 'primary.main', fontSize:'1.3rem' }}/> My Courses
-                  </Typography>
-                  <Typography variant="body2" sx={{ mb: 1, ...secondaryTextSx }}>
-                     Currently Enrolled: <Typography component="span" sx={boldPrimaryTextSx}>{courseData.enrolled}</Typography>
-                  </Typography>
-                  <Typography variant="body2" sx={secondaryTextSx}>
-                     Next Class: {courseData.nextClass}
-                  </Typography>
-                </CardContent>
-                <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
-                  <Button component={RouterLink} to="/courses" size="small">View Courses</Button>
-                  <Button component={RouterLink} to="/schedule" size="small">My Schedule</Button>
-                </CardActions>
-              </Paper>
-            </Grid>
-
-            <Grid item xs={12} md={6} lg={4}>
-               <Paper sx={cardSx}>
-                 <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                     <SpeedIcon sx={{ mr: 1.5, color: 'success.main', fontSize:'1.3rem' }}/> Quick Actions
-                   </Typography>
-                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      <Button component={RouterLink} to="/grades" variant="outlined" startIcon={<AssessmentIcon />} fullWidth>Check Grades</Button>
-                      <Button component={RouterLink} to="/registration" variant="outlined" startIcon={<EditNoteIcon />} fullWidth>Register Courses</Button>
-                      <Button component={RouterLink} to="/profile" variant="outlined" startIcon={<PersonIcon />} fullWidth>Update Profile</Button>
-                   </Box>
-                 </CardContent>
-                 {/* No actions needed */}
-               </Paper>
-            </Grid>
-
-             <Grid item xs={12} md={6} lg={4}>
-                <Paper sx={cardSx}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                      <CalendarMonthIcon sx={{ mr: 1.5, color: 'warning.main', fontSize:'1.3rem' }}/> Upcoming Deadlines
-                    </Typography>
-                    {deadlines.length > 0 ? (
-                      <List dense disablePadding sx={{ width: '100%' }}>
-                        {deadlines.slice(0, 3).map((item, index) => (
-                          <React.Fragment key={item.id || index}> {/* Add fallback key */}
-                            <ListItem disablePadding sx={{ py: 0.75 }}>
-                              <ListItemText
-                                primary={item.title}
-                                secondary={`${item.course || ''} - ${item.date || ''}`}
-                                primaryTypographyProps={{ sx: {...primaryTextSx, fontWeight: 500, fontSize: '0.9rem'} }}
-                                secondaryTypographyProps={{ sx: secondaryTextSx }}/>
-                            </ListItem>
-                            {index < deadlines.slice(0, 3).length - 1 && <Divider component="li" light sx={{ borderColor: 'var(--color-border)' }} />}
-                          </React.Fragment>
-                        ))}
-                      </List>
-                    ) : (
-                      <Typography variant="body2" sx={secondaryTextSx}>No upcoming deadlines found.</Typography>
-                    )}
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
-                    <Button component={RouterLink} to="/calendar" size="small">View Full Calendar</Button>
-                  </CardActions>
-                </Paper>
-              </Grid>
-
-            {/* --- Row 2 (2 items: lg=6) --- */}
-            <Grid item xs={12} md={6} lg={6}>
-               <Paper sx={cardSx}>
-                 <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                     <CampaignIcon sx={{ mr: 1.5, color: 'info.main', fontSize:'1.3rem' }}/> Announcements
-                   </Typography>
-                   {announcements.length > 0 ? (
-                     <List dense disablePadding sx={{ width: '100%' }}>
-                        {announcements.slice(0, 3).map((item, index) => (
-                          <React.Fragment key={item.id || index}> {/* Add fallback key */}
-                            <ListItem disablePadding sx={{ py: 0.75 }}>
-                              <ListItemText
-                                primary={item.title}
-                                secondary={item.date || ''}
-                                primaryTypographyProps={{ sx: {...primaryTextSx, fontWeight: 500, fontSize: '0.9rem'} }}
-                                secondaryTypographyProps={{ sx: secondaryTextSx }}/>
-                            </ListItem>
-                            {index < announcements.slice(0, 3).length - 1 && <Divider component="li" light sx={{ borderColor: 'var(--color-border)' }} />}
-                          </React.Fragment>
-                        ))}
-                     </List>
-                   ) : (
-                     <Typography variant="body2" sx={secondaryTextSx}>No recent announcements.</Typography>
-                   )}
-                 </CardContent>
-                 <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
-                   <Button component={RouterLink} to="/announcements" size="small">View All Announcements</Button>
-                 </CardActions>
-               </Paper>
-             </Grid>
-
-             <Grid item xs={12} md={6} lg={6}>
-               <Paper sx={cardSx}>
-                 <CardContent sx={{ flexGrow: 1 }}>
-                   <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                     <TrendingUpIcon sx={{ mr: 1.5, color: 'secondary.main', fontSize:'1.3rem' }}/> Academic Standing
-                   </Typography>
-                   <Typography variant="body2" sx={{ mb: 1, ...secondaryTextSx }}>
-                     Current GPA: <Typography component="span" sx={boldPrimaryTextSx}>{academicData.gpa}</Typography>
-                   </Typography>
-                   <Typography variant="body2" sx={secondaryTextSx}>
-                     Status: <Typography component="span" sx={{ fontWeight: 500, color: academicData.status === 'Good Standing' ? 'success.main' : (academicData.status === 'Unknown' || academicData.status === 'N/A' ? 'text.disabled' : 'warning.main') }}>{academicData.status}</Typography>
-                   </Typography>
-                 </CardContent>
-                 <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
-                   <Button component={RouterLink} to="/grades" size="small">View Detailed Grades</Button>
-                 </CardActions>
-               </Paper>
-             </Grid>
-
-            {/* --- Row 3 (2 items: lg=6) --- */}
-             <Grid item xs={12} md={6} lg={6}>
-                <Paper sx={cardSx}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                      <AccountBalanceWalletIcon sx={{ mr: 1.5, color: 'success.dark', fontSize:'1.3rem' }}/> Account Summary
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1, ...secondaryTextSx }}>
-                       Current Balance: <Typography component="span" sx={boldPrimaryTextSx}>{financialData.balance}</Typography>
+            {/* Optional: Header Section (Similar to Profile Header but for Dashboard) */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: { xs: 2, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+                <Box>
+                    <Typography variant="h6" component="h2" sx={{ fontWeight: 600, ...primaryTextSx }}>
+                        Welcome, {displayName}!
                     </Typography>
                     <Typography variant="body2" sx={secondaryTextSx}>
-                       Next Payment Due: <Typography component="span" sx={{ fontWeight: 500 }}>{financialData.dueDate}</Typography>
+                        Here's your quick overview for today.
                     </Typography>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
-                    <Button component={RouterLink} to="/billing" size="small">View Billing Details</Button>
-                    <Button component={RouterLink} to="/financial-aid" size="small">Financial Aid</Button>
-                  </CardActions>
-                </Paper>
-              </Grid>
+                </Box>
+                {/* Optional: Add a primary action button here if needed */}
+                {/* <Button size="small" variant="contained">Action</Button> */}
+            </Box>
 
-             <Grid item xs={12} md={6} lg={6}>
-                <Paper sx={cardSx}>
-                  <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h2" gutterBottom sx={cardTitleSx}>
-                      <ContactMailIcon sx={{ mr: 1.5, color: 'primary.dark', fontSize:'1.3rem' }}/> My Advisor
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 0.5, ...secondaryTextSx }}>
-                        Name: <Typography component="span" sx={boldPrimaryTextSx}>{advisorData.name}</Typography>
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 0.5, display: 'flex', alignItems: 'center', flexWrap: 'wrap', ...secondaryTextSx }}>
-                      Email:  {/* Use non-breaking space */}
-                      {advisorData.email && advisorData.email !== 'N/A' ? (
-                          <Link href={`mailto:${advisorData.email}`} sx={{ wordBreak: 'break-all', color: 'var(--color-text-link)' }}>{advisorData.email}</Link>
-                      ) : (
-                          <Typography component="span" sx={{ fontWeight: 500 }}>N/A</Typography>
-                      )}
-                    </Typography>
-                     <Typography variant="body2" sx={secondaryTextSx}>
-                        Office: <Typography component="span" sx={{ fontWeight: 500 }}>{advisorData.office}</Typography>
-                     </Typography>
-                  </CardContent>
-                  <CardActions sx={{ justifyContent: 'flex-end', px: 2, py: 1.5, borderTop: `1px solid var(--color-border)`, mt: 'auto' }}>
-                    <Button component={RouterLink} to="/advising" size="small">Advising Center</Button>
-                  </CardActions>
-                </Paper>
-              </Grid>
-             {/* --- END GRID ITEMS --- */}
+            {/* --- Main Dashboard Content Sections within Paper --- */}
+            <Box sx={{ p: { xs: 2, sm: 3 } }}> {/* Padding for content sections */}
+                <List disablePadding>
 
-          </Grid> {/* End Grid Container */}
-        </Box>
+                    {/* Section 1: Quick Stats */}
+                    <ListItem disablePadding sx={{ display: 'block', mb: 2 }}> {/* Block display for section title */}
+                       <Typography variant="overline" sx={{...secondaryTextSx, display:'flex', alignItems: 'center', mb: 1}}>
+                            <SpeedIcon fontSize="inherit" sx={{ mr: 1 }}/> Quick Stats
+                       </Typography>
+                        <List dense disablePadding>
+                            {dashboardData.quickStats.map((stat) => (
+                                <ListItemButton key={stat.label} component={RouterLink} to={stat.path} sx={{ py: 0.75, px: 1, borderRadius: 1 }}>
+                                    <ListItemIcon sx={{ minWidth: 36, color: 'action.active' }}>{stat.icon}</ListItemIcon>
+                                    <ListItemText
+                                        primary={stat.label}
+                                        secondary={stat.value}
+                                        primaryTypographyProps={{ variant: 'body2', sx: primaryTextSx }}
+                                        secondaryTypographyProps={{ variant: 'body1', sx: {...primaryTextSx, fontWeight: 500} }}
+                                    />
+                                    <ArrowForwardIosIcon sx={{ fontSize: '0.8rem', color: 'action.disabled' }}/>
+                                </ListItemButton>
+                            ))}
+                        </List>
+                    </ListItem>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Section 2: Important Tasks Preview */}
+                    <ListItem disablePadding sx={{ display: 'block', mb: 2 }}>
+                       <Typography variant="overline" sx={{...secondaryTextSx, display:'flex', alignItems: 'center', mb: 1}}>
+                            <AssignmentTurnedInIcon fontSize="inherit" sx={{ mr: 1 }}/> Important Tasks ({dashboardData.pendingTasksCount} Pending)
+                       </Typography>
+                       <List dense disablePadding>
+                           {dashboardData.tasksPreview.map(task => (
+                               <ListItemButton key={task.id} component={RouterLink} to={task.path} sx={{ py: 0.75, px: 1, borderRadius: 1 }}>
+                                   <ListItemIcon sx={{ minWidth: 36 }}>{renderTaskStatusIcon(task.status)}</ListItemIcon>
+                                   <ListItemText
+                                       primary={task.title}
+                                       primaryTypographyProps={{ variant: 'body2', sx: primaryTextSx }}
+                                    />
+                                   <Chip
+                                        label={task.status}
+                                        size="small"
+                                        color={task.status === 'pending' ? 'warning' : 'error'}
+                                        variant="outlined"
+                                        sx={{ ml: 1, textTransform: 'capitalize', height: 'auto', lineHeight: 1.5 }}
+                                    />
+                               </ListItemButton>
+                           ))}
+                       </List>
+                    </ListItem>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    {/* Section 3: Alerts & Upcoming Event */}
+                     <ListItem disablePadding sx={{ display: 'block', mb: 2 }}>
+                       <Typography variant="overline" sx={{...secondaryTextSx, display:'flex', alignItems: 'center', mb: 1}}>
+                            <NotificationsNoneIcon fontSize="inherit" sx={{ mr: 1 }}/> Alerts & Events
+                       </Typography>
+                       <List dense disablePadding>
+                           {/* Alerts */}
+                            <ListItemButton component={RouterLink} to="/notifications" sx={{ py: 0.75, px: 1, borderRadius: 1 }}>
+                                <ListItemIcon sx={{ minWidth: 36, color: 'action.active' }}><NotificationsNoneIcon fontSize="small"/></ListItemIcon>
+                                <ListItemText
+                                    primary={`${dashboardData.alertsCount} New Alerts`}
+                                    primaryTypographyProps={{ variant: 'body2', sx: primaryTextSx }}
+                                />
+                                <ArrowForwardIosIcon sx={{ fontSize: '0.8rem', color: 'action.disabled' }}/>
+                           </ListItemButton>
+                           {/* Next Event */}
+                            <ListItemButton component={RouterLink} to="/calendar" sx={{ py: 0.75, px: 1, borderRadius: 1 }}>
+                                <ListItemIcon sx={{ minWidth: 36, color: 'action.active' }}><EventAvailableIcon fontSize="small"/></ListItemIcon>
+                                <ListItemText
+                                    primary={dashboardData.nextEvent.title}
+                                    secondary={`Next Event: ${dashboardData.nextEvent.date}`}
+                                    primaryTypographyProps={{ variant: 'body2', sx: primaryTextSx }}
+                                    secondaryTypographyProps={{ variant: 'caption', sx: secondaryTextSx }}
+                                />
+                               <ArrowForwardIosIcon sx={{ fontSize: '0.8rem', color: 'action.disabled' }}/>
+                           </ListItemButton>
+                       </List>
+                    </ListItem>
+
+                    <Divider sx={{ my: 2 }} />
+
+                     {/* Section 4: Quick Links */}
+                     <ListItem disablePadding sx={{ display: 'block' }}>
+                       <Typography variant="overline" sx={{...secondaryTextSx, display:'flex', alignItems: 'center', mb: 1}}>
+                            <LinkIcon fontSize="inherit" sx={{ mr: 1 }}/> Quick Links
+                       </Typography>
+                       <List dense disablePadding>
+                           {dashboardData.quickLinks.map(link => (
+                               <ListItemButton key={link.id} component={RouterLink} to={link.path} sx={{ py: 1, px: 1, borderRadius: 1 }}> {/* Slightly more padding for links */}
+                                   <ListItemText
+                                        primary={link.label}
+                                        primaryTypographyProps={{ variant: 'body2', sx: primaryTextSx }}
+                                   />
+                                   <ArrowForwardIosIcon sx={{ fontSize: '0.8rem', color: 'action.disabled' }}/>
+                               </ListItemButton>
+                           ))}
+                       </List>
+                    </ListItem>
+
+                </List>
+            </Box>
+
+        </Paper>
       )}
 
-      {/* Snackbar for Notifications */}
+      {/* --- SNACKBAR --- */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -346,8 +323,7 @@ const Home = () => {
             {snackbar.message}
          </Alert>
       </Snackbar>
-
-    </Container> // End Main Container
+    </Container>
   );
 };
 
