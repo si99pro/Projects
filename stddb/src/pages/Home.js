@@ -22,7 +22,7 @@ import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
 import { useTheme } from '@mui/material/styles';
 import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip'; // Added for potential future use
+import Tooltip from '@mui/material/Tooltip';
 
 // MUI Icons
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNoneOutlined';
@@ -32,9 +32,9 @@ import SchoolIcon from '@mui/icons-material/SchoolOutlined';
 import PaymentIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 import LinkIcon from '@mui/icons-material/LinkOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import ChevronRightIcon from '@mui/icons-material/ChevronRight'; // Keep Chevron
-import TaskAltIcon from '@mui/icons-material/TaskAlt'; // Example icon
-import AssignmentIcon from '@mui/icons-material/Assignment'; // Example icon
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 
 const Home = () => {
   const theme = useTheme();
@@ -46,7 +46,7 @@ const Home = () => {
   const [error, setError] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
-  // --- Placeholder Data --- (Ensure consistent icon usage)
+  // --- Placeholder Data ---
   const [dashboardData, setDashboardData] = useState({
     alertsCount: 2,
     pendingTasksCount: 1,
@@ -74,7 +74,7 @@ const Home = () => {
     setSnackbar({ ...snackbar, open: false });
    };
 
-  // --- User Data Fetching (Keep existing logic) ---
+  // --- User Data Fetching ---
   useEffect(() => {
     let isMounted = true;
     const fetchUserData = async () => {
@@ -104,92 +104,54 @@ const Home = () => {
     };
     fetchUserData();
     return () => { isMounted = false; };
-  }, [currentUser, contextUserData, basicInfo, loading]); // Added loading to dependencies
+  }, [currentUser, contextUserData, basicInfo, loading]);
 
 
   const displayName = basicInfo?.fullName?.split(' ')[0] || 'User';
 
-  // --- Reusable Card Component (Optimized) ---
+  // --- Reusable Card Component ---
   const DashboardCard = ({ title, icon, children, action, sx = {}, ...props }) => (
     <Paper
       elevation={0}
       sx={{
         bgcolor: 'var(--color-surface)',
         borderRadius: 'var(--border-radius-large)',
-        border: `1px solid var(--color-border)`, // Add subtle border like sidebar
-        height: '100%', // Ensure card takes full height of grid item
+        border: `1px solid var(--color-border)`,
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden', // Prevents potential overflow issues
+        overflow: 'hidden',
         ...sx
       }}
       {...props}
     >
-      {/* Card Header with Padding */}
       {(title || action) && (
-        <Box sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            px: 2, // Horizontal padding
-            py: 1.25, // Vertical padding (reduced slightly)
-        }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.25 }}>
           {title && (
-            <Typography variant="subtitle2" // Changed from subtitle1 for slightly smaller header
-                component="h3"
-                sx={{
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 0.75, // Reduced gap
-                    color: 'var(--color-text-primary)'
-                }}>
+            <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--color-text-primary)' }}>
               {icon} {title}
             </Typography>
           )}
           {action}
         </Box>
       )}
-      {/* Divider (Optional based on whether header exists) */}
       {(title || action) && <Divider sx={{ borderColor: 'var(--color-border)' }} />}
-
-      {/* Card Content Area (No padding here, ListItems have padding) */}
-      <Box sx={{ flexGrow: 1, overflowY: 'auto' /* Allow scrolling if content exceeds height */ }}>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
         {children}
       </Box>
     </Paper>
   );
 
   // --- Common List Item Styles ---
-  const listItemSx = {
-    py: 1.25, // Reduced padding slightly from 1.5
-    px: 2
-  };
-  const listIconSx = {
-    minWidth: 36,
-    color: 'var(--color-icon)'
-  };
-  const listTextPrimarySx = {
-    fontWeight: 500,
-    fontSize: '0.875rem', // Standard body2 size
-    color: 'var(--color-text-primary)'
-  };
-  const listTextSecondarySx = {
-    fontSize: '0.75rem', // Standard caption size
-    color: 'var(--color-text-secondary)',
-    mt: 0.25 // Small margin-top for secondary text
-  };
-  const chevronIconSx = {
-    fontSize: '1.2rem',
-    color: 'var(--color-icon)',
-    opacity: 0.7,
-    ml: 1 // Add margin-left to separate from text
-  };
+  const listItemSx = { py: 1.25, px: 2 };
+  const listIconSx = { minWidth: 36, color: 'var(--color-icon)' };
+  const listTextPrimarySx = { fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-text-primary)' };
+  const listTextSecondarySx = { fontSize: '0.75rem', color: 'var(--color-text-secondary)', mt: 0.25 };
+  const chevronIconSx = { fontSize: '1.2rem', color: 'var(--color-icon)', opacity: 0.7, ml: 1 };
 
 
   // --- RENDER ---
   return (
-    // Assuming parent provides necessary structure (e.g., padding handled by .content-padding-wrapper)
     <>
       <Typography
         variant="h4"
@@ -207,23 +169,23 @@ const Home = () => {
       ) : error ? (
         <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>
       ) : (
-        // Main Grid for dashboard sections
-        <Grid container spacing={2.5}> {/* Slightly reduced spacing */}
+        // Main Grid container
+        <Grid container spacing={2.5}>
 
-          {/* Section 1: Quick Stats (Keep as is, already compact) */}
+          {/* Section 1: Quick Stats */}
           <Grid item xs={12}>
-             <Typography variant="overline" component="h3" sx={{ color: 'var(--color-text-secondary)', display: 'block', mb: 1 }}> {/* Reduced margin */}
+             <Typography variant="overline" component="h3" sx={{ color: 'var(--color-text-secondary)', display: 'block', mb: 1 }}>
                 Overview
              </Typography>
-             <Box sx={{ display: 'flex', overflowX: 'auto', py: 0.5, gap: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}> {/* Reduced gap/padding */}
+             <Box sx={{ display: 'flex', overflowX: 'auto', py: 0.5, gap: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
                 {dashboardData.quickStats.map((stat) => (
                     <Paper key={stat.label} component={RouterLink} to={stat.path} elevation={0} variant="outlined"
-                        sx={{ p: 1.75, minWidth: 170, borderRadius: 'var(--border-radius-medium)', borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface)', textDecoration: 'none', flexShrink: 0, transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out', '&:hover': { borderColor: stat.color || 'var(--color-primary)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', transform: 'translateY(-2px)' } }}> {/* Reduced padding/minWidth */}
+                        sx={{ p: 1.75, minWidth: 170, borderRadius: 'var(--border-radius-medium)', borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface)', textDecoration: 'none', flexShrink: 0, transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out', '&:hover': { borderColor: stat.color || 'var(--color-primary)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', transform: 'translateY(-2px)' } }}>
                         <Stack direction="row" spacing={1.5} alignItems="center" >
                             <Box sx={{ color: stat.color || 'var(--color-icon)', display: 'flex' }}>{stat.icon}</Box>
                             <Box>
                                 <Typography variant="caption" component="div" sx={{ color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>{stat.label}</Typography>
-                                <Typography variant="h6" component="div" sx={{ color: 'var(--color-text-primary)', lineHeight: 1.3, fontSize: '1.1rem' }}>{stat.value}</Typography> {/* Slightly smaller h6 */}
+                                <Typography variant="h6" component="div" sx={{ color: 'var(--color-text-primary)', lineHeight: 1.3, fontSize: '1.1rem' }}>{stat.value}</Typography>
                             </Box>
                         </Stack>
                     </Paper>
@@ -231,117 +193,115 @@ const Home = () => {
              </Box>
           </Grid>
 
-          {/* Section 2: Tasks (REDESIGNED) */}
-          <Grid item xs={12} md={6} lg={4}> {/* Adjusted grid size */}
-            <DashboardCard
-                title="Important Tasks"
-                // icon={<AssignmentTurnedInIcon fontSize="small"/>} // Optional: Add icon to title
-                 action={
-                    <Button component={RouterLink} to="/tasks" size="small" sx={{ color: 'var(--color-primary)', fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: 'var(--color-primary-light)' } }}>
-                        View All
-                    </Button>
-                } >
-                <List disablePadding>
-                    {dashboardData.tasksPreview.length > 0 ? (
-                        dashboardData.tasksPreview.map((task, index) => (
-                            <React.Fragment key={task.id}>
-                                <ListItemButton component={RouterLink} to={task.path} sx={listItemSx}>
-                                    <ListItemIcon sx={listIconSx}>
-                                        {task.icon || <AssignmentIcon fontSize="small"/>}
-                                    </ListItemIcon>
-                                    <ListItemText
-                                        primary={task.title}
-                                        secondary={task.subject || null}
-                                        primaryTypographyProps={{ sx: listTextPrimarySx }}
-                                        secondaryTypographyProps={{ sx: listTextSecondarySx }}
-                                    />
-                                    <ChevronRightIcon sx={chevronIconSx}/>
-                                </ListItemButton>
-                                {index < dashboardData.tasksPreview.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />}
-                            </React.Fragment>
-                        ))
-                    ) : ( <Typography variant="body2" sx={{ color: 'var(--color-text-secondary)', textAlign: 'center', p: 3 }}>No pressing tasks.</Typography> )}
-                </List>
-            </DashboardCard>
-          </Grid>
+          {/* --- NEW COLUMN / FULL WIDTH CONTAINER for next sections --- */}
+          <Grid item xs={12}>
+            {/* Nested Grid to arrange the cards */}
+            <Grid container spacing={2.5}>
 
-          {/* Section 3: Alerts & Events (REDESIGNED) */}
-          <Grid item xs={12} md={6} lg={4}> {/* Adjusted grid size */}
-            <DashboardCard
-                title="Notifications & Events"
-                // icon={<NotificationsNoneIcon fontSize="small"/>} // Optional: Add icon to title
-                 action={
-                    <Button component={RouterLink} to="/calendar" size="small" sx={{ color: 'var(--color-primary)', fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: 'var(--color-primary-light)' } }}>
-                        Calendar
-                    </Button>
-                } >
-                <List disablePadding>
-                     {/* Item 1: Alerts */}
-                     <ListItemButton component={RouterLink} to="/notifications" sx={listItemSx}>
-                        <ListItemIcon sx={listIconSx}>
-                            <NotificationsNoneIcon fontSize="small"/>
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={`${dashboardData.alertsCount} New Alert${dashboardData.alertsCount !== 1 ? 's' : ''}`} // Pluralize correctly
-                            primaryTypographyProps={{ sx: listTextPrimarySx }}
-                        />
-                        <ChevronRightIcon sx={chevronIconSx}/>
-                    </ListItemButton>
+                {/* Section 2: Tasks */}
+                <Grid item xs={12} md={12} lg={4}> {/* Full width xs/md, 1/3 lg */}
+                    <DashboardCard
+                        title="Important Tasks"
+                        action={
+                            <Button component={RouterLink} to="/tasks" size="small" sx={{ color: 'var(--color-primary)', fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: 'var(--color-primary-light)' } }}>
+                                View All
+                            </Button>
+                        } >
+                        <List disablePadding>
+                            {dashboardData.tasksPreview.length > 0 ? (
+                                dashboardData.tasksPreview.map((task, index) => (
+                                    <React.Fragment key={task.id}>
+                                        <ListItemButton component={RouterLink} to={task.path} sx={listItemSx}>
+                                            <ListItemIcon sx={listIconSx}>
+                                                {task.icon || <AssignmentIcon fontSize="small"/>}
+                                            </ListItemIcon>
+                                            <ListItemText
+                                                primary={task.title}
+                                                secondary={task.subject || null}
+                                                primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                                secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                                            />
+                                            <ChevronRightIcon sx={chevronIconSx}/>
+                                        </ListItemButton>
+                                        {index < dashboardData.tasksPreview.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />}
+                                    </React.Fragment>
+                                ))
+                            ) : ( <Typography variant="body2" sx={{ color: 'var(--color-text-secondary)', textAlign: 'center', p: 3 }}>No pressing tasks.</Typography> )}
+                        </List>
+                    </DashboardCard>
+                </Grid>
 
-                    <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }}/>
+                {/* Section 3: Alerts & Events */}
+                <Grid item xs={12} md={12} lg={4}> {/* Full width xs/md, 1/3 lg */}
+                    <DashboardCard
+                        title="Notifications & Events"
+                        action={
+                            <Button component={RouterLink} to="/calendar" size="small" sx={{ color: 'var(--color-primary)', fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: 'var(--color-primary-light)' } }}>
+                                Calendar
+                            </Button>
+                        } >
+                        <List disablePadding>
+                            <ListItemButton component={RouterLink} to="/notifications" sx={listItemSx}>
+                                <ListItemIcon sx={listIconSx}>
+                                    <NotificationsNoneIcon fontSize="small"/>
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={`${dashboardData.alertsCount} New Alert${dashboardData.alertsCount !== 1 ? 's' : ''}`}
+                                    primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                />
+                                <ChevronRightIcon sx={chevronIconSx}/>
+                            </ListItemButton>
+                            <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }}/>
+                            <ListItemButton component={RouterLink} to={dashboardData.nextEvent.path} sx={listItemSx}>
+                                <ListItemIcon sx={listIconSx}>
+                                    <EventAvailableIcon fontSize="small"/>
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={dashboardData.nextEvent.title}
+                                    secondary={`Upcoming: ${dashboardData.nextEvent.date}`}
+                                    primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                    secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                                />
+                                <ChevronRightIcon sx={chevronIconSx}/>
+                            </ListItemButton>
+                        </List>
+                    </DashboardCard>
+                </Grid>
 
-                    {/* Item 2: Next Event */}
-                     <ListItemButton component={RouterLink} to={dashboardData.nextEvent.path} sx={listItemSx}>
-                         <ListItemIcon sx={listIconSx}>
-                            <EventAvailableIcon fontSize="small"/>
-                         </ListItemIcon>
-                         <ListItemText
-                            primary={dashboardData.nextEvent.title}
-                            secondary={`Upcoming: ${dashboardData.nextEvent.date}`}
-                            primaryTypographyProps={{ sx: listTextPrimarySx }}
-                            secondaryTypographyProps={{ sx: listTextSecondarySx }}
-                         />
-                        <ChevronRightIcon sx={chevronIconSx}/>
-                    </ListItemButton>
-                 </List>
-            </DashboardCard>
-          </Grid>
+                {/* Section 4: Quick Links */}
+                <Grid item xs={12} md={12} lg={4}> {/* Full width xs/md, 1/3 lg */}
+                    <DashboardCard title="Quick Links">
+                       <List disablePadding>
+                           {dashboardData.quickLinks.map((link, index) => (
+                                <React.Fragment key={link.id}>
+                                    <ListItemButton component={RouterLink} to={link.path} sx={listItemSx}>
+                                        <ListItemIcon sx={listIconSx}>
+                                            {link.icon || <LinkIcon fontSize="small"/>}
+                                        </ListItemIcon>
+                                       <ListItemText
+                                            primary={link.label}
+                                            primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                        />
+                                       <ChevronRightIcon sx={chevronIconSx}/>
+                                   </ListItemButton>
+                                   {index < dashboardData.quickLinks.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />}
+                               </React.Fragment>
+                           ))}
+                       </List>
+                    </DashboardCard>
+                </Grid>
 
-           {/* Section 4: Quick Links (REDESIGNED) */}
-           <Grid item xs={12} md={6} lg={4}> {/* Adjusted grid size */}
-                <DashboardCard
-                    title="Quick Links"
-                    // icon={<LinkIcon fontSize="small"/>} // Optional: Add icon to title
-                >
-                   <List disablePadding>
-                       {dashboardData.quickLinks.map((link, index) => (
-                            <React.Fragment key={link.id}>
-                                <ListItemButton component={RouterLink} to={link.path} sx={listItemSx}>
-                                    <ListItemIcon sx={listIconSx}>
-                                        {link.icon || <LinkIcon fontSize="small"/>}
-                                    </ListItemIcon>
-                                   <ListItemText
-                                        primary={link.label}
-                                        primaryTypographyProps={{ sx: listTextPrimarySx }}
-                                    />
-                                   <ChevronRightIcon sx={chevronIconSx}/>
-                               </ListItemButton>
-                               {index < dashboardData.quickLinks.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />}
-                           </React.Fragment>
-                       ))}
-                   </List>
-                </DashboardCard>
-            </Grid>
+            </Grid> {/* End Nested Grid */}
+          </Grid> {/* End Full Width Parent Grid Item */}
 
         </Grid> // End Main Grid
       )}
 
-      {/* Snackbar remains the same */}
+      {/* Snackbar */}
       <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} >
          <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled" elevation={6}> {snackbar.message} </Alert>
       </Snackbar>
-
-    </> // Using Fragment as outer element since parent div is handled by Layout.js
+    </>
   );
 };
 

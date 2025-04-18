@@ -21,9 +21,9 @@
     /* --- DIMENSIONS & SPACING --- */
     --header-height: 56px;
     --right-sidebar-margin: 8px;
-    --sidebar-width-expanded: 240px;
+    --sidebar-width-expanded: 280px;
     --sidebar-width-collapsed: 68px;
-    --sidebar-right-width: 280px; /* Define width for right sidebar */
+    --sidebar-right-width: 340px; /* Define width for right sidebar */
     --header-icon-button-size: 40px; /* Icon background size */
     --sidebar-item-height: 40px; /* <<< Consistent Height */
     --sidebar-item-v-margin: 2px;
@@ -62,7 +62,7 @@
   body:not(.mobile-view) { overflow: hidden; }
   body.mobile-view { overflow-y: auto; height: auto; min-height: 100vh; }
   body.mobile-nav-active { overflow: hidden; }
-  #root { min-height: 100%; display: flex; }
+  #root { min-height: 100%;}
   
   /* --- LAYOUT WRAPPER --- */
   .app-layout-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; background-color: var(--color-background); }
@@ -110,7 +110,7 @@
     top: var(--header-height);
     height: calc(100vh - var(--header-height)); /* Ensure full height */
     width: var(--sidebar-width-expanded);
-    background-color: var(--color-offset);
+    background-color: #ffffff;
     flex-shrink: 0;
     z-index: var(--z-sidebar);
     transition: width var(--transition-speed) var(--transition-timing);

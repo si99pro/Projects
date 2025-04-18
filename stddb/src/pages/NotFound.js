@@ -4,100 +4,96 @@ import { Link as RouterLink } from 'react-router-dom';
 
 // MUI Components
 import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
+// Removed Container
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CssBaseline from '@mui/material/CssBaseline';
-import { createTheme, ThemeProvider, useTheme } from '@mui/material/styles'; // Added useTheme
+// Removed ThemeProvider, createTheme, useTheme
 
 // MUI Icons
-import SearchOffIcon from '@mui/icons-material/SearchOff';
-import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
-
-// Use your app's theme or a default one
-const defaultTheme = createTheme({
-  // Optional: Define specific minimal theme overrides here if needed
-});
+import SearchOffIcon from '@mui/icons-material/SearchOff'; // Icon for Not Found
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined'; // Icon for Home button
 
 /**
- * NotFound Page Component (404 Error)
- * Displays a user-friendly message when a requested route does not exist.
+ * NotFound Page Component (404 Error) - Responsive Final Version
  */
 function NotFound() {
-  const theme = useTheme(); // Access theme for consistent spacing/palette
-
   return (
-    <ThemeProvider theme={defaultTheme}>
-      {/* Wrapper for full height centering and theme background */}
+    // Outermost Box: Full viewport height, flex column layout
+    <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '100vh',
+        bgcolor: 'var(--color-background, #f4f6f8)', // Use CSS Variable
+    }}>
+      <CssBaseline />
+
+      {/* Centering Wrapper - Responsive Padding */}
       <Box
+        component="main"
         sx={{
+          flexGrow: 1,
           display: 'flex',
-          flexDirection: 'column',
-          minHeight: '100vh',
-          bgcolor: 'background.default', // Use theme background
-          justifyContent: 'center',
-          alignItems: 'center',
-          px: theme.spacing(2), // Use theme spacing
-          py: theme.spacing(4), // Use theme spacing
-          textAlign: 'center',
+          flexDirection: 'column', // Stack items vertically within center area
+          justifyContent: 'center', // Center vertically
+          alignItems: 'center',    // Center horizontally
+          textAlign: 'center',     // Center text within this Box
+          // Responsive Padding: Less padding on smaller screens
+          px: { xs: 2, sm: 3 }, // Horizontal padding
+          py: 4, // Keep consistent vertical padding or adjust if needed { xs: 3, sm: 4 }
+          overflowY: 'auto', // Allow scrolling just in case
         }}
       >
-        <CssBaseline /> {/* Ensure consistent baseline */}
-        <Container component="main" maxWidth="xs"> {/* Keep 'xs' for compact feel */}
+          {/* Icon - Responsive Size */}
+          <SearchOffIcon
+            sx={{
+              fontSize: { xs: '4rem', sm: '5rem' }, // Already responsive
+              color: 'var(--color-text-secondary)',
+              mb: 2,
+            }}
+          />
 
-            {/* Subtle Icon */}
-            <SearchOffIcon
-              sx={{
-                fontSize: { xs: '3.5rem', sm: '4.5rem' },
-                color: 'text.disabled', // Use text.disabled for very subtle grey
-                mb: theme.spacing(3), // Use theme spacing
-              }}
-            />
+          {/* Page Not Found Title - Responsive Variant */}
+          <Typography
+            component="h1"
+            // Use smaller variant on xs, larger on sm+
+            variant={ { xs: 'h5', sm: 'h4' } }
+            gutterBottom
+            sx={{ fontWeight: 500, color: 'var(--color-text-primary)', mb: 1 }}
+          >
+            Page Not Found
+          </Typography>
 
-            {/* 404 Code */}
-            <Typography
-              component="h1"
-              variant="h3"
-              gutterBottom // Keeps standard bottom margin
-              sx={{ fontWeight: 600, color: 'text.primary', mb: theme.spacing(1) }} // Use theme spacing
-            >
-              404
-            </Typography>
+          {/* Description - variant="body1" is generally okay across sizes */}
+          <Typography variant="body1" color="var(--color-text-secondary)" sx={{ mb: 4 }}>
+            Sorry, the page you requested could not be located or doesn't exist.
+          </Typography>
 
-            {/* Page Not Found Title */}
-            <Typography
-              variant="h6"
-              component="h2"
-              sx={{ fontWeight: 'normal', color: 'text.primary', mb: theme.spacing(2) }} // Use normal weight, theme spacing
-            >
-              Page Not Found
-            </Typography>
+          {/* Back Home Button - Responsive Size (Optional) */}
+          <Button
+            component={RouterLink}
+            to="/" // Link to home page
+            variant="contained"
+            startIcon={<HomeOutlinedIcon />}
+            // Optional: Adjust size based on screen width
+            size={ "large" } // Keeping large for consistency, but could use { xs: 'medium', sm: 'large' }
+            sx={{
+               mt: 1,
+               textTransform: 'none',
+               // Ensure button uses theme/variables
+               // bgcolor: 'var(--color-primary)',
+               // '&:hover': { bgcolor: 'var(--color-primary-hover)' },
+            }}
+          >
+            Go to Homepage
+          </Button>
 
-            {/* Description */}
-            <Typography variant="body1" color="text.secondary" paragraph sx={{ mb: theme.spacing(4) }}> {/* Use theme spacing */}
-              Sorry, the page you requested could not be located.
-            </Typography>
+      </Box> {/* End Centering Wrapper */}
 
-            {/* Back Home Button */}
-            <Button
-              component={RouterLink}
-              to="/"
-              variant="outlined"
-              color="primary"
-              startIcon={<HomeOutlinedIcon />}
-              sx={{
-                 mt: theme.spacing(1), // Use theme spacing
-                 py: 1,
-                 px: 3,
-                 borderRadius: theme.shape.borderRadius, // Use theme border radius
-                 textTransform: 'none',
-              }}
-            >
-              Go Back Home
-            </Button>
-        </Container>
-      </Box>
-    </ThemeProvider>
+       {/* Optional Footer - Add if you want the copyright on the 404 page */}
+       {/* <Copyright sx={{ py: 2 }} /> */}
+
+    </Box> // End Outermost Box
   );
 }
 

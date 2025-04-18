@@ -1,6 +1,5 @@
  /* eslint-disable no-unused-vars */
 /* eslint-disable react-hooks/exhaustive-deps */
-// src/pages/Profile.js
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase';
@@ -9,7 +8,8 @@ import { useNavigate, Link as RouterLink } from 'react-router-dom';
 
 // MUI Components
 import Box from '@mui/material/Box';
-import Container from '@mui/material/Container';
+// Container might be handled by a parent layout, consider removing if parent provides padding
+// import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
@@ -19,28 +19,30 @@ import Avatar from '@mui/material/Avatar';
 import Snackbar from '@mui/material/Snackbar';
 import Tooltip from '@mui/material/Tooltip';
 import List from '@mui/material/List';
-import ListItem from '@mui/material/ListItem';
+import ListItem from '@mui/material/ListItem'; // Use ListItem as these are not buttons
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import { useTheme } from '@mui/material/styles';
 import IconButton from '@mui/material/IconButton';
+import Grid from '@mui/material/Grid'; // Added for consistency if needed, but maybe not for single card
 
 // MUI Icons
-import PersonIcon from '@mui/icons-material/Person';
-import EditIcon from '@mui/icons-material/Edit';
-import VerifiedUserIcon from '@mui/icons-material/VerifiedUser';
+// Keep existing icons: PersonIcon, BadgeIcon, SchoolIcon, EmailIcon, CalendarMonthIcon
+import EditIcon from '@mui/icons-material/EditOutlined'; // Use Outlined version for consistency if preferred
+import VerifiedUserIcon from '@mui/icons-material/VerifiedUserOutlined'; // Use Outlined version
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
-import BadgeIcon from '@mui/icons-material/Badge';
-import SchoolIcon from '@mui/icons-material/School';
-import EmailIcon from '@mui/icons-material/Email';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
+import BadgeIcon from '@mui/icons-material/BadgeOutlined'; // Use Outlined version
+import SchoolIcon from '@mui/icons-material/SchoolOutlined'; // Use Outlined version
+import EmailIcon from '@mui/icons-material/EmailOutlined'; // Use Outlined version
+import CalendarMonthIcon from '@mui/icons-material/CalendarMonthOutlined'; // Use Outlined version
 
 /**
  * Helper to format optional values or display placeholder text.
+ * (No changes needed here)
  */
 const formatDisplayValue = (value, isDate = false) => {
     if (value === undefined || value === null || value === '') {
-      return <Typography variant="body1" color="text.disabled" component="span" sx={{ fontStyle: 'italic' }}>Not Set</Typography>;
+      return <Typography variant="body1" color="text.secondary" component="span" sx={{ fontStyle: 'italic' }}>Not Set</Typography>;
     }
     if (isDate && value instanceof Timestamp) {
       try {
@@ -50,11 +52,13 @@ const formatDisplayValue = (value, isDate = false) => {
            return <Typography variant="body1" color="error" component="span">Invalid Date</Typography>;
        }
     }
+    // Return directly for non-empty, non-date values to use ListItemText styling
     return value;
 };
 
 /**
  * Helper for Avatar Initials
+ * (No changes needed here)
  */
 const getInitials = (name) => {
     if (!name || typeof name !== 'string' || name.trim() === "") return '?';
@@ -65,10 +69,10 @@ const getInitials = (name) => {
 };
 
 /**
- * Profile Page Component
+ * Profile Page Component - Redesigned
  */
 const Profile = () => {
-  const theme = useTheme();
+  const theme = useTheme(); // Keep theme for Avatar color potentially
   const { currentUser, userData: contextUserData } = useAuth();
   const navigate = useNavigate();
 
@@ -77,91 +81,93 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
 
+  // --- Fetching Logic (Keep as is, minor adjustments if needed based on context) ---
+  useEffect(() => {
+    let isMounted = true;
+    const fetchUserInfo = async () => {
+      // ... (existing fetch logic remains largely the same)
+      if (!currentUser?.uid) { if (isMounted) { setError("Not logged in."); setLoading(false); } return; }
+      if (contextUserData?.basicInfo && loading) {
+          const profileData = {
+              ...contextUserData.basicInfo,
+              emailVerified: currentUser?.emailVerified,
+              createdAt: contextUserData.metadata?.createdAt || contextUserData.basicInfo?.createdAt,
+          };
+          setBasicInfo(profileData);
+          if (isMounted) setLoading(false);
+          return;
+      }
+      if (loading) {
+          setLoading(true); // Ensure loading is true
+          try {
+              const userDocRef = doc(db, "users", currentUser.uid);
+              const docSnap = await getDoc(userDocRef);
+              if (isMounted) {
+                if (docSnap.exists()) {
+                  const fetchedData = docSnap.data();
+                  const profileData = {
+                      ...fetchedData.basicInfo,
+                      email: fetchedData.basicInfo?.email || currentUser?.email,
+                      emailVerified: currentUser?.emailVerified,
+                      createdAt: fetchedData.metadata?.createdAt || fetchedData.basicInfo?.createdAt,
+                  };
+                  setBasicInfo(profileData);
+                } else {
+                  console.log("No such user document!");
+                  setError('User profile not found. Please complete setup.');
+                  setBasicInfo({ // Provide minimal info even if profile doc missing
+                       email: currentUser?.email,
+                       emailVerified: currentUser?.emailVerified,
+                       fullName: 'User', // Placeholder
+                  });
+                }
+                setLoading(false);
+              }
+          } catch (err) {
+             console.error("Error fetching user info:", err);
+             if (isMounted) { setError('Failed to load user data.'); setLoading(false); }
+          }
+      } else if (!currentUser) {
+          if (isMounted) { setError("Not logged in."); setBasicInfo(null); setLoading(false); }
+      } else if (basicInfo && basicInfo.emailVerified !== currentUser?.emailVerified) {
+          if (isMounted) setBasicInfo(prev => ({...prev, emailVerified: currentUser.emailVerified}));
+      }
+    };
+
+    fetchUserInfo();
+
+    return () => { isMounted = false; };
+  }, [currentUser, contextUserData, loading]); // Removed navigate from deps unless used in fetch
+
+  // --- Snackbar Handler (Keep as is) ---
   const handleSnackbarClose = (event, reason) => {
     if (reason === 'clickaway') return;
     setSnackbar({ ...snackbar, open: false });
   };
 
+  // --- Avatar Initials (Keep as is) ---
   const userInitials = useCallback(() => getInitials(basicInfo?.fullName), [basicInfo?.fullName]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchUserInfo = async () => {
-      if (!currentUser?.uid) { if (isMounted) { setError("Not logged in."); setLoading(false); } return; }
-      try {
-        const userDocRef = doc(db, "users", currentUser.uid);
-        const docSnap = await getDoc(userDocRef);
-        if (isMounted) {
-          if (docSnap.exists()) {
-            const fetchedData = docSnap.data();
-            const profileData = {
-                ...fetchedData.basicInfo,
-                email: fetchedData.basicInfo?.email || currentUser?.email,
-                emailVerified: currentUser?.emailVerified,
-                createdAt: fetchedData.metadata?.createdAt || fetchedData.basicInfo?.createdAt,
-            };
-            setBasicInfo(profileData);
-          } else {
-            console.log("No such user document!");
-            setError('User profile not found. Please complete setup.');
-            setBasicInfo({
-                 email: currentUser?.email,
-                 emailVerified: currentUser?.emailVerified,
-            });
-          }
-          setLoading(false);
-        }
-      } catch (err) { console.error("Error fetching user info:", err); if (isMounted) { setError('Failed to load user data.'); setLoading(false); } }
-    };
-
-    if (contextUserData?.basicInfo && loading) {
-        const profileData = {
-            ...contextUserData.basicInfo,
-            emailVerified: currentUser?.emailVerified,
-            createdAt: contextUserData.metadata?.createdAt || contextUserData.basicInfo?.createdAt,
-        };
-        setBasicInfo(profileData);
-        if (isMounted) setLoading(false);
-    }
-    else if (!currentUser && loading) {
-        if (isMounted) { setLoading(false); setError("Please log in to view your profile."); }
-    }
-    else if (currentUser && loading) {
-        fetchUserInfo();
-    }
-    else if (!currentUser && !loading) {
-        if (isMounted) { setError("Not logged in."); setBasicInfo(null); }
-    }
-    else if (currentUser && basicInfo && basicInfo.emailVerified !== currentUser.emailVerified) {
-       if (isMounted) setBasicInfo(prev => ({...prev, emailVerified: currentUser.emailVerified}));
-    }
-
-    return () => { isMounted = false; };
-  }, [currentUser, contextUserData, loading, navigate]);
-
-  const primaryTextSx = { color: 'var(--color-text-primary)' };
-  const secondaryTextSx = { color: 'var(--color-text-secondary)' };
+  // --- Define Consistent List Item Styles (from Home.js) ---
+  const listItemSx = { py: 1.25, px: 2 }; // Padding inside the item
+  const listIconSx = { minWidth: 40, /* Adjusted from 36 for slightly more space */ color: 'var(--color-icon)' };
+  const listTextPrimarySx = { fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-text-primary)' };
+  const listTextSecondarySx = { fontSize: '0.75rem', color: 'var(--color-text-secondary)', mt: 0.25 };
+  // No chevron needed for profile display items
 
   return (
-    <Container
-      component="main"
-      maxWidth="lg"
-      disableGutters={true} // Container provides no gutters/padding
-      sx={{
-          flexGrow: 1,
-          // Container has no explicit padding or margin
-      }}
-    >
+    // Use Box instead of Container if parent layout handles max-width and padding
+    <Box sx={{ width: '100%' /* Optional: Add padding here if needed e.g., p: { xs: 2, md: 3 } */ }}>
+
       {/* --- PAGE TITLE --- */}
-      {/* ADDED: margin-bottom (mb) to create space below the title */}
       <Typography
         variant="h4"
         component="h1"
         sx={{
           fontWeight: 500,
-          ...primaryTextSx,
-          // No padding here
-          mb: 2, // Add margin-bottom (adjust value 2, 3, etc. as needed)
+          mb: { xs: 2, sm: 3 }, // Match Home.js margin bottom
+          fontSize: { xs: '1.6rem', sm: '1.8rem', md: '2.125rem' }, // Match Home.js font size
+          color: 'var(--color-text-primary)' // Use variable
         }}
       >
         User Profile
@@ -169,41 +175,37 @@ const Profile = () => {
 
       {/* --- CONDITIONAL CONTENT AREA --- */}
       {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%', minHeight: 'calc(50vh - 64px)' }}>
-            <CircularProgress size={50} />
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', p: 5, gap: 2 }}>
+           <CircularProgress />
+           <Typography variant="body2" color="text.secondary">Loading profile...</Typography>
         </Box>
       ) : error ? (
-        // Using width: '100%' might make Alert touch edges, consider adding mx if needed back
-        <Alert severity="error" sx={{ width: '100%', borderRadius: 'var(--border-radius, 6px)' }}>{error}</Alert>
+        <Alert severity="error" sx={{ m: 2 }}>{error}</Alert> // Margin added for spacing
       ) : !basicInfo ? (
-        // Using width: '100%' might make Alert touch edges, consider adding mx if needed back
-        <Alert severity="warning" sx={{ width: '100%', borderRadius: 'var(--border-radius, 6px)' }}>No profile data available. Please log in or complete setup.</Alert>
-      ): (
-        // --- Profile Content within a single Paper/Card ---
-        // RE-ADDED: borderRadius using CSS variable
+        <Alert severity="warning" sx={{ m: 2 }}>No profile data available.</Alert> // Margin added
+      ) : (
+        // --- Profile Content Card (Mimicking DashboardCard) ---
         <Paper
           elevation={0}
-          variant="outlined"
           sx={{
-            p: 0, // Inner content padding handled below
-            width: '100%', // Takes full width of container
-            bgcolor: 'var(--color-bg-card)',
-            borderColor: 'divider',
-            borderRadius: 'var(--border-radius, 6px)', // Restore border radius
-            overflow: 'hidden',
-            // No margin here
+            bgcolor: 'var(--color-surface)',
+            borderRadius: 'var(--border-radius-large)', // Use variable
+            border: `1px solid var(--color-border)`,    // Use variable
+            overflow: 'hidden', // Keep overflow hidden
+            // No height: '100%' needed as it's the main content block
+            // No margin needed if Grid/Box parent handles spacing
           }}
         >
            {/* --- Profile Header Section --- */}
-           {/* Padding inside Paper remains */}
-           <Box sx={{ display: 'flex', alignItems: 'center', p: { xs: 2, sm: 3 }, borderBottom: 1, borderColor: 'divider' }}>
+           {/* Use consistent padding like DashboardCard header */}
+           <Box sx={{ display: 'flex', alignItems: 'center', p: 2, borderBottom: `1px solid var(--color-border)` }}>
                <Avatar
                    sx={{
-                       bgcolor: theme.palette.primary.main,
-                       width: { xs: 48, sm: 64 },
-                       height: { xs: 48, sm: 64 },
-                       mr: { xs: 2, sm: 3 },
-                       fontSize: { xs: '1.2rem', sm: '1.5rem' },
+                       bgcolor: theme.palette.primary.main, // Or use a specific var(--color-...) if defined
+                       width: { xs: 48, sm: 56 }, // Slightly adjusted size example
+                       height: { xs: 48, sm: 56 },
+                       mr: 2,
+                       fontSize: { xs: '1.1rem', sm: '1.3rem' },
                        color: theme.palette.getContrastText(theme.palette.primary.main)
                    }}
                    src={basicInfo.profileImageUrl || undefined}
@@ -212,100 +214,108 @@ const Profile = () => {
                   {!basicInfo.profileImageUrl ? userInitials() : null}
                </Avatar>
                <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, flexWrap: 'wrap', gap: 0.5 }}>
-                        <Typography variant="h6" component="h2" sx={{ fontWeight: 600, ...primaryTextSx }}>
+                    {/* Combine Name and Verification Icon */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.25, flexWrap: 'wrap', gap: 0.5 }}>
+                        <Typography variant="h6" component="h2" noWrap sx={{ fontWeight: 600, color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
                             {basicInfo.fullName || 'User Profile'}
                         </Typography>
                         <Tooltip title={basicInfo.emailVerified ? "Verified Account" : "Email Not Verified"} arrow>
-                            <span>
-                              <IconButton size="small" sx={{ p: 0.25, cursor: 'default' }} disableRipple disabled={loading}>
+                           {/* Wrap IconButton in span for Tooltip when disabled */}
+                           <span>
+                              <IconButton size="small" sx={{ p: 0.25, color: basicInfo.emailVerified ? 'var(--color-success, green)' : 'var(--color-warning, orange)' }} disableRipple>
                                   {basicInfo.emailVerified
-                                      ? <VerifiedUserIcon color="success" sx={{ fontSize: '1.1rem' }} />
-                                      : <ErrorOutlineIcon color="warning" sx={{ fontSize: '1.1rem' }} />
+                                      ? <VerifiedUserIcon sx={{ fontSize: '1.1rem' }} />
+                                      : <ErrorOutlineIcon sx={{ fontSize: '1.1rem' }} />
                                   }
                               </IconButton>
-                            </span>
+                           </span>
                         </Tooltip>
                     </Box>
-                    <Typography variant="body2" sx={{ wordBreak: 'break-all', ...secondaryTextSx }}>
+                    <Typography variant="body2" noWrap sx={{ color: 'var(--color-text-secondary)', wordBreak: 'break-all' }}>
                         {basicInfo.email || 'No email provided'}
                     </Typography>
                </Box>
+               {/* Edit Button - Styled like Home.js card actions */}
                <Tooltip title="Edit Profile">
-                    <span>
-                      <IconButton component={RouterLink} to="/profile/edit" size="medium" aria-label="Edit profile" sx={{ ml: 1, color: 'action.active' }} disabled={loading}>
-                          <EditIcon />
-                      </IconButton>
-                    </span>
+                    <IconButton component={RouterLink} to="/profile/edit" size="medium" aria-label="Edit profile" sx={{ ml: 1, color: 'var(--color-icon)', '&:hover': { bgcolor: 'action.hover' } }}>
+                        <EditIcon fontSize='small' />
+                    </IconButton>
                </Tooltip>
            </Box>
 
           {/* --- Display User Information using List --- */}
-          {/* Padding inside Paper remains */}
-          <Box sx={{ p: { xs: 2, sm: 3 } }}>
-              <List disablePadding>
-                 {/* ListItems remain unchanged */}
-                 <ListItem disablePadding sx={{ py: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><SchoolIcon fontSize="small"/></ListItemIcon>
-                    <ListItemText
-                        primary={formatDisplayValue(basicInfo.fullName)}
-                        secondary="Full Name"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }}
-                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
-                    />
-                 </ListItem>
-                 <ListItem disablePadding sx={{ py: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><BadgeIcon fontSize="small"/></ListItemIcon>
-                    <ListItemText
-                        primary={formatDisplayValue(basicInfo.studentId)}
-                        secondary="Student ID"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }}
-                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
-                    />
-                 </ListItem>
-                 <ListItem disablePadding sx={{ py: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><SchoolIcon fontSize="small"/></ListItemIcon>
-                    <ListItemText
-                        primary={formatDisplayValue(basicInfo.session)}
-                        secondary="Session"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }}
-                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
-                    />
-                 </ListItem>
+          {/* No extra Box needed, List goes directly inside Paper */}
+          <List disablePadding>
+              {/* Use consistent styles for ListItems */}
+               <ListItem sx={listItemSx}>
+                  <ListItemIcon sx={listIconSx}><BadgeIcon fontSize="small"/></ListItemIcon>
+                  <ListItemText
+                      primary={formatDisplayValue(basicInfo.fullName)}
+                      secondary="Full Name"
+                      primaryTypographyProps={{ sx: listTextPrimarySx }}
+                      secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                  />
+               </ListItem>
+               <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} /> {/* Divider between items */}
 
-                 <Divider sx={{ my: 1.5, borderColor: 'divider' }} />
+               <ListItem sx={listItemSx}>
+                  <ListItemIcon sx={listIconSx}><SchoolIcon fontSize="small"/></ListItemIcon>
+                  <ListItemText
+                      primary={formatDisplayValue(basicInfo.studentId)}
+                      secondary="Student ID"
+                      primaryTypographyProps={{ sx: listTextPrimarySx }}
+                      secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                  />
+               </ListItem>
+               <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />
 
-                  <ListItem disablePadding sx={{ py: 1.5 }}>
-                    <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><EmailIcon fontSize="small"/></ListItemIcon>
-                    <ListItemText
-                        primary={formatDisplayValue(basicInfo.email)}
-                        secondary="Email Address"
-                        primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: { ...primaryTextSx, overflowWrap: 'break-word' } }}
-                        secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
-                    />
-                  </ListItem>
-                 {basicInfo.createdAt && basicInfo.createdAt instanceof Timestamp && (
-                     <ListItem disablePadding sx={{ py: 1.5 }}>
-                        <ListItemIcon sx={{ minWidth: 40, color: 'action.active' }}><CalendarMonthIcon fontSize="small"/></ListItemIcon>
+               <ListItem sx={listItemSx}>
+                  <ListItemIcon sx={listIconSx}><SchoolIcon fontSize="small"/></ListItemIcon>
+                  <ListItemText
+                      primary={formatDisplayValue(basicInfo.session)}
+                      secondary="Session"
+                      primaryTypographyProps={{ sx: listTextPrimarySx }}
+                      secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                  />
+               </ListItem>
+               <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />
+
+                <ListItem sx={listItemSx}>
+                  <ListItemIcon sx={listIconSx}><EmailIcon fontSize="small"/></ListItemIcon>
+                  <ListItemText
+                      primary={formatDisplayValue(basicInfo.email)}
+                      secondary="Email Address"
+                      primaryTypographyProps={{ sx: { ...listTextPrimarySx, overflowWrap: 'break-word' } }} // Allow wrapping
+                      secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                  />
+                </ListItem>
+                <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />
+
+               {/* Conditional Rendering for Member Since */}
+               {basicInfo.createdAt && (
+                   <>
+                     <ListItem sx={listItemSx}>
+                        <ListItemIcon sx={listIconSx}><CalendarMonthIcon fontSize="small"/></ListItemIcon>
                         <ListItemText
                             primary={formatDisplayValue(basicInfo.createdAt, true)}
                             secondary="Member Since"
-                            primaryTypographyProps={{ variant: 'body1', fontWeight: 500, sx: primaryTextSx }}
-                            secondaryTypographyProps={{ variant: 'body2', sx: secondaryTextSx }}
+                            primaryTypographyProps={{ sx: listTextPrimarySx }}
+                            secondaryTypographyProps={{ sx: listTextSecondarySx }}
                         />
                      </ListItem>
-                 )}
-              </List>
-          </Box>
-
+                     {/* Optional: Add a final divider if more items could follow */}
+                     {/* <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} /> */}
+                   </>
+               )}
+            </List>
         </Paper>
       )}
 
-      {/* --- SNACKBAR --- */}
-      <Snackbar open={snackbar.open} autoHideDuration={6000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-       <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled"> {snackbar.message} </Alert>
+      {/* --- SNACKBAR (Keep as is) --- */}
+      <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+       <Alert onClose={handleSnackbarClose} severity={snackbar.severity} sx={{ width: '100%' }} variant="filled" elevation={6}> {snackbar.message} </Alert>
       </Snackbar>
-    </Container>
+    </Box> // End of main Box wrapper
   );
 };
 
