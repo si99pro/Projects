@@ -122,7 +122,7 @@ const Header = forwardRef(({ onToggleSidebar, isSidebarCollapsed, isMobile }, re
               // display: { xs: 'none', sm: 'block' }
             }}
           >
-            YourApp
+            stdDB
           </Typography>
         </Box>
 

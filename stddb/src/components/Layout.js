@@ -17,27 +17,26 @@ const SIDEBAR_STATE_KEY = 'sidebarState';
 const Layout = () => {
     const theme = useTheme();
     const headerRef = useRef(null);
-    const mainAreaRef = useRef(null);
+    const mainAreaContainerRef = useRef(null); // Renamed ref for clarity
     const [sidebarState, setSidebarState] = useState('expanded');
     const [mobileOpen, setMobileOpen] = useState(false);
 
-    // This correctly defines mobile as < 768px
     const isMobile = useMediaQuery('(max-width: 767.95px)');
     const isTabletOrSmallDesktop = useMediaQuery('(min-width: 768px) and (max-width: 1199.95px)');
 
     const location = useLocation();
 
-    // --- Effects --- (Keep existing useEffects as they were in the previous correct version)
+    // --- Effects ---
     useEffect(() => {
         const storedState = localStorage.getItem(SIDEBAR_STATE_KEY);
         if (!isMobile) {
             const defaultState = isTabletOrSmallDesktop ? 'collapsed' : 'expanded';
             setSidebarState(storedState || defaultState);
             if (mobileOpen) {
-                setMobileOpen(false);
+                setMobileOpen(false); // Close mobile drawer if resizing up
             }
         }
-    }, [isTabletOrSmallDesktop, isMobile, mobileOpen]); // Added mobileOpen dependency
+    }, [isTabletOrSmallDesktop, isMobile, mobileOpen]);
 
     useEffect(() => {
         if (!isMobile) {
@@ -58,37 +57,52 @@ const Layout = () => {
         };
     }, [isMobile]);
 
+    // Effect for Header Height and Main Area Padding Top
     useEffect(() => {
         const updateLayoutOffsets = () => {
             const headerElement = headerRef.current;
-            const mainAreaElement = mainAreaRef.current;
-            if (headerElement && mainAreaElement) {
+            const containerElement = mainAreaContainerRef.current; // Use the ref for the container
+            if (headerElement && containerElement) {
                 const headerHeight = headerElement.offsetHeight;
-                mainAreaElement.style.paddingTop = `${headerHeight}px`;
+                // Apply padding-top to the container holding main and right sidebar
+                containerElement.style.paddingTop = `${headerHeight}px`;
                 document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
             }
         };
-        updateLayoutOffsets();
+
+        updateLayoutOffsets(); // Initial calculation
+
         let resizeObserver;
         const headerEl = headerRef.current;
+
         if (headerEl && typeof ResizeObserver !== 'undefined') {
             resizeObserver = new ResizeObserver(updateLayoutOffsets);
-            resizeObserver.observe(headerEl);
+            resizeObserver.observe(headerEl); // Observe header for height changes
         } else {
-            window.addEventListener('resize', updateLayoutOffsets);
+            window.addEventListener('resize', updateLayoutOffsets); // Fallback
         }
-        return () => {
+
+        return () => { // Cleanup
             if (resizeObserver && headerEl) {
                 resizeObserver.unobserve(headerEl);
             } else {
                 window.removeEventListener('resize', updateLayoutOffsets);
             }
             document.documentElement.style.removeProperty('--header-height');
-            if (mainAreaRef.current) {
-                mainAreaRef.current.style.paddingTop = '';
+             // Clear inline style on unmount
+            if (mainAreaContainerRef.current) {
+                mainAreaContainerRef.current.style.paddingTop = '';
             }
         };
-    }, []);
+    }, []); // Dependencies: Re-run only if needed (e.g., header content changes causing height change)
+
+    // Effect to Close Drawer on Route Change
+    useEffect(() => {
+        if (mobileOpen) {
+            handleDrawerClose();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [location.pathname]); // Dependency: location.pathname
 
     // --- Handlers ---
     const handleToggleSidebar = useCallback(() => {
@@ -103,14 +117,7 @@ const Layout = () => {
         setMobileOpen(false);
     }, []);
 
-    // Close drawer on route change
-    useEffect(() => {
-        if (mobileOpen) {
-            handleDrawerClose();
-        }
-         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname]);
-
+    // --- Render Logic ---
     const isDesktopSidebarCollapsed = !isMobile && sidebarState === 'collapsed';
     const layoutClass = isMobile ? 'mobile-layout' : `desktop-layout-${sidebarState}`;
 
@@ -133,15 +140,13 @@ const Layout = () => {
                     onClose={handleDrawerClose}
                     ModalProps={{ keepMounted: true }}
                     sx={{
-                        // REMOVED the display property:
-                        // display: { xs: 'block', sm: 'none' },
                         zIndex: 'var(--z-drawer)',
                         '& .MuiDrawer-paper': {
                             boxSizing: 'border-box',
                             width: 'var(--sidebar-width-expanded)',
                             bgcolor: 'var(--color-offset)',
                             borderRight: 'none',
-                            paddingTop: 'var(--header-height)',
+                            paddingTop: 'var(--header-height)', // Space for fixed header inside drawer
                         },
                     }}
                 >
@@ -160,13 +165,20 @@ const Layout = () => {
                 </aside>
             )}
 
-            {/* Main Content Area */}
-            <div className="main-area-container" ref={mainAreaRef}>
+            {/* Main Area Container (Handles header offset) */}
+            <div className="main-area-container" ref={mainAreaContainerRef}>
+                {/* Main Content Area (Handles sidebar offset) */}
                 <main className="main-content-area" id="main-content">
+                    {/* Inner Wrapper (Handles scrolling) */}
                     <div className="main-content-inner-wrapper">
-                       <Outlet />
+                        {/* Padding Wrapper (Handles content padding) */}
+                        <div className="content-padding-wrapper">
+                           <Outlet />
+                        </div>
                     </div>
                 </main>
+
+                {/* Right Sidebar (CSS handles hiding) */}
                 <aside className="right-sidebar-wrapper">
                     <RightSidebar />
                 </aside>

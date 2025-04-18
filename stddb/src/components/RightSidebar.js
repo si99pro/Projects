@@ -36,20 +36,52 @@ const RightSidebar = () => {
          { id: 'u2', name: 'Samantha Lee', title: 'Product Designer', avatarUrl: 'https://i.pravatar.cc/40?img=5' },
     ];
 
+    // --- Optimized Styles ---
     const cardSx = {
         bgcolor: 'var(--color-surface)',
         border: `1px solid var(--color-border)`,
         borderRadius: 'var(--border-radius-large)',
         overflow: 'hidden',
-        mb: 'var(--content-padding)',
+        // Reduced bottom margin between cards
+        mb: theme.spacing(1.5), // Was var(--content-padding) - likely 24px, now 12px
         boxShadow: 'none',
     };
     const cardHeaderSx = {
-        p: theme.spacing(1.5, 2), display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        // Slightly reduced vertical padding
+        p: theme.spacing(1.25, 2), // Was 1.5 (12px), now 10px vertical. Horizontal kept at 16px.
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
     };
     const cardFooterSx = {
-        p: theme.spacing(1, 2), borderTop: `1px solid var(--color-border)`, textAlign: 'center',
+        // Slightly reduced padding
+        p: theme.spacing(0.75, 2), // Was 1 (8px), now 6px vertical. Horizontal kept at 16px.
+        borderTop: `1px solid var(--color-border)`,
+        textAlign: 'center',
     };
+    const listItemSx = {
+        // Reduced vertical padding for list items
+        py: 1, // Was 1.5 (12px) or 1 (8px), now consistently 8px
+        px: 2, // Keep horizontal padding
+    };
+    const listIconSx = {
+        minWidth: 36,
+        color: 'var(--color-icon)'
+    };
+    const listIconAvatarSx = {
+        minWidth: 44, // Slightly smaller minWidth for avatar icon
+    };
+    const listTextPrimarySx = {
+        fontWeight: 500,
+        fontSize: '0.875rem', // Slightly smaller font if desired, or keep at 0.9rem
+        color: 'var(--color-text-primary)'
+    };
+    const listTextSecondarySx = {
+        fontSize: '0.75rem', // Slightly smaller font if desired, or keep at 0.8rem
+        color: 'var(--color-text-secondary)'
+    };
+    // --- End Optimized Styles ---
+
 
     const handleFollow = (userId) => console.log('Follow:', userId); // Placeholder function
 
@@ -69,101 +101,110 @@ const RightSidebar = () => {
             component="aside"
             aria-label="Contextual information sidebar"
             sx={{
-                p: 'var(--content-padding)',
+                // Reduced overall padding for the sidebar container
+                p: theme.spacing(1.5), // Was var(--content-padding), now 12px
                 height: '100%',
                 boxSizing: 'border-box',
+                display: 'flex', // Use flexbox to push footer down
+                flexDirection: 'column', // Stack children vertically
             }}
         >
-            <Paper elevation={0} sx={cardSx}>
-                <Box sx={cardHeaderSx}>
-                    <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>Challenges</Typography>
-                </Box>
-                <Divider sx={{ borderColor: 'var(--color-border)' }} />
-                <List dense disablePadding>
-                    {challenges.map((item) => (
-                        <ListItemButton key={item.id} component={RouterLink} to={item.link} sx={{ py: 1.5, px: 2 }}>
-                            <ListItemIcon sx={{ minWidth: 36, color: 'var(--color-icon)' }}>
-                                {item.icon}
+            {/* Main Content Area (Scrollable if needed, but usually fits) */}
+            <Box sx={{ flexGrow: 1 }}>
+                <Paper elevation={0} sx={cardSx}>
+                    <Box sx={cardHeaderSx}>
+                        <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>Challenges</Typography>
+                    </Box>
+                    <Divider sx={{ borderColor: 'var(--color-border)' }} />
+                    <List dense disablePadding>
+                        {challenges.map((item) => (
+                            <ListItemButton key={item.id} component={RouterLink} to={item.link} sx={listItemSx}>
+                                <ListItemIcon sx={listIconSx}>
+                                    {item.icon}
+                                </ListItemIcon>
+                                <ListItemText
+                                    primary={item.name}
+                                    secondary={item.desc}
+                                    primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                    secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                                />
+                                <ChevronRightIcon sx={{ color: 'var(--color-icon)', fontSize: '1.2rem', ml: 1 }} />
+                            </ListItemButton>
+                        ))}
+                    </List>
+                </Paper>
+
+                 <Paper elevation={0} sx={cardSx}>
+                    <Box sx={cardHeaderSx}>
+                         <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>Suggestions</Typography>
+                         <Tooltip title="Based on your activity"><InfoOutlinedIcon sx={{ color: 'var(--color-icon)', fontSize: '1rem' }} /></Tooltip>
+                     </Box>
+                     <Divider sx={{ borderColor: 'var(--color-border)' }} />
+                     {/* REMOVED py from List, handled by ListItemButton */}
+                     <List dense disablePadding>
+                     {suggestions.map((user) => (
+                        <ListItemButton key={user.id} sx={listItemSx}>
+                            <ListItemIcon sx={listIconAvatarSx}>
+                                <Avatar
+                                    {...getAvatarProps(user)} // Use helper function
+                                    // Slightly smaller avatar
+                                    sx={{ width: 30, height: 30 }}
+                                />
                             </ListItemIcon>
                             <ListItemText
-                                primary={item.name}
-                                secondary={item.desc}
-                                primaryTypographyProps={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}
-                                secondaryTypographyProps={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}
+                                primary={user.name}
+                                secondary={user.title}
+                                primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                secondaryTypographyProps={{ sx: listTextSecondarySx }}
                             />
-                            <ChevronRightIcon sx={{ color: 'var(--color-icon)', fontSize: '1.2rem', ml: 1 }} />
+                            <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                onClick={() => handleFollow(user.id)}
+                                sx={{
+                                    ml: 1,
+                                    textTransform: 'none',
+                                    fontSize: '0.75rem',
+                                    py: 0.25,
+                                    px: 1,
+                                    borderColor: 'var(--color-border)',
+                                    color: 'var(--color-primary)',
+                                    '&:hover': {
+                                        bgcolor: 'var(--color-primary-light)',
+                                        borderColor: 'var(--color-primary)'
+                                    }
+                                }}
+                            >
+                                Follow
+                            </Button>
                         </ListItemButton>
-                    ))}
-                </List>
-            </Paper>
-
-             <Paper elevation={0} sx={cardSx}>
-                <Box sx={cardHeaderSx}>
-                     <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600 }}>Suggestions</Typography>
-                     <Tooltip title="Based on your activity"><InfoOutlinedIcon sx={{ color: 'var(--color-icon)', fontSize: '1rem' }} /></Tooltip>
-                 </Box>
-                 <Divider sx={{ borderColor: 'var(--color-border)' }} />
-                 <List dense disablePadding sx={{ py: 1 }}>
-                 {suggestions.map((user) => (
-                    <ListItemButton key={user.id} sx={{ py: 1, px: 2 }}>
-                        <ListItemIcon sx={{ minWidth: 48 }}>
-                            <Avatar
-                                {...getAvatarProps(user)} // Use helper function
-                                sx={{ width: 32, height: 32 }}
-                            />
-                        </ListItemIcon>
-                        <ListItemText
-                            primary={user.name}
-                            secondary={user.title}
-                            primaryTypographyProps={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--color-text-primary)' }}
-                            secondaryTypographyProps={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}
-                        />
+                        ))}
+                     </List>
+                     <Box sx={cardFooterSx}>
                         <Button
+                            component={RouterLink}
+                            to="/suggestions"
                             size="small"
-                            variant="outlined"
-                            startIcon={<AddIcon />}
-                            onClick={() => handleFollow(user.id)}
-                            sx={{
-                                ml: 1,
-                                textTransform: 'none',
-                                fontSize: '0.75rem',
-                                py: 0.25,
-                                px: 1,
-                                borderColor: 'var(--color-border)',
-                                color: 'var(--color-primary)',
-                                '&:hover': {
-                                    bgcolor: 'var(--color-primary-light)',
-                                    borderColor: 'var(--color-primary)'
-                                }
-                            }}
+                            endIcon={<ChevronRightIcon />}
+                            sx={{ textTransform: 'none', color: 'var(--color-primary)', fontWeight: 500 }}
                         >
-                            Follow
+                            View All
                         </Button>
-                    </ListItemButton>
-                    ))}
-                 </List>
-                 <Box sx={cardFooterSx}>
-                    <Button
-                        component={RouterLink}
-                        to="/suggestions"
-                        size="small"
-                        endIcon={<ChevronRightIcon />}
-                        sx={{ textTransform: 'none', color: 'var(--color-primary)', fontWeight: 500 }}
-                    >
-                        View All
-                    </Button>
-                 </Box>
-             </Paper>
+                     </Box>
+                 </Paper>
+             </Box>
 
-              <Box sx={{ mt: 'auto', pt: 2, textAlign: 'center' }}>
-                   <Typography variant="caption" sx={{ color: 'var(--color-text-secondary)', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing(0.5, 1.5), fontSize: '0.75rem' }}>
-                       <RouterLink to="/about" style={{ color: 'inherit', textDecoration: 'none' }}>About</RouterLink>
-                       <RouterLink to="/help" style={{ color: 'inherit', textDecoration: 'none' }}>Help</RouterLink>
-                       <RouterLink to="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy</RouterLink>
-                       <RouterLink to="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</RouterLink>
-                       <span>© {new Date().getFullYear()} YourApp</span>
-                   </Typography>
-              </Box>
+             {/* Footer Links Area */}
+             <Box sx={{ mt: 1, pt: 1, textAlign: 'center', borderTop: `1px solid var(--color-border)` }}>
+                  <Typography variant="caption" sx={{ color: 'var(--color-text-secondary)', display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: theme.spacing(0.5, 1.5), fontSize: '0.75rem' }}>
+                      <RouterLink to="/about" style={{ color: 'inherit', textDecoration: 'none' }}>About</RouterLink>
+                      <RouterLink to="/help" style={{ color: 'inherit', textDecoration: 'none' }}>Help</RouterLink>
+                      <RouterLink to="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy</RouterLink>
+                      <RouterLink to="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</RouterLink>
+                      <span>© {new Date().getFullYear()} stdDB</span>
+                  </Typography>
+             </Box>
 
         </Box>
     );
