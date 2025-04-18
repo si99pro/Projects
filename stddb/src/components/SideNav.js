@@ -9,10 +9,10 @@ import List from '@mui/material/List';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-import Drawer from '@mui/material/Drawer';
-import Toolbar from '@mui/material/Toolbar';
+// Removed Drawer import - Layout handles it now
+// Removed Toolbar import - Padding handled by Drawer style
 import Divider from '@mui/material/Divider';
-import Typography from '@mui/material/Typography';
+// Removed Typography import if not used elsewhere
 
 // --- Import Your Icons ---
 import DashboardIcon from '@mui/icons-material/DashboardOutlined';
@@ -38,41 +38,51 @@ const secondaryNavItems = [
 ];
 
 // --- Component ---
-const SideNav = ({ isMobile, isCollapsed, isOpen, onClose }) => {
+// Removed isOpen, onClose props. Added onNavItemClick.
+const SideNav = ({ isMobile, isCollapsed, onNavItemClick }) => {
 
-    const renderNavList = (
-        // Added className for easier CSS targeting if needed
+    // Function to handle item click - closes drawer only on mobile
+    const handleItemClick = () => {
+        if (isMobile && typeof onNavItemClick === 'function') {
+            onNavItemClick();
+        }
+        // Navigation happens via the NavLink component automatically
+    };
+
+    // This component now *only* renders the content list.
+    // Layout.js places this inside a Drawer (mobile) or <aside> (desktop).
+    return (
+        // Use the className for CSS targeting. CSS handles visual differences.
         <Box className="side-nav-scroll-container" sx={{ overflowY: 'auto', height: '100%', pt: 1 }}>
-             {isMobile && <Toolbar />}
+             {/* Removed conditional Toolbar - Drawer styling in Layout.js handles top padding */}
             <List component="nav" sx={{ p: 0 }}>
                 {mainNavItems.map((item) => (
                     <ListItemButton
                         key={item.text}
                         component={NavLink}
                         to={item.path}
-                        end={item.path === '/'}
+                        end={item.path === '/'} // Use end prop for exact match on root path
+                        onClick={handleItemClick} // Add click handler
+                        // The className 'active' will be added automatically by NavLink
+                        // Your existing CSS targets .active correctly
                     >
-                        {/* Icon styling adjusted via CSS based on collapsed state */}
                         <ListItemIcon>
                             {item.icon}
                         </ListItemIcon>
-                        {/* Text is always rendered, CSS handles opacity/hiding */}
                         <ListItemText
                             primary={item.text}
-                            primaryTypographyProps={{
-                                variant: 'body2',
-                                // Apply transition here as well, though CSS is primary
-                                sx: { transition: 'opacity var(--transition-speed) var(--transition-timing)' }
-                            }}
+                            primaryTypographyProps={{ variant: 'body2' }}
+                            // CSS handles the visual hiding/showing based on parent state
                         />
                     </ListItemButton>
                 ))}
 
                 <Divider sx={{
                     my: 1,
-                    mx: isCollapsed ? 1 : 2, // Adjust margin based on collapse
+                     // Adjust margin based on collapse state (implicitly works for mobile too, as isCollapsed=false)
+                    mx: isCollapsed ? 1 : 'var(--sidebar-horizontal-padding)', // Use variable
                     borderColor: 'var(--color-border-strong)',
-                    transition: 'margin var(--transition-speed) var(--transition-timing)' // Smooth margin change
+                    transition: 'margin var(--transition-speed) var(--transition-timing)'
                     }}
                 />
 
@@ -81,50 +91,21 @@ const SideNav = ({ isMobile, isCollapsed, isOpen, onClose }) => {
                         key={item.text}
                         component={NavLink}
                         to={item.path}
-                        end
+                        end // Use end for potentially exact matches if needed
+                        onClick={handleItemClick} // Add click handler
                     >
                         <ListItemIcon>
                             {item.icon}
                         </ListItemIcon>
-                        {/* Text is always rendered, CSS handles opacity/hiding */}
                         <ListItemText
                             primary={item.text}
-                             primaryTypographyProps={{
-                                variant: 'body2',
-                                sx: { transition: 'opacity var(--transition-speed) var(--transition-timing)' }
-                            }}
+                            primaryTypographyProps={{ variant: 'body2' }}
                         />
                     </ListItemButton>
                 ))}
             </List>
         </Box>
     );
-
-    if (isMobile) {
-        return (
-            <Drawer
-                variant="temporary"
-                open={isOpen}
-                onClose={onClose}
-                ModalProps={{ keepMounted: true }}
-                sx={{
-                    display: { xs: 'block', sm: 'none' },
-                    zIndex: 'var(--z-drawer)', // Ensure drawer is above other elements if needed
-                    '& .MuiDrawer-paper': {
-                        boxSizing: 'border-box',
-                        width: 'var(--sidebar-width-expanded)',
-                        bgcolor: 'var(--color-offset)',
-                        borderRight: 'none',
-                    },
-                }}
-            >
-                {renderNavList}
-            </Drawer>
-        );
-    } else {
-        // Desktop/Tablet: Content is rendered directly inside the wrapper from Layout.js
-        return renderNavList;
-    }
 };
 
 export default SideNav;
