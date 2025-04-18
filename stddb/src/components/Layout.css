@@ -1,157 +1,315 @@
 /* src/components/Layout.css */
 
-/* --- Layout Wrapper --- */
-.app-layout-wrapper {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--color-bg-primary);
+:root {
+  --font-family-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  --color-background: #F5F7FD;
+  --color-surface: #FFFFFF; /* White */
+  --color-offset: #F5F7FD; /* Header, Sidebars bg */
+  --color-text-primary: #374151; /* Slightly softer dark text */
+  --color-text-secondary: #6B7280; /* Grey text */
+  --color-text-placeholder: #9CA3AF;
+  --color-border: #E5E7EB; /* Light border */
+  --color-border-strong: #D1D5DB; /* Divider border */
+  --color-primary: #3B82F6; /* Blue */
+  --color-primary-hover: #2563EB; /* Darker blue */
+  --color-active-bg: #EBEEF9; /* Subtle Active Background */
+  --color-hover-bg: #EBEEF9; /* Subtle Hover Background (Matched to Header Button Hover) */
+  --color-icon: #6B7280; /* Grey icon */
+  --color-icon-active: var(--color-primary); /* Blue icon (active) */
+  --color-error: #EF4444; /* Red */
+
+  /* --- DIMENSIONS & SPACING --- */
+  --header-height: 56px;
+  --right-sidebar-margin: 8px;
+  --sidebar-width-expanded: 240px;
+  --sidebar-width-collapsed: 68px;
+  --header-icon-button-size: 40px; /* Icon background size */
+  --sidebar-item-height: 40px; /* <<< Consistent Height */
+  --sidebar-item-v-margin: 2px;
+  --sidebar-horizontal-padding: 12px; /* Base horizontal padding for list */
+  --sidebar-item-h-padding: 12px; /* <<< Reduced horizontal padding inside items */
+  --sidebar-icon-margin-right: 10px; /* <<< Reduced icon margin */
+  --content-padding: 24px;
+  --content-max-width: 1400px;
+  --border-radius-small: 4px;
+  --border-radius-medium: 6px;
+  --border-radius-large: 8px;
+  --border-radius-main-corner: 12px;
+  --border-radius-pill: 50px;
+
+  /* --- TRANSITIONS --- */
+  --transition-speed: 0.2s;
+  --transition-timing: ease-in-out;
+
+  /* --- Z-INDEXES --- */
+  --z-header: 1100;
+  --z-sidebar: 1000;
+  --z-drawer: 1200;
 }
 
-/* --- Main Grid Container (Desktop First - applies >= 900px by default) --- */
-.main-grid-container {
-  flex-grow: 1;
-  display: grid;
-  /* Columns: Left Sidebar | Main Content (Flexible) */
-  /* Fixed right sidebar positioned independently */
-  grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-  gap: var(--layout-gap);
-  /* Padding top is set dynamically by JS to account for header height + gap */
-  /* Ensure JS adds appropriate space (e.g., headerHeight + layoutGap) */
-  padding-bottom: var(--spacing-lg);
-  padding-left: var(--layout-padding-x);
-  /* Adjust right padding for fixed sidebar space */
-  padding-right: calc(var(--sidebar-right-width) + var(--layout-gap) + var(--layout-padding-x));
-  max-width: var(--layout-max-width);
-  margin-left: auto; margin-right: auto;
-  width: 100%;
-  box-sizing: border-box;
-  align-items: start;
+/* --- BASE & RESET --- */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-family-sans);
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+body:not(.mobile-view) { overflow: hidden; }
+body.mobile-view { overflow-y: auto; height: auto; min-height: 100vh; }
+body.mobile-nav-active { overflow: hidden; }
+#root { min-height: 100%; display: flex; }
+
+/* --- LAYOUT WRAPPER --- */
+.app-layout-wrapper { display: flex; flex-direction: column; width: 100%; height: 100%; background-color: var(--color-background); }
+
+/* --- HEADER --- */
+header.app-header { position: fixed; top: 0; left: 0; width: 100%; height: var(--header-height); z-index: var(--z-header); background-color: var(--color-offset); border: none; box-shadow: none; }
+
+/* --- MAIN AREA (Below Header) --- */
+.main-area-container { flex-grow: 1; display: flex; height: 100%; box-sizing: border-box; overflow: hidden; position: relative; }
+
+/* --- COLUMN BASE STYLES --- */
+.side-nav-wrapper, .main-content-area, .right-sidebar-wrapper { height: 100%; box-sizing: border-box; }
+.side-nav-wrapper .side-nav-scroll-container, .main-content-inner-wrapper, .right-sidebar-wrapper { overflow-y: auto; scrollbar-width: none; -ms-overflow-style: none; }
+.side-nav-wrapper .side-nav-scroll-container::-webkit-scrollbar, .main-content-inner-wrapper::-webkit-scrollbar, .right-sidebar-wrapper::-webkit-scrollbar { display: none; }
+
+/* --- LEFT SIDEBAR WRAPPER (Desktop/Tablet) --- */
+.side-nav-wrapper { position: fixed; left: 0; top: var(--header-height); height: calc(100vh - var(--header-height)); width: var(--sidebar-width-expanded); background-color: var(--color-offset); flex-shrink: 0; z-index: var(--z-sidebar); transition: width var(--transition-speed) var(--transition-timing); overflow: hidden; }
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper { width: var(--sidebar-width-collapsed); }
+
+/* --- MAIN CONTENT AREA --- */
+.main-content-area { flex-grow: 1; padding-left: var(--sidebar-width-expanded); margin-right: var(--right-sidebar-margin); transition: padding-left var(--transition-speed) var(--transition-timing), margin-right var(--transition-speed) var(--transition-timing); background-color: var(--color-offset); overflow: hidden; position: relative; }
+.app-layout-wrapper[data-sidebar-state="collapsed"] .main-content-area { padding-left: var(--sidebar-width-collapsed); }
+
+/* --- MAIN CONTENT INNER WRAPPER (Scrolls) --- */
+.main-content-inner-wrapper { padding: var(--content-padding); max-width: var(--content-max-width); margin: 0 auto; box-sizing: border-box; height: 100%; background-color: var(--color-surface); border-top-left-radius: var(--border-radius-main-corner); }
+
+/* --- RIGHT SIDEBAR --- */
+.right-sidebar-wrapper { width: var(--sidebar-right-width); flex-shrink: 0; background-color: var(--color-surface); border-left: none; }
+
+
+/* --- SIDE NAVIGATION ITEM STYLING --- */
+
+/* Base Button Styles (Common to both states) */
+.side-nav-scroll-container .MuiListItemButton-root,
+.MuiDrawer-paper .MuiListItemButton-root {
+    display: flex;
+    align-items: center;
+    height: var(--sidebar-item-height);
+    margin-top: var(--sidebar-item-v-margin);
+    margin-bottom: var(--sidebar-item-v-margin);
+    background-color: transparent;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    overflow: hidden;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color var(--transition-speed) var(--transition-timing),
+                color var(--transition-speed) var(--transition-timing),
+                margin-left var(--transition-speed) var(--transition-timing),
+                margin-right var(--transition-speed) var(--transition-timing),
+                padding-left var(--transition-speed) var(--transition-timing),
+                padding-right var(--transition-speed) var(--transition-timing);
 }
 
-/* --- Left Sidebar Wrapper (Sticky) --- */
-.side-nav-wrapper {
-  grid-column: 1 / 2;
-  position: sticky;
-  /* Stick relative to grid container's padding-top */
-  top: 0;
-   /* Adjust max-height based on header, gap, and grid bottom padding */
-   /* Assuming grid padding-top accounts for header+gap */
-  max-height: calc(100vh - var(--header-height) - var(--layout-gap) - var(--spacing-lg));
-  overflow-y: auto;
-  overflow-x: hidden;
-  box-sizing: border-box;
-}
-/* .side-nav-wrapper::-webkit-scrollbar { display: none; } */
-
-
-/* --- Main Content Area (Grid Cell) --- */
-.main-content-area {
-  grid-column: 2 / 3;
-  min-width: 0;
-  box-sizing: border-box;
-  overflow: visible;
+/* Expanded View Specific Button Styles */
+.app-layout-wrapper:not([data-sidebar-state="collapsed"]) .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root {
+    justify-content: flex-start;
+    margin-left: var(--sidebar-horizontal-padding);
+    margin-right: var(--sidebar-horizontal-padding);
+    padding-left: var(--sidebar-item-h-padding); /* <<< Use variable */
+    padding-right: var(--sidebar-item-h-padding); /* <<< Use variable */
+    border-radius: var(--border-radius-pill);
 }
 
-/* --- Inner Content Wrapper (Controls Max Width & Centering) --- */
-.main-content-wrapper {
-  max-width: var(--main-content-max-width);
-  margin-left: auto;
-  margin-right: auto;
-  width: 100%;
-  /* <<< MODIFIED: Removed top padding to align content with fixed sidebar top >>> */
-  /* padding-top: var(--layout-padding-y); */ /* REMOVED */
-  /* Keep bottom padding for space at the end of content */
-  padding-bottom: var(--layout-padding-y);
-  box-sizing: border-box;
+/* Base Icon Styles (Common) */
+.side-nav-scroll-container .MuiListItemIcon-root,
+.MuiDrawer-paper .MuiListItemIcon-root {
+    color: inherit;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: color var(--transition-speed) var(--transition-timing),
+                min-width var(--transition-speed) var(--transition-timing),
+                margin-right var(--transition-speed) var(--transition-timing),
+                width var(--transition-speed) var(--transition-timing),
+                height var(--transition-speed) var(--transition-timing),
+                background-color var(--transition-speed) var(--transition-timing),
+                border-radius var(--transition-speed) var(--transition-timing);
+}
+.side-nav-scroll-container .MuiSvgIcon-root,
+.MuiDrawer-paper .MuiSvgIcon-root {
+    font-size: 1.25rem;
 }
 
-/* --- Right Sidebar Wrapper (NOW FIXED) --- */
-.right-sidebar-wrapper {
-  position: fixed;
-  /* Position below header + layout gap */
-  top: calc(var(--header-height) + var(--layout-gap));
-  /* Position from right edge, aligned with outer padding */
-  right: var(--layout-padding-x);
-  width: var(--sidebar-right-width);
-  /* Height fills remaining viewport below top position */
-  height: calc(100vh - var(--header-height) - var(--layout-gap));
-  box-sizing: border-box;
-  /* grid-column removed */
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge legacy */
-}
-/* For Chrome, Safari, and newer Edge (Webkit-based) */
-.right-sidebar-wrapper::-webkit-scrollbar {
-  display: none; /* Hide the scrollbar */
-}
-
-
-/* --- Responsive Adjustments --- */
-
-/* Tablet - Hide right sidebar, main content takes remaining space */
-@media (min-width: 900px) and (max-width: 1199.95px) {
-    .main-grid-container {
-        /* Two columns: Left Sidebar | Main Content */
-        grid-template-columns: var(--sidebar-left-width) minmax(0, 1fr);
-        /* Reset right padding */
-        padding-right: var(--layout-padding-x);
-    }
-    .right-sidebar-wrapper { display: none; } /* Hide right sidebar */
-}
-
-/* Mobile - Stack layout, hide sidebars */
-@media (max-width: 899.95px) {
-  .main-grid-container {
-    display: block;
-    padding: 0 !important;
-    max-width: none;
-    width: 100%;
-    gap: 0;
+/* Icon Styles (Expanded View) */
+.app-layout-wrapper:not([data-sidebar-state="collapsed"]) .side-nav-wrapper .side-nav-scroll-container .MuiListItemIcon-root {
+    min-width: 32px;
+    width: 32px;
     height: auto;
-    overflow: visible;
-  }
-  /* Reset left sidebar */
-  .side-nav-wrapper {
-      display: none; position: static; height: auto;
-      max-height: none; width: auto;
-  }
-  /* Reset right sidebar */
-  .right-sidebar-wrapper {
-      display: none; position: static; width: auto;
-      height: auto; max-height: none; top: auto;
-      right: auto; overflow: visible;
-  }
-  /* Reset main content area */
-  .main-content-area {
-     width: 100%; min-width: auto; height: auto;
-     overflow: visible; padding: 0;
-  }
-  /* Adjust main content wrapper for mobile */
-  .main-content-wrapper {
-     max-width: none; margin-left: 0; margin-right: 0;
-     /* <<< MODIFIED: Add padding below header for mobile view >>> */
-     /* Note: Removed explicit top padding earlier for desktop alignment, */
-     /* so ensure mobile padding is handled here or via another mobile-specific rule */
-     padding: var(--spacing-md);
-     padding-top: calc(var(--header-height) + var(--spacing-md));
-     /* Keep the removed padding-top: var(--layout-padding-y) from the base rule in mind */
-  }
+    margin-right: var(--sidebar-icon-margin-right); /* <<< Use variable */
+    border-radius: 0;
+    background-color: transparent;
 }
 
-/* --- Body class for mobile nav --- */
-body.mobile-nav-active {
-   overflow: hidden;
+/* Base Text Styles (Common) */
+.side-nav-scroll-container .MuiListItemText-root,
+.MuiDrawer-paper .MuiListItemText-root {
+    margin: 0;
+    flex-grow: 1;
+    transition: opacity var(--transition-speed) var(--transition-timing);
+    font-size: 0.875rem;
 }
 
-/* Add rule for when mobile nav IS displayed */
-@media (max-width: 899.95px) {
-    .side-nav-wrapper.mobile-nav-open {
-        display: block; position: fixed; left: 0;
-        top: 0; width: var(--sidebar-left-width);
-        height: 100vh; background-color: var(--color-bg-sidenav);
-        z-index: 1000; overflow-y: auto; max-height: none;
-    }
+/* Text Styles (Expanded View) */
+.app-layout-wrapper:not([data-sidebar-state="collapsed"]) .side-nav-wrapper .side-nav-scroll-container .MuiListItemText-root {
+    opacity: 1;
+    color: var(--color-text-primary);
+}
+
+/* --- Active State (Expanded View) --- */
+.app-layout-wrapper:not([data-sidebar-state="collapsed"]) .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root.active {
+    background-color: var(--color-active-bg);
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* --- Hover State (Expanded View, Non-Active) --- */
+.app-layout-wrapper:not([data-sidebar-state="collapsed"]) .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root:hover:not(.active) {
+   background-color: var(--color-hover-bg);
+   color: var(--color-text-primary);
+}
+/* Hover State (Expanded View, Active) */
+.app-layout-wrapper:not([data-sidebar-state="collapsed"]) .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root.active:hover {
+    background-color: var(--color-active-bg);
+    color: var(--color-primary);
+}
+
+
+/* --- Collapsed Sidebar Specific Adjustments --- */
+
+/* Button positioning */
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root {
+     margin-left: auto;
+     margin-right: auto;
+     padding: 0;
+     width: var(--sidebar-width-collapsed);
+     height: var(--sidebar-item-height); /* <<< Keep height consistent */
+     justify-content: center;
+     align-items: center;
+     border-radius: 0;
+     background-color: transparent !important;
+     overflow: visible;
+     transition: none;
+}
+
+/* Icon container takes the appearance */
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper .side-nav-scroll-container .MuiListItemIcon-root {
+    min-width: auto;
+    width: var(--header-icon-button-size);
+    height: var(--header-icon-button-size);
+    margin: 0;
+    border-radius: 50%;
+    color: var(--color-icon);
+    background-color: transparent;
+}
+
+/* Hide Text when collapsed */
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper .side-nav-scroll-container .MuiListItemText-root {
+    display: none;
+}
+
+/* Active state when collapsed - Style Icon Container */
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root.active .MuiListItemIcon-root {
+    background-color: var(--color-hover-bg);
+    color: var(--color-primary);
+}
+
+/* Hover state when collapsed - Style Icon Container */
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root:hover .MuiListItemIcon-root {
+     background-color: var(--color-hover-bg);
+     color: var(--color-text-primary);
+}
+.app-layout-wrapper[data-sidebar-state="collapsed"] .side-nav-wrapper .side-nav-scroll-container .MuiListItemButton-root.active:hover .MuiListItemIcon-root {
+    background-color: var(--color-hover-bg);
+    color: var(--color-primary);
+}
+
+
+/* --- Mobile Drawer Overrides --- */
+.MuiDrawer-paper .MuiListItemButton-root {
+    justify-content: flex-start !important;
+    margin: var(--sidebar-item-v-margin) var(--sidebar-horizontal-padding) !important;
+    padding-left: var(--sidebar-item-h-padding) !important; /* <<< Use variable */
+    padding-right: var(--sidebar-item-h-padding) !important; /* <<< Use variable */
+    height: var(--sidebar-item-height) !important;
+    border-radius: var(--border-radius-pill) !important;
+    background-color: transparent !important;
+    color: var(--color-text-secondary) !important;
+    font-weight: 500 !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    cursor: pointer !important;
+    transition: background-color var(--transition-speed) var(--transition-timing),
+                color var(--transition-speed) var(--transition-timing) !important;
+}
+.MuiDrawer-paper .MuiListItemIcon-root {
+    min-width: 32px !important;
+    width: 32px !important;
+    height: auto !important;
+    margin: 0 !important;
+    margin-right: var(--sidebar-icon-margin-right) !important; /* <<< Use variable */
+    color: inherit !important;
+    flex-shrink: 0 !important;
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    transition: color var(--transition-speed) var(--transition-timing) !important;
+}
+.MuiDrawer-paper .MuiSvgIcon-root {
+    font-size: 1.25rem !important;
+}
+.MuiDrawer-paper .MuiListItemText-root {
+    opacity: 1 !important;
+    display: block !important;
+    width: auto !important;
+    margin: 0 !important;
+    flex-grow: 1 !important;
+    color: var(--color-text-primary) !important;
+    transition: opacity var(--transition-speed) var(--transition-timing) !important;
+    font-size: 0.875rem !important;
+}
+.MuiDrawer-paper .MuiListItemButton-root.active {
+       background-color: var(--color-active-bg) !important;
+       color: var(--color-primary) !important;
+       font-weight: 600 !important;
+}
+.MuiDrawer-paper .MuiListItemButton-root:hover:not(.active) {
+   background-color: var(--color-hover-bg) !important;
+   color: var(--color-text-primary) !important;
+}
+.MuiDrawer-paper .MuiListItemButton-root.active:hover {
+    background-color: var(--color-active-bg) !important;
+    color: var(--color-primary) !important;
+}
+
+
+/* --- RESPONSIVE ADJUSTMENTS --- */
+@media (min-width: 768px) and (max-width: 1199.95px) {
+  .right-sidebar-wrapper { display: none; }
+  .main-content-area { margin-right: 0; }
+}
+@media (max-width: 767.95px) {
+  .app-layout-wrapper { height: auto; min-height: 100vh; }
+  .main-area-container { display: block; height: auto; padding-top: var(--header-height); overflow: visible; }
+  .side-nav-wrapper { display: none; }
+  .right-sidebar-wrapper { display: none; }
+  .main-content-area { width: 100%; padding-left: 0 !important; margin-right: 0; height: auto; min-height: calc(100vh - var(--header-height)); overflow: visible; background-color: transparent; transition: none; }
+  .main-content-inner-wrapper { padding: calc(var(--content-padding) * 0.75); max-width: none; height: auto; overflow: visible; border-top-left-radius: 0; background-color: var(--color-surface); }
 }

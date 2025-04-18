@@ -1,128 +1,132 @@
+/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
+// src/components/Layout.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import SideNav from './SideNav';
 import RightSidebar from './RightSidebar';
-import './Layout.css'; // Ensure this CSS file is imported
+import './Layout.css';
+import useMediaQuery from '@mui/material/useMediaQuery';
+
+const SIDEBAR_STATE_KEY = 'sidebarState';
 
 const Layout = () => {
-  const headerRef = useRef(null);
-  const [isMobileNavOpen, setMobileNavOpen] = useState(false);
+    const headerRef = useRef(null);
+    const mainAreaRef = useRef(null);
+    const [sidebarState, setSidebarState] = useState('expanded'); // Initial value updated in useEffect
 
-  // --- Mobile Nav Handlers ---
-  const handleToggleMobileNav = useCallback(() => {
-    setMobileNavOpen(prev => {
-      const nextState = !prev;
-      document.body.classList.toggle('mobile-nav-active', nextState);
-      return nextState;
-    });
-  }, []);
+    const isMobile = useMediaQuery('(max-width: 767.95px)');
+    const isTabletOrSmallDesktop = useMediaQuery('(min-width: 768px) and (max-width: 1199.95px)');
 
-  const closeMobileNav = useCallback(() => {
-    setMobileNavOpen(false);
-    document.body.classList.remove('mobile-nav-active');
-  }, []);
+    const location = useLocation();
 
-  // --- Header Height Calculation & Layout Adjustment ---
-  useEffect(() => {
-    const updateLayoutOffsets = () => {
-      const rootStyle = getComputedStyle(document.documentElement);
-      const headerElement = headerRef.current;
-      const defaultHeight = parseFloat(rootStyle.getPropertyValue('--header-height')) || 60; // Fallback
-      const headerHeight = headerElement?.offsetHeight || defaultHeight;
-      const spacingLg = parseFloat(rootStyle.getPropertyValue('--spacing-lg') || '24'); // Fallback
-
-      // --- Update the --header-height CSS variable ---
-      const currentHeaderVar = parseFloat(rootStyle.getPropertyValue('--header-height'));
-      if (Math.abs(headerHeight - currentHeaderVar) > 1) { // Update only if changed
-          document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
-      }
-      // --- Variable Updated ---
-
-
-      const gridContainer = document.querySelector('.main-grid-container');
-      if (gridContainer) {
-        const isMobileView = window.innerWidth < 900; // Check breakpoint
-
-        if (!isMobileView) {
-          // --- Adjust Padding Top for Grid Container ---
-          // This pushes the grid content below the fixed header
-          gridContainer.style.paddingTop = `${headerHeight + spacingLg}px`;
-
-          // --- REMOVE Height Calculation/Setting for Left Sidebar & Main Content ---
-          // Let their height be determined by content or CSS (like max-height for sticky)
-          // const leftSidebar = document.querySelector('.side-nav-wrapper'); // No longer needed here
-          // const mainContentArea = document.querySelector('.main-content-area'); // No longer needed here
-          // const calculatedHeight = `calc(100vh - ${headerHeight}px - ${spacingLg}px)`; // No longer needed here
-          // if (leftSidebar) leftSidebar.style.height = calculatedHeight; // REMOVED
-          // if (mainContentArea) mainContentArea.style.height = calculatedHeight; // REMOVED
-          // --- Heights NO LONGER SET by JS ---
-
-        } else {
-          // On mobile, reset styles potentially set by JS for desktop view
-          gridContainer.style.paddingTop = ''; // Let mobile CSS handle padding
-
-          // Reset heights if they were set dynamically (redundant now, but safe)
-           const leftSidebar = document.querySelector('.side-nav-wrapper');
-           const mainContentArea = document.querySelector('.main-content-area');
-           if (leftSidebar) leftSidebar.style.height = '';
-           if (mainContentArea) mainContentArea.style.height = '';
+    useEffect(() => {
+        const storedState = localStorage.getItem(SIDEBAR_STATE_KEY);
+        if (!isMobile) {
+            const defaultState = isTabletOrSmallDesktop ? 'collapsed' : 'expanded';
+            setSidebarState(storedState || defaultState);
         }
-      }
-    };
+    }, [isTabletOrSmallDesktop, isMobile]);
 
-    let resizeObserver;
-    const headerEl = headerRef.current;
+    useEffect(() => {
+        if (!isMobile) {
+            localStorage.setItem(SIDEBAR_STATE_KEY, sidebarState);
+        }
+    }, [sidebarState, isMobile]);
 
-    if (headerEl && typeof ResizeObserver !== 'undefined') {
-      updateLayoutOffsets();
-      resizeObserver = new ResizeObserver(updateLayoutOffsets);
-      resizeObserver.observe(headerEl);
-      window.addEventListener('resize', updateLayoutOffsets); // Handle viewport changes
-    } else {
-      // Fallback
-      const timerId = setTimeout(updateLayoutOffsets, 50);
-      window.addEventListener('resize', updateLayoutOffsets);
-      return () => {
-        clearTimeout(timerId);
-        window.removeEventListener('resize', updateLayoutOffsets);
-      }
-    }
+    useEffect(() => {
+        if (isMobile) {
+            document.body.classList.add('mobile-view');
+        } else {
+            document.body.classList.remove('mobile-view');
+        }
+    }, [isMobile]);
 
-    // Cleanup
-    return () => {
-      if (resizeObserver && headerEl) {
-        resizeObserver.unobserve(headerEl);
-      }
-      window.removeEventListener('resize', updateLayoutOffsets);
-    };
-  }, []); // Runs on mount
+    const handleToggleSidebar = useCallback(() => {
+        if (!isMobile) {
+            setSidebarState(prev => (prev === 'expanded' ? 'collapsed' : 'expanded'));
+        }
+    }, [isMobile]);
 
-  // --- Cleanup for mobile nav body class ---
-  useEffect(() => {
-    return () => document.body.classList.remove('mobile-nav-active');
-  }, []);
+    // Header Height Calculation & Main Area Padding Adjustment
+    useEffect(() => {
+        const updateLayoutOffsets = () => {
+            const headerElement = headerRef.current;
+            const mainAreaElement = mainAreaRef.current;
+            if (headerElement && mainAreaElement) {
+                const headerHeight = headerElement.offsetHeight;
+                // Apply padding only for non-mobile where CSS doesn't handle it
+                if (!isMobile) {
+                    mainAreaElement.style.paddingTop = `${headerHeight}px`;
+                }
+                // Set the CSS variable regardless of mobile state
+                document.documentElement.style.setProperty('--header-height', `${headerHeight}px`);
+            }
+        };
 
+        updateLayoutOffsets();
+        let resizeObserver;
+        const headerEl = headerRef.current;
 
-  return (
-    <div className="app-layout-wrapper">
-      <Header ref={headerRef} onToggleMobileNav={handleToggleMobileNav} />
-      <div className="main-grid-container">
-        <aside className="side-nav-wrapper">
-          <SideNav isOpen={isMobileNavOpen} onClose={closeMobileNav} />
-        </aside>
-        <main className="main-content-area" id="main-content">
-          <div className="main-content-wrapper">
-            <Outlet />
-          </div>
-        </main>
-        {/* Right sidebar uses position: sticky defined in CSS */}
-        <aside className="right-sidebar-wrapper">
-          <RightSidebar />
-        </aside>
-      </div>
-    </div>
-  );
+        if (headerEl && typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver(updateLayoutOffsets);
+            resizeObserver.observe(headerEl);
+        } else {
+            window.addEventListener('resize', updateLayoutOffsets);
+        }
+
+        return () => {
+            if (resizeObserver && headerEl) {
+                resizeObserver.unobserve(headerEl);
+            } else {
+                window.removeEventListener('resize', updateLayoutOffsets);
+            }
+            // Clean up styles potentially set on unmount/re-render cycle if needed
+            document.documentElement.style.removeProperty('--header-height');
+             // Also clear the JS padding on unmount/desktop->mobile transition if needed
+             if (mainAreaRef.current) {
+                 mainAreaRef.current.style.paddingTop = '';
+             }
+        };
+        // Rerun when isMobile changes to apply/remove the desktop padding correctly
+    }, [isMobile]); // Dependency on isMobile is important here
+
+    useEffect(() => {
+        return () => {
+            document.body.classList.remove('mobile-view');
+        };
+    }, []);
+
+    return (
+        <div className="app-layout-wrapper" data-sidebar-state={isMobile ? 'mobile' : sidebarState}>
+            <Header
+                ref={headerRef}
+                onToggleSidebar={handleToggleSidebar}
+                isSidebarCollapsed={!isMobile && sidebarState === 'collapsed'}
+                isMobile={isMobile}
+            />
+
+            {/* This container's padding-top is handled by CSS on mobile */}
+            <div className="main-area-container" ref={mainAreaRef}>
+                <aside className="side-nav-wrapper">
+                    <SideNav
+                        isMobile={isMobile}
+                        isCollapsed={!isMobile && sidebarState === 'collapsed'}
+                        onToggleCollapse={handleToggleSidebar}
+                    />
+                </aside>
+
+                <main className="main-content-area" id="main-content">
+                   <Outlet />
+                </main>
+
+                <aside className="right-sidebar-wrapper">
+                    <RightSidebar />
+                </aside>
+            </div>
+        </div>
+    );
 };
 
 export default Layout;
