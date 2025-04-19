@@ -18,11 +18,10 @@ import List from '@mui/material/List';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
-import Grid from '@mui/material/Grid';
 import Stack from '@mui/material/Stack';
+import Grid from '@mui/material/Grid';
 import { useTheme } from '@mui/material/styles';
 import Button from '@mui/material/Button';
-import Tooltip from '@mui/material/Tooltip';
 
 // MUI Icons
 import NotificationsNoneIcon from '@mui/icons-material/NotificationsNoneOutlined';
@@ -35,6 +34,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TaskAltIcon from '@mui/icons-material/TaskAlt';
 import AssignmentIcon from '@mui/icons-material/Assignment';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 const Home = () => {
   const theme = useTheme();
@@ -74,228 +74,273 @@ const Home = () => {
     setSnackbar({ ...snackbar, open: false });
    };
 
-  // --- User Data Fetching ---
-  useEffect(() => {
+  // --- User Data Fetching (unchanged) ---
+   useEffect(() => {
     let isMounted = true;
     const fetchUserData = async () => {
+      setBasicInfo(prev => prev || { email: currentUser?.email, fullName: currentUser?.displayName || 'User' });
+      setLoading(true);
+      setError('');
       if (!currentUser?.uid) { if (isMounted) { setError("Not logged in."); setLoading(false); setBasicInfo(null); } return; }
-      if (contextUserData?.basicInfo && loading) {
-          setBasicInfo(contextUserData.basicInfo);
-          if (isMounted) setLoading(false);
-          return;
-      }
-      if (loading) {
-        setLoading(true);
-        try {
-          const userDocRef = doc(db, "users", currentUser.uid);
-          const docSnap = await getDoc(userDocRef);
-          if (isMounted) {
-            if (docSnap.exists()) {
-              const fetchedData = docSnap.data();
-              setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: 'User' });
-            } else { setError('User profile not found.'); setBasicInfo({ email: currentUser.email, fullName: 'User' }); }
-            setLoading(false);
-          }
-        } catch (err) {
-             console.error("Error fetching user info:", err);
-             if (isMounted) { setError('Failed to load user data.'); setLoading(false); setBasicInfo({ email: currentUser.email, fullName: 'User' }); }
-        }
-      } else if (!basicInfo) { setLoading(true); }
+      if (contextUserData?.basicInfo) { if (!basicInfo || basicInfo.email !== contextUserData.basicInfo.email) { setBasicInfo(contextUserData.basicInfo); } if (isMounted) setLoading(false); return; }
+      try { const userDocRef = doc(db, "users", currentUser.uid); const docSnap = await getDoc(userDocRef); if (isMounted) { if (docSnap.exists()) { const fetchedData = docSnap.data(); setBasicInfo(fetchedData.basicInfo || { email: currentUser.email, fullName: currentUser.displayName || 'User' }); } else { setError('Profile not found.'); setBasicInfo({ email: currentUser.email, fullName: currentUser.displayName || 'User' }); } setLoading(false); } } catch (err) { console.error("Error fetching user info:", err); if (isMounted) { setError('Failed to load data.'); setBasicInfo({ email: currentUser.email, fullName: currentUser.displayName || 'User' }); setLoading(false); } }
     };
     fetchUserData();
     return () => { isMounted = false; };
-  }, [currentUser, contextUserData, basicInfo, loading]);
+   }, [currentUser, contextUserData]);
 
 
   const displayName = basicInfo?.fullName?.split(' ')[0] || 'User';
 
-  // --- Reusable Card Component ---
-  const DashboardCard = ({ title, icon, children, action, sx = {}, ...props }) => (
+  // --- Common List Item Styles ---
+  const listItemSx = {
+     py: 1.25,
+     px: { xs: 2, sm: 2 }
+  };
+  const listIconSx = { minWidth: 36, color: theme.palette.action.active };
+  const listTextPrimarySx = { fontWeight: 500, fontSize: '0.9rem', color: theme.palette.text.primary };
+  const listTextSecondarySx = { fontSize: '0.75rem', color: theme.palette.text.secondary, mt: 0.25 };
+  const chevronIconSx = { fontSize: '1.2rem', color: theme.palette.action.active, opacity: 0.7, ml: 1 };
+
+  // Define the smaller radius value
+  const reducedBorderRadius = '8px'; // Or '0' for sharp corners
+
+  // --- Section Container Component ---
+  const SectionContainer = ({ title, actionButton, children, sx = {} }) => (
     <Paper
       elevation={0}
+      variant="outlined"
       sx={{
-        bgcolor: 'var(--color-surface)',
-        borderRadius: 'var(--border-radius-large)',
-        border: `1px solid var(--color-border)`,
+        bgcolor: theme.palette.background.paper,
+        // Apply reduced border radius
+        borderRadius: reducedBorderRadius,
+        overflow: 'hidden',
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
         ...sx
       }}
-      {...props}
     >
-      {(title || action) && (
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', px: 2, py: 1.25 }}>
+      {(title || actionButton) && (
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            px: { xs: 2, sm: 2 },
+            py: 1.5,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            flexShrink: 0,
+          }}
+        >
           {title && (
-            <Typography variant="subtitle2" component="h3" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 0.75, color: 'var(--color-text-primary)' }}>
-              {icon} {title}
+            <Typography variant="h6" component="h3" sx={{ fontWeight: 600, fontSize: '1.0rem' }}>
+              {title}
             </Typography>
           )}
-          {action}
+          {actionButton}
         </Box>
       )}
-      {(title || action) && <Divider sx={{ borderColor: 'var(--color-border)' }} />}
-      <Box sx={{ flexGrow: 1, overflowY: 'auto' }}>
+      <Box sx={{ flexGrow: 1, overflowY: 'auto'}}>
         {children}
       </Box>
     </Paper>
   );
 
-  // --- Common List Item Styles ---
-  const listItemSx = { py: 1.25, px: 2 };
-  const listIconSx = { minWidth: 36, color: 'var(--color-icon)' };
-  const listTextPrimarySx = { fontWeight: 500, fontSize: '0.875rem', color: 'var(--color-text-primary)' };
-  const listTextSecondarySx = { fontSize: '0.75rem', color: 'var(--color-text-secondary)', mt: 0.25 };
-  const chevronIconSx = { fontSize: '1.2rem', color: 'var(--color-icon)', opacity: 0.7, ml: 1 };
-
 
   // --- RENDER ---
   return (
     <>
-      <Typography
-        variant="h4"
-        component="h1"
-        sx={{ fontWeight: 500, mb: { xs: 2, sm: 3 }, fontSize: { xs: '1.6rem', sm: '1.8rem', md: '2.125rem' }, color: 'var(--color-text-primary)'}}
+      {/* Wrap Title in a Box for the border */}
+      <Box sx={{
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          pb: { xs: 1, sm: 2 },
+          mb: { xs: 2, sm: 4 },
+          px: 0, // Keep container padding 0
+      }}>
+        <Typography
+          variant="h5"
+          component="h2"
+          sx={{
+            fontWeight: 500,
+            color: theme.palette.text.primary,
+            textAlign: 'left',
+            px: 0, // Keep text padding 0
+          }}
+        >
+          Welcome back, {displayName}!
+        </Typography>
+      </Box>
+
+      {/* Main Content Container */}
+      <Box
+        sx={{
+          maxWidth: '700px',
+          mx: 'auto',
+          px: { xs: 0, sm: 3 } // No padding on xs, add on sm+
+        }}
       >
-        Welcome back, {displayName}!
-      </Typography>
+        {/* Loading State */}
+        {loading && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', p: 5, gap: 2 }}>
+             <CircularProgress />
+             <Typography variant="body2" color="text.secondary">Loading dashboard...</Typography>
+          </Box>
+        )}
 
-      {loading ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column', p: 5, gap: 2 }}>
-           <CircularProgress />
-           <Typography variant="body2" color="text.secondary">Loading dashboard...</Typography>
-        </Box>
-      ) : error ? (
-        <Alert severity="error" sx={{ m: 2 }}>{error}</Alert>
-      ) : (
-        // Main Grid container
-        <Grid container spacing={2.5}>
+        {/* Error State */}
+        {!loading && error && (
+          <Alert
+            severity="error"
+            icon={<ErrorOutlineIcon fontSize="inherit" />}
+            sx={{ mb: 3, mx: { xs: 2, sm: 0 } }} // Add margin on xs to align with content padding
+          >
+            {error}
+          </Alert>
+        )}
 
-          {/* Section 1: Quick Stats */}
-          <Grid item xs={12}>
-             <Typography variant="overline" component="h3" sx={{ color: 'var(--color-text-secondary)', display: 'block', mb: 1 }}>
-                Overview
-             </Typography>
-             <Box sx={{ display: 'flex', overflowX: 'auto', py: 0.5, gap: 1.5, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-                {dashboardData.quickStats.map((stat) => (
-                    <Paper key={stat.label} component={RouterLink} to={stat.path} elevation={0} variant="outlined"
-                        sx={{ p: 1.75, minWidth: 170, borderRadius: 'var(--border-radius-medium)', borderColor: 'var(--color-border)', bgcolor: 'var(--color-surface)', textDecoration: 'none', flexShrink: 0, transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, border-color 0.2s ease-in-out', '&:hover': { borderColor: stat.color || 'var(--color-primary)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', transform: 'translateY(-2px)' } }}>
-                        <Stack direction="row" spacing={1.5} alignItems="center" >
-                            <Box sx={{ color: stat.color || 'var(--color-icon)', display: 'flex' }}>{stat.icon}</Box>
-                            <Box>
-                                <Typography variant="caption" component="div" sx={{ color: 'var(--color-text-secondary)', lineHeight: 1.2 }}>{stat.label}</Typography>
-                                <Typography variant="h6" component="div" sx={{ color: 'var(--color-text-primary)', lineHeight: 1.3, fontSize: '1.1rem' }}>{stat.value}</Typography>
-                            </Box>
-                        </Stack>
-                    </Paper>
-                ))}
-             </Box>
-          </Grid>
+        {/* Dashboard Content: Use Grid for layout */}
+        {!loading && basicInfo && !error && (
+          <Grid container spacing={3}>
 
-          {/* --- NEW COLUMN / FULL WIDTH CONTAINER for next sections --- */}
-          <Grid item xs={12}>
-            {/* Nested Grid to arrange the cards */}
-            <Grid container spacing={2.5}>
+            {/* Section 1: Overview (Quick Stats) - Full width */}
+            <Grid item xs={12}>
+                <Box sx={{ px: { xs: 2, sm: 0 } }}> {/* Padding wrapper for mobile */}
+                   <Typography variant="overline" component="h3" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1.5 }}>
+                      Overview
+                   </Typography>
+                   {/* Quick Stats Scrollable Box */}
+                   <Box sx={{
+                        display: 'flex',
+                        overflowX: 'auto',
+                        py: 0.5,
+                        gap: 1.5,
+                        scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' },
+                        px: { xs: 0, sm: 0.25 },
+                        mx: { xs: -2, sm: 0 } // Negative margin only for mobile
+                    }}
+                   >
+                      {dashboardData.quickStats.map((stat) => (
+                          <Paper key={stat.label} component={RouterLink} to={stat.path} elevation={0} variant="outlined"
+                              sx={{
+                                  p: 1.75,
+                                  minWidth: 160,
+                                  // Apply reduced border radius
+                                  borderRadius: reducedBorderRadius,
+                                  borderColor: theme.palette.divider,
+                                  bgcolor: theme.palette.background.paper,
+                                  textDecoration: 'none',
+                                  flexShrink: 0,
+                                  transition: theme.transitions.create(['transform', 'box-shadow', 'border-color'], { duration: theme.transitions.duration.short }),
+                                  '&:hover': {
+                                    borderColor: stat.color || theme.palette.primary.main,
+                                    boxShadow: theme.shadows[2],
+                                    transform: 'translateY(-2px)'
+                                  },
+                                }}
+                              >
+                              <Stack direction="row" spacing={1.5} alignItems="center" >
+                                  <Box sx={{ color: stat.color || theme.palette.action.active, display: 'flex' }}>{stat.icon}</Box>
+                                  <Box>
+                                      <Typography variant="caption" component="div" sx={{ color: theme.palette.text.secondary, lineHeight: 1.2 }}>{stat.label}</Typography>
+                                      <Typography variant="h6" component="div" sx={{ color: theme.palette.text.primary, lineHeight: 1.3, fontSize: '1.0rem' }}>{stat.value}</Typography>
+                                  </Box>
+                              </Stack>
+                          </Paper>
+                      ))}
+                   </Box>
+                </Box>
+            </Grid>
 
-                {/* Section 2: Tasks */}
-                <Grid item xs={12} md={12} lg={4}> {/* Full width xs/md, 1/3 lg */}
-                    <DashboardCard
-                        title="Important Tasks"
-                        action={
-                            <Button component={RouterLink} to="/tasks" size="small" sx={{ color: 'var(--color-primary)', fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: 'var(--color-primary-light)' } }}>
-                                View All
-                            </Button>
-                        } >
-                        <List disablePadding>
-                            {dashboardData.tasksPreview.length > 0 ? (
-                                dashboardData.tasksPreview.map((task, index) => (
-                                    <React.Fragment key={task.id}>
-                                        <ListItemButton component={RouterLink} to={task.path} sx={listItemSx}>
-                                            <ListItemIcon sx={listIconSx}>
-                                                {task.icon || <AssignmentIcon fontSize="small"/>}
-                                            </ListItemIcon>
-                                            <ListItemText
-                                                primary={task.title}
-                                                secondary={task.subject || null}
-                                                primaryTypographyProps={{ sx: listTextPrimarySx }}
-                                                secondaryTypographyProps={{ sx: listTextSecondarySx }}
-                                            />
-                                            <ChevronRightIcon sx={chevronIconSx}/>
-                                        </ListItemButton>
-                                        {index < dashboardData.tasksPreview.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />}
-                                    </React.Fragment>
-                                ))
-                            ) : ( <Typography variant="body2" sx={{ color: 'var(--color-text-secondary)', textAlign: 'center', p: 3 }}>No pressing tasks.</Typography> )}
-                        </List>
-                    </DashboardCard>
-                </Grid>
+            {/* Column for Tasks and Events */}
+            <Grid item xs={12} md={6}>
+                <Stack spacing={3}> {/* Stack items vertically within this column */}
+                    {/* Section 2: Important Tasks */}
+                    <SectionContainer
+                      title="Important Tasks"
+                      actionButton={
+                        <Button component={RouterLink} to="/tasks" size="small" sx={{ fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: theme.palette.action.hover } }}>
+                            View All
+                        </Button>
+                      }
+                    >
+                      <List disablePadding>
+                          {dashboardData.tasksPreview.length > 0 ? (
+                              dashboardData.tasksPreview.map((task, index) => (
+                                  <React.Fragment key={task.id}>
+                                      <ListItemButton component={RouterLink} to={task.path} sx={listItemSx}>
+                                          <ListItemIcon sx={listIconSx}>
+                                              {task.icon || <AssignmentIcon fontSize="small"/>}
+                                          </ListItemIcon>
+                                          <ListItemText
+                                              primary={task.title}
+                                              secondary={task.subject || null}
+                                              primaryTypographyProps={{ sx: listTextPrimarySx }}
+                                              secondaryTypographyProps={{ sx: listTextSecondarySx }}
+                                          />
+                                          <ChevronRightIcon sx={chevronIconSx}/>
+                                      </ListItemButton>
+                                      {index < dashboardData.tasksPreview.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: theme.palette.divider }} />}
+                                  </React.Fragment>
+                              ))
+                          ) : ( <Typography variant="body2" sx={{ color: theme.palette.text.secondary, textAlign: 'center', p: 3 }}>No pressing tasks.</Typography> )}
+                      </List>
+                    </SectionContainer>
 
-                {/* Section 3: Alerts & Events */}
-                <Grid item xs={12} md={12} lg={4}> {/* Full width xs/md, 1/3 lg */}
-                    <DashboardCard
-                        title="Notifications & Events"
-                        action={
-                            <Button component={RouterLink} to="/calendar" size="small" sx={{ color: 'var(--color-primary)', fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: 'var(--color-primary-light)' } }}>
-                                Calendar
-                            </Button>
-                        } >
-                        <List disablePadding>
-                            <ListItemButton component={RouterLink} to="/notifications" sx={listItemSx}>
-                                <ListItemIcon sx={listIconSx}>
-                                    <NotificationsNoneIcon fontSize="small"/>
-                                </ListItemIcon>
-                                <ListItemText
-                                    primary={`${dashboardData.alertsCount} New Alert${dashboardData.alertsCount !== 1 ? 's' : ''}`}
-                                    primaryTypographyProps={{ sx: listTextPrimarySx }}
-                                />
-                                <ChevronRightIcon sx={chevronIconSx}/>
-                            </ListItemButton>
-                            <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }}/>
-                            <ListItemButton component={RouterLink} to={dashboardData.nextEvent.path} sx={listItemSx}>
-                                <ListItemIcon sx={listIconSx}>
-                                    <EventAvailableIcon fontSize="small"/>
-                                </ListItemIcon>
-                                <ListItemText
-                                    primary={dashboardData.nextEvent.title}
-                                    secondary={`Upcoming: ${dashboardData.nextEvent.date}`}
-                                    primaryTypographyProps={{ sx: listTextPrimarySx }}
-                                    secondaryTypographyProps={{ sx: listTextSecondarySx }}
-                                />
-                                <ChevronRightIcon sx={chevronIconSx}/>
-                            </ListItemButton>
-                        </List>
-                    </DashboardCard>
-                </Grid>
+                    {/* Section 3: Notifications & Events */}
+                    <SectionContainer
+                      title="Notifications & Events"
+                      actionButton={
+                        <Button component={RouterLink} to="/calendar" size="small" sx={{ fontWeight: 500, textTransform: 'none', '&:hover': { bgcolor: theme.palette.action.hover } }}>
+                            Calendar
+                        </Button>
+                      }
+                    >
+                      <List disablePadding>
+                        <ListItemButton component={RouterLink} to="/notifications" sx={listItemSx}>
+                            <ListItemIcon sx={listIconSx}> <NotificationsNoneIcon fontSize="small"/> </ListItemIcon>
+                            <ListItemText primary={`${dashboardData.alertsCount} New Alert${dashboardData.alertsCount !== 1 ? 's' : ''}`} primaryTypographyProps={{ sx: listTextPrimarySx }} />
+                            <ChevronRightIcon sx={chevronIconSx}/>
+                        </ListItemButton>
+                        <Divider component="li" sx={{ mx: 2, borderColor: theme.palette.divider }}/>
+                        <ListItemButton component={RouterLink} to={dashboardData.nextEvent.path} sx={listItemSx}>
+                            <ListItemIcon sx={listIconSx}> <EventAvailableIcon fontSize="small"/> </ListItemIcon>
+                            <ListItemText primary={dashboardData.nextEvent.title} secondary={`Upcoming: ${dashboardData.nextEvent.date}`} primaryTypographyProps={{ sx: listTextPrimarySx }} secondaryTypographyProps={{ sx: listTextSecondarySx }} />
+                            <ChevronRightIcon sx={chevronIconSx}/>
+                        </ListItemButton>
+                      </List>
+                    </SectionContainer>
+                </Stack>
+            </Grid>
 
+            {/* Column for Quick Links */}
+            <Grid item xs={12} md={6}>
                 {/* Section 4: Quick Links */}
-                <Grid item xs={12} md={12} lg={4}> {/* Full width xs/md, 1/3 lg */}
-                    <DashboardCard title="Quick Links">
-                       <List disablePadding>
-                           {dashboardData.quickLinks.map((link, index) => (
-                                <React.Fragment key={link.id}>
-                                    <ListItemButton component={RouterLink} to={link.path} sx={listItemSx}>
-                                        <ListItemIcon sx={listIconSx}>
-                                            {link.icon || <LinkIcon fontSize="small"/>}
-                                        </ListItemIcon>
-                                       <ListItemText
-                                            primary={link.label}
-                                            primaryTypographyProps={{ sx: listTextPrimarySx }}
-                                        />
-                                       <ChevronRightIcon sx={chevronIconSx}/>
-                                   </ListItemButton>
-                                   {index < dashboardData.quickLinks.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: 'var(--color-border)' }} />}
-                               </React.Fragment>
-                           ))}
-                       </List>
-                    </DashboardCard>
-                </Grid>
+                <SectionContainer title="Quick Links">
+                   <List disablePadding>
+                       {dashboardData.quickLinks.map((link, index) => (
+                            <React.Fragment key={link.id}>
+                                <ListItemButton component={RouterLink} to={link.path} sx={listItemSx}>
+                                    <ListItemIcon sx={listIconSx}> {link.icon || <LinkIcon fontSize="small"/>} </ListItemIcon>
+                                   <ListItemText primary={link.label} primaryTypographyProps={{ sx: listTextPrimarySx }} />
+                                   <ChevronRightIcon sx={chevronIconSx}/>
+                               </ListItemButton>
+                               {index < dashboardData.quickLinks.length - 1 && <Divider component="li" sx={{ mx: 2, borderColor: theme.palette.divider }} />}
+                           </React.Fragment>
+                       ))}
+                   </List>
+                </SectionContainer>
+            </Grid>
 
-            </Grid> {/* End Nested Grid */}
-          </Grid> {/* End Full Width Parent Grid Item */}
+          </Grid> // End Main Grid Container
+        )}
+         {!loading && !error && !basicInfo && (
+             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', p: 3 }}>
+                 Could not load user information.
+             </Typography>
+         )}
 
-        </Grid> // End Main Grid
-      )}
+      </Box> {/* End Max Width Container */}
 
       {/* Snackbar */}
       <Snackbar open={snackbar.open} autoHideDuration={5000} onClose={handleSnackbarClose} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} >
