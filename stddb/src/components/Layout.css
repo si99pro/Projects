@@ -110,7 +110,7 @@
     top: var(--header-height);
     height: calc(100vh - var(--header-height)); /* Ensure full height */
     width: var(--sidebar-width-expanded);
-    background-color: #ffffff;
+    background-color: #F5F7FD;
     flex-shrink: 0;
     z-index: var(--z-sidebar);
     transition: width var(--transition-speed) var(--transition-timing);
